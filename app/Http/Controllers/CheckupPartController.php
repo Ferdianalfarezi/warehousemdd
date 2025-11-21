@@ -18,7 +18,7 @@ class CheckupPartController extends Controller
     {
         $validator = \Validator::make($request->all(), [
             'general_checkup_id' => 'required|exists:general_checkups,id',
-            'checkup_detail_id' => 'nullable|exists:checkup_details,id',
+            'checkup_detail_id' => 'required|exists:checkup_details,id',
             'part_id' => 'required|exists:parts,id',
             'quantity_used' => 'required|integer|min:1',
             'catatan' => 'nullable|string',
@@ -33,17 +33,16 @@ class CheckupPartController extends Controller
 
         DB::beginTransaction();
         try {
+            // Check stock
             $part = Part::findOrFail($request->part_id);
-
-            // Check stock availability
             if ($part->stock < $request->quantity_used) {
                 return response()->json([
                     'success' => false,
-                    'message' => "Stock tidak mencukupi! Available: {$part->stock}, Needed: {$request->quantity_used}"
+                    'message' => 'Stock tidak mencukupi!'
                 ], 400);
             }
 
-            // Create part replacement (stock will be reduced automatically in model boot)
+            // Create part replacement
             $partReplacement = CheckupPartReplacement::create([
                 'general_checkup_id' => $request->general_checkup_id,
                 'checkup_detail_id' => $request->checkup_detail_id,
@@ -52,7 +51,13 @@ class CheckupPartController extends Controller
                 'catatan' => $request->catatan,
             ]);
 
-            // Reload with part data
+            // Update checkup detail status
+            $detail = CheckupDetail::find($request->checkup_detail_id);
+            $detail->ng_action_type = 'part';
+            $detail->ng_action_status = 'waiting_part_installation';
+            $detail->save();
+
+            // Reload with relationships
             $partReplacement->load('part');
 
             DB::commit();
@@ -65,10 +70,10 @@ class CheckupPartController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Add Part Replacement Error: ' . $e->getMessage());
+            Log::error('Add Part Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal menambahkan part: ' . $e->getMessage()
+                'message' => 'Gagal menambahkan part!'
             ], 500);
         }
     }
@@ -81,8 +86,6 @@ class CheckupPartController extends Controller
         DB::beginTransaction();
         try {
             $partReplacement = CheckupPartReplacement::findOrFail($id);
-            
-            // Stock will be restored automatically in model boot
             $partReplacement->delete();
 
             DB::commit();
@@ -94,7 +97,7 @@ class CheckupPartController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Delete Part Replacement Error: ' . $e->getMessage());
+            Log::error('Delete Part Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menghapus part!'
@@ -107,22 +110,53 @@ class CheckupPartController extends Controller
      */
     public function getAvailableParts()
     {
+        $parts = Part::where('stock', '>', 0)
+            ->orderBy('nama')
+            ->get();
+
+        return response()->json([
+            'success' => true,
+            'data' => $parts
+        ]);
+    }
+
+    public function close($id)
+    {
+        DB::beginTransaction();
         try {
-            $parts = Part::where('stock', '>', 0)
-                ->select('id', 'kode_part', 'nama', 'stock', 'satuan')
-                ->orderBy('nama', 'asc')
-                ->get();
+            $detail = CheckupDetail::findOrFail($id);
+
+            if ($detail->ng_action_type !== 'part') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bukan tindakan part replacement!'
+                ], 400);
+            }
+
+            if ($detail->ng_action_status !== 'waiting_part_installation') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Status tidak valid untuk close!'
+                ], 400);
+            }
+
+            // Update status to closed
+            $detail->ng_action_status = 'closed';
+            $detail->save();
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
-                'data' => $parts
+                'message' => 'Part replacement berhasil ditutup!'
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Get Available Parts Error: ' . $e->getMessage());
+            DB::rollBack();
+            Log::error('Close Part Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
-                'message' => 'Gagal memuat data parts!'
+                'message' => 'Gagal menutup part replacement!'
             ], 500);
         }
     }

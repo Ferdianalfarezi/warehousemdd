@@ -277,17 +277,276 @@ async function openDetailHistoryModal(historyId) {
 
         if (data.success) {
             const history = data.data;
+                
+            // Basic Info
+            document.getElementById('historyDetailImage').src = history.gambar 
+                ? `/storage/barangs/${history.gambar}` 
+                : '/images/no-image.png';
+            document.getElementById('historyDetailKode').textContent = history.kode_barang;
+            document.getElementById('historyDetailNama').textContent = history.nama;
+            document.getElementById('historyDetailLine').textContent = history.line || '-';
+            document.getElementById('historyDetailTerjadwal').textContent = 
+                new Date(history.tanggal_terjadwal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
             
-            // Populate modal - implement detail modal content
-            console.log('History data:', history);
+            // Timeline Info
+            document.getElementById('historyDetailCheckup').textContent = 
+                new Date(history.tanggal_checkup).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+            document.getElementById('historyDetailMulai').textContent = 
+                new Date(history.mulai_perbaikan).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            document.getElementById('historyDetailSelesai').textContent = 
+                new Date(history.waktu_selesai).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
             
-            Swal.fire('Coming Soon', 'Detail modal implementation', 'info');
+            // Calculate Duration (Fix untuk durasi kosong)
+            const mulai = new Date(history.mulai_perbaikan);
+            const selesai = new Date(history.waktu_selesai);
+            const diffMs = selesai - mulai;
+            const diffMins = Math.floor(diffMs / 60000);
+            const hours = Math.floor(diffMins / 60);
+            const mins = diffMins % 60;
+            
+            let durasiText = '';
+            if (hours > 0) {
+                durasiText = `${hours} jam ${mins} menit`;
+            } else {
+                durasiText = `${mins} menit`;
+            }
+            document.getElementById('historyDetailDurasi').textContent = durasiText;
+            
+            // Stats
+            document.getElementById('historyDetailOK').textContent = history.total_ok;
+            document.getElementById('historyDetailNG').textContent = history.total_ng;
+            document.getElementById('historyDetailParts').textContent = history.total_part_used;
+            document.getElementById('historyDetailCatatan').textContent = history.catatan_umum || 'Tidak ada catatan';
+
+            // Checkup Details
+            const detailsContainer = document.getElementById('historyCheckupDetails');
+            detailsContainer.innerHTML = '';
+            
+            if (history.details && history.details.length > 0) {
+                history.details.forEach((detail, index) => {
+                    const statusBadge = detail.status === 'ok' 
+                        ? '<span class="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-bold">✓ OK</span>'
+                        : '<span class="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-bold">✗ NG</span>';
+                    
+                    const bgColor = detail.status === 'ok' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
+                    
+                    // NG Action Badge
+                    let actionBadge = '';
+                    if (detail.status === 'ng' && detail.ng_action_type) {
+                        if (detail.ng_action_type === 'part') {
+                            actionBadge = '<span class="ml-2 px-2 py-1 bg-orange-500 text-white rounded text-xs font-semibold">🔧 Ganti Part</span>';
+                        } else if (detail.ng_action_type === 'inhouse') {
+                            actionBadge = '<span class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs font-semibold">🏭 Inhouse</span>';
+                        } else if (detail.ng_action_type === 'outhouse') {
+                            actionBadge = '<span class="ml-2 px-2 py-1 bg-purple-500 text-white rounded text-xs font-semibold">🏢 Outhouse</span>';
+                        }
+                    }
+                    
+                    // Part Replacements for this detail
+                    let partReplacementsHTML = '';
+                    if (detail.part_replacements && detail.part_replacements.length > 0) {
+                        partReplacementsHTML = `
+                            <div class="mt-3 space-y-2 bg-white rounded-lg p-3 border border-orange-300 animate-fadeIn">
+                                <p class="text-xs font-bold text-orange-800 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                    </svg>
+                                    Part yang Digunakan:
+                                </p>
+                                ${detail.part_replacements.map(part => `
+                                    <div class="bg-orange-50 rounded p-2 border border-orange-200">
+                                        <p class="text-xs font-semibold text-gray-900">${part.nama_part}</p>
+                                        <p class="text-xs text-gray-600">${part.kode_part} - Qty: ${part.quantity_used}</p>
+                                        ${part.catatan ? `<p class="text-xs text-gray-500 italic mt-1">${part.catatan}</p>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        `;
+                    }
+
+                    // Inhouse/Outhouse Request Info
+                    let requestInfoHTML = '';
+                    if (detail.inhouse_request) {
+                        const req = detail.inhouse_request;
+                        requestInfoHTML = `
+                            <div class="mt-3 space-y-2 bg-white rounded-lg p-3 border border-blue-300 animate-fadeIn">
+                                <p class="text-xs font-bold text-blue-800 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    Inhouse Request:
+                                </p>
+                                <div class="bg-blue-50 rounded p-2 border border-blue-200 space-y-1">
+                                    <div class="grid grid-cols-2 gap-2 text-xs">
+                                        <div>
+                                            <span class="text-gray-600">Problem:</span>
+                                            <p class="font-semibold text-gray-900">${req.problem || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">Mesin:</span>
+                                            <p class="font-semibold text-gray-900">${req.mesin || '-'}</p>
+                                        </div>
+                                    </div>
+                                    ${req.proses_dilakukan ? `
+                                        <div class="text-xs">
+                                            <span class="text-gray-600">Proses:</span>
+                                            <p class="font-semibold text-gray-900">${req.proses_dilakukan}</p>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    } else if (detail.outhouse_request) {
+                        const req = detail.outhouse_request;
+                        requestInfoHTML = `
+                            <div class="mt-3 space-y-2 bg-white rounded-lg p-3 border border-purple-300 animate-fadeIn">
+                                <p class="text-xs font-bold text-purple-800 flex items-center">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    Outhouse Request:
+                                </p>
+                                <div class="bg-purple-50 rounded p-2 border border-purple-200 space-y-1">
+                                    <div class="grid grid-cols-2 gap-2 text-xs">
+                                        <div>
+                                            <span class="text-gray-600">Problem:</span>
+                                            <p class="font-semibold text-gray-900">${req.problem || '-'}</p>
+                                        </div>
+                                        <div>
+                                            <span class="text-gray-600">Mesin:</span>
+                                            <p class="font-semibold text-gray-900">${req.mesin || '-'}</p>
+                                        </div>
+                                    </div>
+                                    ${req.supplier ? `
+                                        <div class="text-xs">
+                                            <span class="text-gray-600">Supplier:</span>
+                                            <p class="font-semibold text-gray-900">${req.supplier}</p>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
+                    detailsContainer.innerHTML += `
+                        <div class="border ${bgColor} rounded-lg p-4 hover:shadow-md transition-all duration-200 animate-slideIn" style="animation-delay: ${index * 50}ms">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center space-x-3">
+                                    <span class="bg-gray-700 text-white px-3 py-1 rounded-full text-xs font-bold">
+                                        ${detail.poin}
+                                    </span>
+                                    <p class="text-sm font-bold text-gray-900">${detail.nama_bagian}</p>
+                                </div>
+                                <div class="flex items-center">
+                                    ${statusBadge}
+                                    ${actionBadge}
+                                </div>
+                            </div>
+                            ${detail.catatan ? `
+                                <div class="mt-2 pl-4 border-l-2 ${detail.status === 'ok' ? 'border-green-400' : 'border-red-400'}">
+                                    <p class="text-xs text-gray-600 italic">Catatan: ${detail.catatan}</p>
+                                </div>
+                            ` : ''}
+                            ${partReplacementsHTML}
+                            ${requestInfoHTML}
+                        </div>
+                    `;
+                });
+            } else {
+                detailsContainer.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Tidak ada detail checkup</p>';
+            }
+
+            // Part Replacements (standalone)
+            const partsContainer = document.getElementById('historyPartReplacements');
+            const partsSection = document.getElementById('historyPartReplacementsSection');
+            partsContainer.innerHTML = '';
+            
+            const standaloneReplacements = history.part_replacements 
+                ? history.part_replacements.filter(part => !part.history_checkup_detail_id)
+                : [];
+            
+            if (standaloneReplacements.length > 0) {
+                partsSection.classList.remove('hidden');
+                standaloneReplacements.forEach(part => {
+                    partsContainer.innerHTML += `
+                        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 hover:shadow-md transition-all duration-200">
+                            <div class="flex items-start space-x-3">
+                                <div class="p-2 bg-orange-200 rounded-lg">
+                                    <svg class="w-6 h-6 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                    </svg>
+                                </div>
+                                <div class="flex-1">
+                                    <p class="text-sm font-bold text-gray-900">${part.nama_part}</p>
+                                    <p class="text-xs text-gray-600 mt-1">${part.kode_part}</p>
+                                    <div class="flex items-center mt-2">
+                                        <span class="px-2 py-1 bg-orange-200 text-orange-800 rounded text-xs font-semibold">
+                                            Qty: ${part.quantity_used}
+                                        </span>
+                                    </div>
+                                    ${part.catatan ? `
+                                        <p class="text-xs text-gray-500 italic mt-2 border-l-2 border-orange-400 pl-2">${part.catatan}</p>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                partsSection.classList.add('hidden');
+            }
+
+            // Show modal with animation
+            const modal = document.getElementById('historyDetailModal');
+            const modalContent = document.getElementById('historyModalContent');
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modal.classList.add('opacity-100');
+
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
+
+        } else {
+            Swal.fire('Error!', 'Gagal memuat detail history', 'error');
         }
     } catch (error) {
         console.error('Error:', error);
         Swal.fire('Error!', 'Gagal memuat detail history', 'error');
     }
 }
+
+function closeHistoryDetailModal() {
+    const modal = document.getElementById('historyDetailModal');
+    const modalContent = document.getElementById('historyModalContent');
+    
+    modalContent.classList.remove('scale-100', 'opacity-100');
+    modalContent.classList.add('scale-95', 'opacity-0');
+
+    modal.classList.remove('opacity-100');
+    modal.classList.add('opacity-0');
+
+    setTimeout(() => {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }, 300);
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeHistoryDetailModal();
+});
+
+
+// Keyboard shortcut
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeHistoryDetailModal();
+    }
+});
 
 async function deleteHistory(historyId) {
     const result = await Swal.fire({

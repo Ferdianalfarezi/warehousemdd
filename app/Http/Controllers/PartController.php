@@ -7,6 +7,9 @@ use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\PartsImport;
+use App\Exports\PartsTemplateExport;
 
 class PartController extends Controller
 {
@@ -170,6 +173,60 @@ class PartController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menghapus part! Mungkin masih digunakan di data barang.'
+            ], 500);
+        }
+    }
+
+    public function importForm()
+    {
+        $suppliers = Supplier::all();
+        return view('parts.import', compact('suppliers'));
+    }
+
+    /**
+     * Download template Excel
+     */
+    public function downloadTemplate()
+    {
+        return Excel::download(new PartsTemplateExport(), 'template_import_parts.xlsx');
+    }
+
+    /**
+     * Process import Excel
+     */
+    public function import(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|mimes:xlsx,xls|max:5120',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $import = new PartsImport();
+            Excel::import($import, $request->file('file'));
+            
+            $results = $import->getResults();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Import completed!',
+                'data' => [
+                    'total' => $results['total'],
+                    'success' => $results['success'],
+                    'failed' => $results['failed'],
+                    'errors' => $results['errors']
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Import failed: ' . $e->getMessage()
             ], 500);
         }
     }

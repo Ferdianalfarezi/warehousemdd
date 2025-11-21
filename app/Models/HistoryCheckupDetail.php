@@ -17,6 +17,13 @@ class HistoryCheckupDetail extends Model
         'poin',
         'status',
         'catatan',
+        'ng_action_type',
+        'ng_action_status',
+        'ng_action_data',
+    ];
+
+    protected $casts = [
+        'ng_action_data' => 'array',
     ];
 
     /**
@@ -25,6 +32,43 @@ class HistoryCheckupDetail extends Model
     public function historyCheckup()
     {
         return $this->belongsTo(HistoryCheckup::class);
+    }
+
+    public function checkIndicator()
+    {
+        return $this->belongsTo(CheckIndicator::class);
+    }
+
+    public function checkIndicatorStandard()
+    {
+        return $this->belongsTo(CheckIndicatorStandard::class);
+    }
+
+    public function partReplacements()
+    {
+        return $this->hasMany(HistoryCheckupPartReplacement::class, 'history_checkup_detail_id');
+    }
+
+    /**
+     * Get inhouse request data from JSON
+     */
+    public function getInhouseRequestAttribute()
+    {
+        if ($this->ng_action_type === 'inhouse' && $this->ng_action_data) {
+            return (object) $this->ng_action_data;
+        }
+        return null;
+    }
+
+    /**
+     * Get outhouse request data from JSON
+     */
+    public function getOuthouseRequestAttribute()
+    {
+        if ($this->ng_action_type === 'outhouse' && $this->ng_action_data) {
+            return (object) $this->ng_action_data;
+        }
+        return null;
     }
 
     /**

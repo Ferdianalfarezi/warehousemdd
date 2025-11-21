@@ -6,6 +6,7 @@ use App\Models\HistoryCheckup;
 use App\Models\Barang;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
 class HistoryCheckupController extends Controller
@@ -60,16 +61,42 @@ class HistoryCheckupController extends Controller
      */
     public function show($id)
     {
-        $history = HistoryCheckup::with([
-            'details',
-            'partReplacements',
-            'barang'
-        ])->findOrFail($id);
+        try {
+            $history = HistoryCheckup::with([
+                'details.partReplacements.part',
+                'partReplacements.part',
+                'barang'
+            ])->findOrFail($id);
 
-        return response()->json([
-            'success' => true,
-            'data' => $history
-        ]);
+            // Process each detail to add inhouse/outhouse request data
+            foreach ($history->details as $detail) {
+                // Add inhouse/outhouse request as object from JSON
+                if ($detail->ng_action_type === 'inhouse' && $detail->ng_action_data) {
+                    $detail->inhouse_request = (object) $detail->ng_action_data;
+                    $detail->outhouse_request = null;
+                } elseif ($detail->ng_action_type === 'outhouse' && $detail->ng_action_data) {
+                    $detail->outhouse_request = (object) $detail->ng_action_data;
+                    $detail->inhouse_request = null;
+                } else {
+                    $detail->inhouse_request = null;
+                    $detail->outhouse_request = null;
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $history
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Show History Error: ' . $e->getMessage());
+            Log::error('Stack trace: ' . $e->getTraceAsString());
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal memuat detail history: ' . $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -95,6 +122,7 @@ class HistoryCheckupController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Delete History Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal menghapus history!'

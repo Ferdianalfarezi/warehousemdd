@@ -109,6 +109,8 @@
                         $existingDetail = $checkup->details->where('check_indicator_standard_id', $standard->id)->first();
                         $currentStatus = $existingDetail ? $existingDetail->status : null;
                         $currentCatatan = $existingDetail ? $existingDetail->catatan : '';
+                        $existingActionType = $existingDetail ? $existingDetail->ng_action_type : null;
+                        $existingActionStatus = $existingDetail ? $existingDetail->ng_action_status : null;
                     @endphp
 
                     <div class="border border-gray-200 rounded-lg p-4" data-standard-id="{{ $standard->id }}">
@@ -169,41 +171,191 @@
                             >{{ $currentCatatan }}</textarea>
                         </div>
 
-                        <!-- NG Actions (Add Part Button) -->
+                        <!-- NG Actions -->
                         <div class="ng-actions mt-3 {{ $currentStatus === 'ng' ? '' : 'hidden' }}" data-ng-section="{{ $standard->id }}">
-                            <button 
-                                type="button"
-                                onclick="openAddPartModal({{ $checkup->id }}, {{ $standard->id }})"
-                                class="inline-flex items-center px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition"
-                            >
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                                </svg>
-                                Tambah Part
-                            </button>
+                            
+                            @if(!$existingActionType)
+                                <!-- Dropdown untuk pilih action type -->
+                                <div class="mb-3">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tindakan:</label>
+                                    <select 
+                                        id="actionTypeSelect-{{ $standard->id }}"
+                                        onchange="showActionForm({{ $standard->id }})"
+                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
+                                    >
+                                        <option value="">-- Pilih Tindakan --</option>
+                                        <option value="part">Ganti Part</option>
+                                        <option value="inhouse">Proses Inhouse</option>
+                                        <option value="outhouse">Proses Outhouse</option>
+                                    </select>
+                                </div>
 
-                            <!-- Part List -->
-                            <div class="mt-3 space-y-2" id="partList-{{ $standard->id }}">
-                                @if($existingDetail && $existingDetail->partReplacements)
-                                    @foreach($existingDetail->partReplacements as $partReplacement)
-                                        <div class="flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200" data-part-id="{{ $partReplacement->id }}">
-                                            <div class="flex-1">
-                                                <p class="text-sm font-medium text-gray-900">{{ $partReplacement->part->nama }}</p>
-                                                <p class="text-xs text-gray-600">{{ $partReplacement->part->kode_part }} - Qty: {{ $partReplacement->quantity_used }}</p>
-                                            </div>
+                                <!-- Form Ganti Part -->
+                                <div id="partForm-{{ $standard->id }}" class="hidden">
+                                    <button 
+                                        type="button"
+                                        onclick="openAddPartModal({{ $checkup->id }}, {{ $standard->id }})"
+                                        class="inline-flex items-center px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition"
+                                    >
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                        </svg>
+                                        Tambah Part
+                                    </button>
+
+                                    <!-- Part List -->
+                                    <div class="mt-3 space-y-2" id="partList-{{ $standard->id }}">
+                                        <!-- Will be populated dynamically -->
+                                    </div>
+                                </div>
+
+                                <!-- Form Inhouse -->
+                                <div id="inhouseForm-{{ $standard->id }}" class="hidden space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Problem:</label>
+                                        <textarea 
+                                            id="inhouseProblem-{{ $standard->id }}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black resize-none"
+                                            rows="2"
+                                            placeholder="Jelaskan masalah yang terjadi..."
+                                        ></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Proses yang Dilakukan:</label>
+                                        <textarea 
+                                            id="inhouseProses-{{ $standard->id }}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black resize-none"
+                                            rows="2"
+                                            placeholder="Jelaskan proses perbaikan yang akan dilakukan..."
+                                        ></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Mesin:</label>
+                                        <input 
+                                            type="text"
+                                            id="inhouseMesin-{{ $standard->id }}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
+                                            placeholder="Nama mesin yang akan diperbaiki..."
+                                        >
+                                    </div>
+                                    <button 
+                                        type="button"
+                                        onclick="submitInhouseRequest({{ $checkup->id }}, {{ $standard->id }})"
+                                        class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition"
+                                    >
+                                        Submit Permintaan Inhouse
+                                    </button>
+                                </div>
+
+                                <!-- Form Outhouse -->
+                                <div id="outhouseForm-{{ $standard->id }}" class="hidden space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Problem:</label>
+                                        <textarea 
+                                            id="outhouseProblem-{{ $standard->id }}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black resize-none"
+                                            rows="2"
+                                            placeholder="Jelaskan masalah yang terjadi..."
+                                        ></textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Mesin:</label>
+                                        <input 
+                                            type="text"
+                                            id="outhouseMesin-{{ $standard->id }}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
+                                            placeholder="Nama mesin yang akan diperbaiki..."
+                                        >
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-1">Supplier:</label>
+                                        <input 
+                                            type="text"
+                                            id="outhouseSupplier-{{ $standard->id }}"
+                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
+                                            placeholder="Nama supplier..."
+                                        >
+                                    </div>
+                                    <button 
+                                        type="button"
+                                        onclick="submitOuthouseRequest({{ $checkup->id }}, {{ $standard->id }})"
+                                        class="w-full px-4 py-2 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition"
+                                    >
+                                        Submit Permintaan Outhouse
+                                    </button>
+                                </div>
+                            @else
+                                <!-- Show existing action status -->
+                                <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div class="flex items-center justify-between">
+                                        <div>
+                                            <p class="text-sm font-medium text-blue-900">
+                                                Tindakan: 
+                                                @if($existingActionType === 'part')
+                                                    <span class="px-2 py-1 bg-orange-500 text-white rounded text-xs">Ganti Part</span>
+                                                @elseif($existingActionType === 'inhouse')
+                                                    <span class="px-2 py-1 bg-blue-500 text-white rounded text-xs">Inhouse</span>
+                                                @elseif($existingActionType === 'outhouse')
+                                                    <span class="px-2 py-1 bg-purple-500 text-white rounded text-xs">Outhouse</span>
+                                                @endif
+                                            </p>
+                                            <p class="text-xs text-blue-700 mt-1">
+                                                Status: 
+                                                <span data-action-status="{{ $existingActionStatus }}">
+                                                    @if($existingActionStatus === 'waiting_part_installation')
+                                                        Menunggu Pemasangan Part
+                                                    @elseif($existingActionStatus === 'waiting_pdd_confirm')
+                                                        Menunggu Konfirmasi PDD
+                                                    @elseif($existingActionStatus === 'inhouse_on_process')
+                                                        Inhouse Sedang Dikerjakan
+                                                    @elseif($existingActionStatus === 'inhouse_completed')
+                                                        Inhouse Selesai
+                                                    @elseif($existingActionStatus === 'waiting_subcont_confirm')
+                                                        Menunggu Konfirmasi Subcont
+                                                    @elseif($existingActionStatus === 'outhouse_on_process')
+                                                        Outhouse Sedang Dikerjakan
+                                                    @elseif($existingActionStatus === 'outhouse_completed')
+                                                        Outhouse Selesai
+                                                    @elseif($existingActionStatus === 'closed')
+                                                        Selesai
+                                                    @endif
+                                                </span>
+                                            </p>
+                                        </div>
+
+                                        <!-- Close Button (muncul jika status completed) -->
+                                        @if(in_array($existingActionStatus, ['waiting_part_installation', 'inhouse_completed', 'outhouse_completed']))
                                             <button 
                                                 type="button"
-                                                onclick="removePart({{ $partReplacement->id }}, {{ $standard->id }})"
-                                                class="text-red-500 hover:text-red-700"
+                                                onclick="closeAction('{{ $existingActionType }}', {{ $existingDetail->id }}, {{ $standard->id }})"
+                                                class="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition"
                                             >
-                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                                                </svg>
+                                                Close
                                             </button>
+                                        @endif
+                                    </div>
+
+                                    <!-- Hidden input untuk track action status -->
+                                    <input 
+                                        type="hidden" 
+                                        data-ng-action-status="{{ $standard->id }}" 
+                                        value="{{ $existingActionStatus }}"
+                                    >
+
+                                    <!-- Show part list if action type is part -->
+                                    @if($existingActionType === 'part' && $existingDetail->partReplacements->count() > 0)
+                                        <div class="mt-3 space-y-2">
+                                            <p class="text-xs font-semibold text-blue-900">Part yang digunakan:</p>
+                                            @foreach($existingDetail->partReplacements as $partReplacement)
+                                                <div class="bg-white p-2 rounded border border-blue-200">
+                                                    <p class="text-sm font-medium text-gray-900">{{ $partReplacement->part->nama }}</p>
+                                                    <p class="text-xs text-gray-600">{{ $partReplacement->part->kode_part }} - Qty: {{ $partReplacement->quantity_used }}</p>
+                                                </div>
+                                            @endforeach
                                         </div>
-                                    @endforeach
-                                @endif
-                            </div>
+                                    @endif
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @endforeach
@@ -319,33 +471,273 @@ function setStatus(standardId, status) {
     updateActionButtons();
 }
 
+// Show action form based on selected type
+function showActionForm(standardId) {
+    const actionType = document.getElementById(`actionTypeSelect-${standardId}`).value;
+    
+    // Hide all forms
+    document.getElementById(`partForm-${standardId}`).classList.add('hidden');
+    document.getElementById(`inhouseForm-${standardId}`).classList.add('hidden');
+    document.getElementById(`outhouseForm-${standardId}`).classList.add('hidden');
+    
+    // Show selected form
+    if (actionType === 'part') {
+        document.getElementById(`partForm-${standardId}`).classList.remove('hidden');
+    } else if (actionType === 'inhouse') {
+        document.getElementById(`inhouseForm-${standardId}`).classList.remove('hidden');
+    } else if (actionType === 'outhouse') {
+        document.getElementById(`outhouseForm-${standardId}`).classList.remove('hidden');
+    }
+}
+
 // Update action buttons based on status
 function updateActionButtons() {
     const statusInputs = document.querySelectorAll('input[data-status-input]');
-    let hasNG = false;
+    let hasNGNotClosed = false;
     let allFilled = true;
 
     statusInputs.forEach(input => {
-        if (input.value === 'ng') {
-            hasNG = true;
-        }
-        if (!input.value) {
+        const standardId = input.getAttribute('data-status-input');
+        const status = input.value;
+
+        // Check if filled
+        if (!status) {
             allFilled = false;
+            return;
+        }
+
+        // Check if NG
+        if (status === 'ng') {
+            // Check action status from hidden input
+            const actionStatusInput = document.querySelector(`input[data-ng-action-status="${standardId}"]`);
+            
+            if (actionStatusInput) {
+                const actionStatus = actionStatusInput.value;
+                // If action status is NOT 'closed', then it's not complete yet
+                if (actionStatus !== 'closed') {
+                    hasNGNotClosed = true;
+                }
+            } else {
+                // No action selected/completed yet
+                hasNGNotClosed = true;
+            }
         }
     });
 
     const saveTempBtn = document.getElementById('saveTempBtn');
     const finishBtn = document.getElementById('finishBtn');
 
-    if (hasNG) {
-        saveTempBtn.classList.remove('hidden');
-        finishBtn.classList.add('hidden');
-    } else if (allFilled) {
+    // Show "Selesai" only if:
+    // 1. All parameters are filled
+    // 2. No NG that is not closed yet
+    if (allFilled && !hasNGNotClosed) {
         saveTempBtn.classList.add('hidden');
         finishBtn.classList.remove('hidden');
     } else {
         saveTempBtn.classList.remove('hidden');
         finishBtn.classList.add('hidden');
+    }
+}
+
+// Submit Inhouse Request
+async function submitInhouseRequest(checkupId, standardId) {
+    const problem = document.getElementById(`inhouseProblem-${standardId}`).value;
+    const proses = document.getElementById(`inhouseProses-${standardId}`).value;
+    const mesin = document.getElementById(`inhouseMesin-${standardId}`).value;
+
+    if (!problem || !proses || !mesin) {
+        Swal.fire('Peringatan!', 'Semua field harus diisi!', 'warning');
+        return;
+    }
+
+    // Get checkup_detail_id
+    const detailId = await getOrCreateDetailId(checkupId, standardId);
+
+    if (!detailId) {
+        Swal.fire('Error!', 'Gagal mendapatkan detail ID!', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/inhouse-requests/store', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                general_checkup_id: checkupId,
+                checkup_detail_id: detailId,
+                problem: problem,
+                proses_dilakukan: proses,
+                mesin: mesin
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            await Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: result.message,
+                showConfirmButton: false,
+                timer: 1500
+            });
+            location.reload();
+        } else {
+            Swal.fire('Error!', result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire('Error!', 'Gagal mengajukan permintaan inhouse!', 'error');
+    }
+}
+
+// Submit Outhouse Request
+async function submitOuthouseRequest(checkupId, standardId) {
+    const problem = document.getElementById(`outhouseProblem-${standardId}`).value;
+    const mesin = document.getElementById(`outhouseMesin-${standardId}`).value;
+    const supplier = document.getElementById(`outhouseSupplier-${standardId}`).value;
+
+    if (!problem || !mesin || !supplier) {
+        Swal.fire('Peringatan!', 'Semua field harus diisi!', 'warning');
+        return;
+    }
+
+    // Get checkup_detail_id
+    const detailId = await getOrCreateDetailId(checkupId, standardId);
+
+    if (!detailId) {
+        Swal.fire('Error!', 'Gagal mendapatkan detail ID!', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/outhouse-requests/store', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                general_checkup_id: checkupId,
+                checkup_detail_id: detailId,
+                problem: problem,
+                mesin: mesin,
+                supplier: supplier
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            await Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: result.message,
+                showConfirmButton: false,
+                timer: 1500
+            });
+            location.reload();
+        } else {
+            Swal.fire('Error!', result.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire('Error!', 'Gagal mengajukan permintaan outhouse!', 'error');
+    }
+}
+
+// Helper function to get or create checkup detail ID
+async function getOrCreateDetailId(checkupId, standardId) {
+    // First save current status to create detail if not exists
+    const formData = new FormData(document.getElementById('checkupForm'));
+    const data = {};
+    data.details = [];
+
+    const statusInput = document.querySelector(`input[data-status-input="${standardId}"]`);
+    const status = statusInput.value;
+    const catatan = formData.get(`details[${standardId}][catatan]`);
+
+    data.details.push({
+        check_indicator_standard_id: standardId,
+        status: status,
+        catatan: catatan
+    });
+
+    try {
+        const response = await fetch(`/general-checkups/${checkupId}/save-checkup`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        
+        if (result.success && result.detail_id) {
+            return result.detail_id;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error:', error);
+        return null;
+    }
+}
+
+// Close Action
+async function closeAction(actionType, detailId, standardId) {
+    const result = await Swal.fire({
+        title: 'Close Tindakan?',
+        text: "Tindakan akan ditandai selesai",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Close!',
+        cancelButtonText: 'Batal'
+    });
+
+    if (!result.isConfirmed) return;
+
+    let url = '';
+    if (actionType === 'part') {
+        url = `/checkup-parts/${detailId}/close`;
+    } else if (actionType === 'inhouse') {
+        url = `/inhouse-requests/${detailId}/close`;
+    } else if (actionType === 'outhouse') {
+        url = `/outhouse-requests/${detailId}/close`;
+    }
+
+    try {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            await Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: data.message,
+                showConfirmButton: false,
+                timer: 1500
+            });
+            location.reload();
+        } else {
+            Swal.fire('Error!', data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire('Error!', 'Gagal menutup tindakan!', 'error');
     }
 }
 
@@ -533,6 +925,14 @@ async function addPart() {
         return;
     }
 
+    // Get checkup_detail_id
+    const detailId = await getOrCreateDetailId(checkupId, selectedStandardId);
+
+    if (!detailId) {
+        Swal.fire('Error!', 'Gagal mendapatkan detail ID!', 'error');
+        return;
+    }
+
     try {
         const response = await fetch('/checkup-parts/add', {
             method: 'POST',
@@ -542,7 +942,7 @@ async function addPart() {
             },
             body: JSON.stringify({
                 general_checkup_id: checkupId,
-                checkup_detail_id: null,
+                checkup_detail_id: detailId,
                 part_id: partId,
                 quantity_used: quantity,
                 catatan: catatan
@@ -563,6 +963,9 @@ async function addPart() {
             // Add to part list
             addPartToList(selectedStandardId, result.data);
             closeAddPartModal();
+            
+            // Reload to update status
+            location.reload();
         } else {
             Swal.fire('Error!', result.message, 'error');
         }

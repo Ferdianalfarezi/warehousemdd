@@ -15,6 +15,8 @@ class CheckupDetail extends Model
         'check_indicator_standard_id',
         'status',
         'catatan',
+        'ng_action_type',
+        'ng_action_status',
     ];
 
     /**
@@ -92,4 +94,16 @@ class CheckupDetail extends Model
     {
         return $query->where('status', 'ng');
     }
+
+    public function inhouseRequest()
+    {
+        return $this->hasOne(InhouseRequest::class);
+    }
+
+    public function outhouseRequest()
+    {
+        return $this->hasOne(OuthouseRequest::class);
+    }
+
+    
 }

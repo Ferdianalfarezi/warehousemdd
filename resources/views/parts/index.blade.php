@@ -11,15 +11,29 @@
             <h1 class="text-3xl font-bold text-gray-900">Parts</h1>
             <p class="text-gray-600 mt-1">Manage warehouse parts and inventory</p>
         </div>
-        <button 
-            onclick="openCreateModal()"
-            class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
-        >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-            </svg>
-            <span>Add Part</span>
-        </button>
+        <div class="flex space-x-3">
+            <!-- Button Import Excel -->
+            <button 
+                onclick="openImportModal()"
+                class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition transform hover:scale-105 flex items-center space-x-2"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <span>Import Excel</span>
+            </button>
+            
+            <!-- Button Add Part -->
+            <button 
+                onclick="openCreateModal()"
+                class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                <span>Add Part</span>
+            </button>
+        </div>
     </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -160,6 +174,9 @@
 
 <!-- Include Edit Modal -->
 @include('parts.edit')
+
+<!-- Include Import Modal -->
+@include('parts.import')
 
 <!-- Image Preview Modal -->
 <div id="imagePreviewModal" class="fixed inset-0 hidden items-center justify-center z-50 p-4" onclick="closeImagePreview()">

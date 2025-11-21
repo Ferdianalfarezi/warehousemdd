@@ -138,6 +138,23 @@
         background: linear-gradient(180deg, #000000 0%, #1a1a1a 100%);
     }
 
+    /* Logo Styles */
+    .logo-container {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .logo-image {
+        width: 75px;
+        height: 50px;
+        object-fit: contain;
+        transition: transform 0.3s ease;
+    }
+
+    .logo-container:hover .logo-image {
+        transform: scale(1.05);
+    }
+
     /* Menu Group Header */
     .menu-group-header {
         position: relative;
@@ -277,16 +294,6 @@
         transform: translateY(-1px);
     }
 
-    /* Logo Animation */
-    @keyframes logoFloat {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-3px); }
-    }
-
-    .logo-text {
-        animation: logoFloat 3s ease-in-out infinite;
-    }
-
     /* Sidebar transition */
     aside {
         transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -311,13 +318,44 @@
     a {
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-fadeIn {
+        animation: fadeIn 0.3s ease-in-out;
+    }
+
+    .animate-slideIn {
+        animation: slideIn 0.3s ease-out;
+    }
 </style>
 <body class="bg-gray-50 font-sans antialiased">
     <div class="flex h-screen overflow-hidden" x-data="{ 
         sidebarOpen: true,
-        masterOpen: true,
-        transactionOpen: true,
-        historyOpen: true
+        openMenus: {
+            master: {{ request()->routeIs('parts.*') || request()->routeIs('barangs.*') || request()->routeIs('schedules.*') || request()->routeIs('check-indicators.*') || request()->routeIs('suppliers.*') || request()->routeIs('users.*') ? 'true' : 'false' }},
+            transaction: {{ request()->routeIs('general-checkups.*') ? 'true' : 'false' }},
+            approval: {{ request()->routeIs('pdd.confirm.*') || request()->routeIs('subcont.confirm.*') ? 'true' : 'false' }},
+            andon: {{ request()->routeIs('andon.inhouse.*') || request()->routeIs('andon.outhouse.*') ? 'true' : 'false' }},
+            history: {{ request()->routeIs('history-checkups.*') ? 'true' : 'false' }}
+        },
+        toggleMenu(menu) {
+            Object.keys(this.openMenus).forEach(key => {
+                if (key !== menu) {
+                    this.openMenus[key] = false;
+                }
+            });
+            this.openMenus[menu] = !this.openMenus[menu];
+        }
     }">
         
         <!-- Sidebar -->
@@ -326,12 +364,14 @@
             :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
         >
             <!-- Logo -->
-            <div class="flex items-center justify-center h-16 border-b border-gray-800 border-opacity-50">
-                <h1 class="text-xl font-bold tracking-wider logo-text">WarehousMDD</h1>
+            <div class="logo-container flex items-center justify-center h-20 border-b border-gray-800 border-opacity-50 px-4">
+                <!-- Ganti src dengan path logo Anda -->
+                <img src="{{ asset('images/logomdd.png') }}" alt="Logo" class="logo-image  ">
+                <h1 class="text-xl tracking-wider mt-2"><i>Warehouse</i></h1>
             </div>
 
             <!-- Navigation -->
-            <nav class="mt-4 px-3 space-y-1 overflow-y-auto h-[calc(100vh-9rem)] pb-4">
+            <nav class="mt-4 px-3 space-y-1 overflow-y-auto h-[calc(100vh-11rem)] pb-4">
                 
                 <!-- Dashboard - Direct Link (No Dropdown) -->
                 <a href="{{ route('dashboard') }}" 
@@ -344,22 +384,22 @@
 
                 <!-- Data Master Group -->
                 <div>
-                    <button @click="masterOpen = !masterOpen" 
+                    <button @click="toggleMenu('master')" 
                             class="menu-group-header w-full flex items-center justify-between"
-                            :class="masterOpen ? 'active' : ''">
+                            :class="openMenus.master ? 'active' : ''">
                         <div class="flex items-center">
                             <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
                             </svg>
                             <span class="font-semibold text-sm">Data Master</span>
                         </div>
-                        <svg class="w-4 h-4 chevron-icon" :class="masterOpen ? 'open' : ''" 
+                        <svg class="w-4 h-4 chevron-icon" :class="openMenus.master ? 'open' : ''" 
                              fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
                     
-                    <div class="submenu-container" :class="masterOpen ? 'open' : ''">
+                    <div class="submenu-container" :class="openMenus.master ? 'open' : ''">
                         <div class="ml-8 mt-1 space-y-1">
                             <a href="{{ route('parts.index') }}" 
                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('parts.*') ? 'active' : '' }}">
@@ -416,22 +456,22 @@
 
                 <!-- Data Transaksi Group -->
                 <div>
-                    <button @click="transactionOpen = !transactionOpen" 
+                    <button @click="toggleMenu('transaction')" 
                             class="menu-group-header w-full flex items-center justify-between"
-                            :class="transactionOpen ? 'active' : ''">
+                            :class="openMenus.transaction ? 'active' : ''">
                         <div class="flex items-center">
                             <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                             </svg>
                             <span class="font-semibold text-sm">Data Transaksi</span>
                         </div>
-                        <svg class="w-4 h-4 chevron-icon" :class="transactionOpen ? 'open' : ''" 
+                        <svg class="w-4 h-4 chevron-icon" :class="openMenus.transaction ? 'open' : ''" 
                              fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
                     
-                    <div class="submenu-container" :class="transactionOpen ? 'open' : ''">
+                    <div class="submenu-container" :class="openMenus.transaction ? 'open' : ''">
                         <div class="ml-8 mt-1 space-y-1">
                             <a href="{{ route('general-checkups.index') }}" 
                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('general-checkups.*') ? 'active' : '' }}">
@@ -444,24 +484,100 @@
                     </div>
                 </div>
 
+                <!-- Approval Group -->
+                <div>
+                    <button @click="toggleMenu('approval')" 
+                            class="menu-group-header w-full flex items-center justify-between"
+                            :class="openMenus.approval ? 'active' : ''">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <span class="font-semibold text-sm">Approval</span>
+                        </div>
+                        <svg class="w-4 h-4 chevron-icon" :class="openMenus.approval ? 'open' : ''" 
+                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="submenu-container" :class="openMenus.approval ? 'open' : ''">
+                        <div class="ml-8 mt-1 space-y-1">
+                            <a href="{{ route('pdd.confirm.index') }}" 
+                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('pdd.confirm.*') ? 'active' : '' }}">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                </svg>
+                                Konfirmasi Inhouse
+                            </a>
+
+                            <a href="{{ route('subcont.confirm.index') }}" 
+                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('subcont.confirm.*') ? 'active' : '' }}">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                </svg>
+                                Konfirmasi Outhouse
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Andon Group -->
+                <div>
+                    <button @click="toggleMenu('andon')" 
+                            class="menu-group-header w-full flex items-center justify-between"
+                            :class="openMenus.andon ? 'active' : ''">
+                        <div class="flex items-center">
+                            <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                            </svg>
+                            <span class="font-semibold text-sm">Andon</span>
+                        </div>
+                        <svg class="w-4 h-4 chevron-icon" :class="openMenus.andon ? 'open' : ''" 
+                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    
+                    <div class="submenu-container" :class="openMenus.andon ? 'open' : ''">
+                        <div class="ml-8 mt-1 space-y-1">
+                            <a href="{{ route('andon.inhouse.index') }}" 
+                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.inhouse.*') ? 'active' : '' }}">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                </svg>
+                                Andon Inhouse
+                            </a>
+
+                            <a href="{{ route('andon.outhouse.index') }}" 
+                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.outhouse.*') ? 'active' : '' }}">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                </svg>
+                                Andon Outhouse
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Data History Group -->
                 <div>
-                    <button @click="historyOpen = !historyOpen" 
+                    <button @click="toggleMenu('history')" 
                             class="menu-group-header w-full flex items-center justify-between"
-                            :class="historyOpen ? 'active' : ''">
+                            :class="openMenus.history ? 'active' : ''">
                         <div class="flex items-center">
                             <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <span class="font-semibold text-sm">Data History</span>
                         </div>
-                        <svg class="w-4 h-4 chevron-icon" :class="historyOpen ? 'open' : ''" 
+                        <svg class="w-4 h-4 chevron-icon" :class="openMenus.history ? 'open' : ''" 
                              fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
                     
-                    <div class="submenu-container" :class="historyOpen ? 'open' : ''">
+                    <div class="submenu-container" :class="openMenus.history ? 'open' : ''">
                         <div class="ml-8 mt-1 space-y-1">
                             <a href="{{ route('history-checkups.index') }}" 
                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('history-checkups.*') ? 'active' : '' }}">

@@ -7,13 +7,23 @@
     <title>Login - WarehousMDD</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
+
+<style>
+    .logo-image {
+            width: 440px;
+            height: 120px;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+</style>
+
 <body class="bg-black">
     <div class="min-h-screen flex items-center justify-center px-4">
         <div class="max-w-md w-full">
             <!-- Logo/Title -->
             <div class="text-center mb-8">
-                <h1 class="text-4xl font-bold text-white mb-2">WarehousMDD</h1>
-                <p class="text-gray-400">Warehouse Management System</p>
+                <img src="{{ asset('images/logomdd.png') }}" alt="Logo" class="logo-image  ">
+                <p class="text-white">Warehouse Management System</p>
             </div>
 
             <!-- Login Card -->
@@ -97,7 +107,7 @@
 
             <!-- Copyright -->
             <div class="text-center mt-6">
-                <p class="text-gray-500 text-sm">&copy; 2024 WarehousMDD. All rights reserved.</p>
+                <p class="text-gray-500 text-sm">&copy; 2025 Warehouse MDD. All rights reserved.</p>
             </div>
         </div>
     </div>
