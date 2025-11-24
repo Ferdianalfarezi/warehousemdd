@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/PddConfirmController.php
 
 namespace App\Http\Controllers;
 
@@ -15,16 +14,13 @@ class PddConfirmController extends Controller
      */
     public function index()
     {
-        // HAPUS PENGECEKAN INI:
-        // if (!in_array(Auth::user()->role, ['pdd', 'superadmin'])) {
-        //     abort(403, 'Unauthorized');
-        // }
-
         $requests = InhouseRequest::with([
             'generalCheckup.barang',
-            'checkupDetail.checkIndicatorStandard'
+            'checkupDetail.checkIndicatorStandard',
+            'confirmedBy',
+            'completedBy'
         ])
-        ->pending()
+        ->whereIn('status', ['pending', 'on_process'])
         ->orderBy('created_at', 'desc')
         ->get();
 
@@ -43,7 +39,9 @@ class PddConfirmController extends Controller
     {
         $request = InhouseRequest::with([
             'generalCheckup.barang',
-            'checkupDetail.checkIndicatorStandard'
+            'checkupDetail.checkIndicatorStandard',
+            'confirmedBy',
+            'completedBy'
         ])->findOrFail($id);
 
         return response()->json([
@@ -53,7 +51,7 @@ class PddConfirmController extends Controller
     }
 
     /**
-     * Approve permintaan inhouse
+     * Approve permintaan inhouse (konfirmasi pertama)
      */
     public function approve($id)
     {
@@ -68,7 +66,7 @@ class PddConfirmController extends Controller
                 ], 400);
             }
 
-            // Update status
+            // Update ke on_process
             $inhouseRequest->status = 'on_process';
             $inhouseRequest->confirmed_by = Auth::id();
             $inhouseRequest->confirmed_at = now();
@@ -91,6 +89,49 @@ class PddConfirmController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal konfirmasi permintaan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Complete permintaan inhouse (konfirmasi kedua)
+     */
+    public function complete($id)
+    {
+        DB::beginTransaction();
+        try {
+            $inhouseRequest = InhouseRequest::findOrFail($id);
+
+            if ($inhouseRequest->status !== 'on_process') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Permintaan belum dalam status On Process!'
+                ], 400);
+            }
+
+            // Update ke completed
+            $inhouseRequest->status = 'completed';
+            $inhouseRequest->completed_by = Auth::id();
+            $inhouseRequest->completed_at = now();
+            $inhouseRequest->save();
+
+            // Update checkup detail
+            $detail = $inhouseRequest->checkupDetail;
+            $detail->ng_action_status = 'inhouse_completed';
+            $detail->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Perbaikan berhasil diselesaikan!'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyelesaikan perbaikan: ' . $e->getMessage()
             ], 500);
         }
     }

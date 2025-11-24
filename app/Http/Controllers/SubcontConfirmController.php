@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/SubcontConfirmController.php
 
 namespace App\Http\Controllers;
 
@@ -15,16 +14,13 @@ class SubcontConfirmController extends Controller
      */
     public function index()
     {
-        // HAPUS PENGECEKAN INI:
-        // if (!in_array(Auth::user()->role, ['subcont', 'superadmin'])) {
-        //     abort(403, 'Unauthorized');
-        // }
-
         $requests = OuthouseRequest::with([
             'generalCheckup.barang',
-            'checkupDetail.checkIndicatorStandard'
+            'checkupDetail.checkIndicatorStandard',
+            'confirmedBy',
+            'completedBy'
         ])
-        ->pending()
+        ->whereIn('status', ['pending', 'on_process'])
         ->orderBy('created_at', 'desc')
         ->get();
 
@@ -43,7 +39,9 @@ class SubcontConfirmController extends Controller
     {
         $request = OuthouseRequest::with([
             'generalCheckup.barang',
-            'checkupDetail.checkIndicatorStandard'
+            'checkupDetail.checkIndicatorStandard',
+            'confirmedBy',
+            'completedBy'
         ])->findOrFail($id);
 
         return response()->json([
@@ -53,7 +51,7 @@ class SubcontConfirmController extends Controller
     }
 
     /**
-     * Approve permintaan outhouse
+     * Approve permintaan outhouse (konfirmasi pertama)
      */
     public function approve($id)
     {
@@ -68,7 +66,7 @@ class SubcontConfirmController extends Controller
                 ], 400);
             }
 
-            // Update status
+            // Update ke on_process
             $outhouseRequest->status = 'on_process';
             $outhouseRequest->confirmed_by = Auth::id();
             $outhouseRequest->confirmed_at = now();
@@ -91,6 +89,49 @@ class SubcontConfirmController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal konfirmasi permintaan: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Complete permintaan outhouse (konfirmasi kedua)
+     */
+    public function complete($id)
+    {
+        DB::beginTransaction();
+        try {
+            $outhouseRequest = OuthouseRequest::findOrFail($id);
+
+            if ($outhouseRequest->status !== 'on_process') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Permintaan belum dalam status On Process!'
+                ], 400);
+            }
+
+            // Update ke completed
+            $outhouseRequest->status = 'completed';
+            $outhouseRequest->completed_by = Auth::id();
+            $outhouseRequest->completed_at = now();
+            $outhouseRequest->save();
+
+            // Update checkup detail
+            $detail = $outhouseRequest->checkupDetail;
+            $detail->ng_action_status = 'outhouse_completed';
+            $detail->save();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Perbaikan berhasil diselesaikan!'
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyelesaikan perbaikan: ' . $e->getMessage()
             ], 500);
         }
     }

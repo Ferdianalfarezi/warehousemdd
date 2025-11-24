@@ -1,4 +1,3 @@
-{{-- resources/views/subcont/confirm.blade.php --}}
 @extends('layouts.app')
 
 @section('title', 'Konfirmasi Outhouse - Subcont')
@@ -97,9 +96,16 @@
                                     @if($request->status === 'pending')
                                         <button 
                                             onclick="approveRequest({{ $request->id }})"
-                                            class="bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-600 transition"
+                                            class="bg-purple-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-purple-600 transition"
                                         >
                                             Approve
+                                        </button>
+                                    @elseif($request->status === 'on_process')
+                                        <button 
+                                            onclick="completeRequest({{ $request->id }})"
+                                            class="bg-green-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-600 transition"
+                                        >
+                                            Complete
                                         </button>
                                     @endif
                                 </div>
@@ -162,6 +168,30 @@
                 <p class="text-xs text-gray-500">Tanggal Permintaan</p>
                 <p id="detailTanggal" class="text-sm font-semibold text-gray-900">-</p>
             </div>
+            <div id="confirmedSection" style="display: none;">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs text-gray-500">Dikonfirmasi Oleh</p>
+                        <p id="detailConfirmedBy" class="text-sm font-semibold text-gray-900">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Tanggal Konfirmasi</p>
+                        <p id="detailConfirmedAt" class="text-sm font-semibold text-gray-900">-</p>
+                    </div>
+                </div>
+            </div>
+            <div id="completedSection" style="display: none;">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-xs text-gray-500">Diselesaikan Oleh</p>
+                        <p id="detailCompletedBy" class="text-sm font-semibold text-gray-900">-</p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500">Tanggal Selesai</p>
+                        <p id="detailCompletedAt" class="text-sm font-semibold text-gray-900">-</p>
+                    </div>
+                </div>
+            </div>
             <div>
                 <p class="text-xs text-gray-500">Status</p>
                 <p id="detailStatus" class="text-sm font-semibold text-gray-900">-</p>
@@ -190,6 +220,24 @@ async function openDetailModal(requestId) {
             document.getElementById('detailTanggal').textContent = new Date(request.created_at).toLocaleString('id-ID');
             document.getElementById('detailStatus').textContent = request.status_display;
 
+            // Show confirmed section if on_process or completed
+            if (request.status === 'on_process' || request.status === 'completed') {
+                document.getElementById('confirmedSection').style.display = 'block';
+                document.getElementById('detailConfirmedBy').textContent = request.confirmed_by ? request.confirmed_by.name : '-';
+                document.getElementById('detailConfirmedAt').textContent = request.confirmed_at ? new Date(request.confirmed_at).toLocaleString('id-ID') : '-';
+            } else {
+                document.getElementById('confirmedSection').style.display = 'none';
+            }
+
+            // Show completed section if completed
+            if (request.status === 'completed') {
+                document.getElementById('completedSection').style.display = 'block';
+                document.getElementById('detailCompletedBy').textContent = request.completed_by ? request.completed_by.name : '-';
+                document.getElementById('detailCompletedAt').textContent = request.completed_at ? new Date(request.completed_at).toLocaleString('id-ID') : '-';
+            } else {
+                document.getElementById('completedSection').style.display = 'none';
+            }
+
             const modal = document.getElementById('detailModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');
@@ -209,10 +257,10 @@ function closeDetailModal() {
 async function approveRequest(requestId) {
     const result = await Swal.fire({
         title: 'Approve Permintaan?',
-        text: "Permintaan akan dikirim ke Andon Outhouse",
+        text: "Permintaan akan masuk ke status On Process",
         icon: 'question',
         showCancelButton: true,
-        confirmButtonColor: '#10b981',
+        confirmButtonColor: '#9333ea',
         cancelButtonColor: '#d33',
         confirmButtonText: 'Ya, Approve!',
         cancelButtonText: 'Batal'
@@ -245,6 +293,48 @@ async function approveRequest(requestId) {
     } catch (error) {
         console.error('Error:', error);
         Swal.fire('Error!', 'Gagal approve permintaan!', 'error');
+    }
+}
+
+async function completeRequest(requestId) {
+    const result = await Swal.fire({
+        title: 'Complete Perbaikan?',
+        text: "Perbaikan akan ditandai selesai",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Complete!',
+        cancelButtonText: 'Batal'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const response = await fetch(`/subcont/confirm/${requestId}/complete`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            await Swal.fire({
+                icon: 'success',
+                title: 'Berhasil!',
+                text: data.message,
+                showConfirmButton: false,
+                timer: 1500
+            });
+            location.reload();
+        } else {
+            Swal.fire('Error!', data.message, 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire('Error!', 'Gagal complete perbaikan!', 'error');
     }
 }
 

@@ -50,7 +50,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/parts/download-template', [PartController::class, 'downloadTemplate'])->name('parts.download.template');
     Route::resource('parts', PartController::class);
     
-
     // Barangs
     Route::resource('barangs', BarangController::class);
     Route::get('barangs/{barang}/details', [CheckIndicatorController::class, 'getBarangDetails']);
@@ -91,31 +90,33 @@ Route::middleware('auth')->group(function () {
 
     // ==================== APPROVAL ====================
     
-    // PDD Confirmation (no middleware - cek di blade)
+    // PDD Confirmation
     Route::prefix('pdd')->name('pdd.')->group(function () {
         Route::get('confirm', [PddConfirmController::class, 'index'])->name('confirm.index');
         Route::get('confirm/{id}', [PddConfirmController::class, 'show'])->name('confirm.show');
         Route::post('confirm/{id}/approve', [PddConfirmController::class, 'approve'])->name('confirm.approve');
+        Route::post('confirm/{id}/complete', [PddConfirmController::class, 'complete'])->name('confirm.complete'); // 🔥 NEW
     });
 
-    // Subcont Confirmation (no middleware - cek di blade)
+    // Subcont Confirmation
     Route::prefix('subcont')->name('subcont.')->group(function () {
         Route::get('confirm', [SubcontConfirmController::class, 'index'])->name('confirm.index');
         Route::get('confirm/{id}', [SubcontConfirmController::class, 'show'])->name('confirm.show');
         Route::post('confirm/{id}/approve', [SubcontConfirmController::class, 'approve'])->name('confirm.approve');
+        Route::post('confirm/{id}/complete', [SubcontConfirmController::class, 'complete'])->name('confirm.complete'); // 🔥 NEW
     });
 
-    // ==================== ANDON ====================
+    // ==================== ANDON (READ-ONLY) ====================
     
-    // Andon Inhouse
+    // Andon Inhouse - Display Only
     Route::get('andon/inhouse', [AndonInhouseController::class, 'index'])->name('andon.inhouse.index');
     Route::get('andon/inhouse/{id}', [AndonInhouseController::class, 'show'])->name('andon.inhouse.show');
-    Route::post('andon/inhouse/{id}/complete', [AndonInhouseController::class, 'complete'])->name('andon.inhouse.complete');
+    // ❌ REMOVED: Route::post('andon/inhouse/{id}/complete', ...)
 
-    // Andon Outhouse
+    // Andon Outhouse - Display Only
     Route::get('andon/outhouse', [AndonOuthouseController::class, 'index'])->name('andon.outhouse.index');
     Route::get('andon/outhouse/{id}', [AndonOuthouseController::class, 'show'])->name('andon.outhouse.show');
-    Route::post('andon/outhouse/{id}/complete', [AndonOuthouseController::class, 'complete'])->name('andon.outhouse.complete');
+    // ❌ REMOVED: Route::post('andon/outhouse/{id}/complete', ...)
 
     // ==================== DATA HISTORY ====================
     
