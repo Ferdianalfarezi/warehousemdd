@@ -287,7 +287,7 @@
                             @else
                                 <!-- Show existing action status -->
                                 <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                    <div class="flex items-center justify-between">
+                                    <div class="flex items-center justify-between mb-3">
                                         <div>
                                             <p class="text-sm font-medium text-blue-900">
                                                 Tindakan: 
@@ -299,40 +299,31 @@
                                                     <span class="px-2 py-1 bg-purple-500 text-white rounded text-xs">Outhouse</span>
                                                 @endif
                                             </p>
-                                            <p class="text-xs text-blue-700 mt-1">
-                                                Status: 
-                                                <span data-action-status="{{ $existingActionStatus }}">
-                                                    @if($existingActionStatus === 'waiting_part_installation')
-                                                        Menunggu Pemasangan Part
-                                                    @elseif($existingActionStatus === 'waiting_pdd_confirm')
-                                                        Menunggu Konfirmasi PDD
-                                                    @elseif($existingActionStatus === 'inhouse_on_process')
-                                                        Inhouse Sedang Dikerjakan
-                                                    @elseif($existingActionStatus === 'inhouse_completed')
-                                                        Inhouse Selesai
-                                                    @elseif($existingActionStatus === 'waiting_subcont_confirm')
-                                                        Menunggu Konfirmasi Subcont
-                                                    @elseif($existingActionStatus === 'outhouse_on_process')
-                                                        Outhouse Sedang Dikerjakan
-                                                    @elseif($existingActionStatus === 'outhouse_completed')
-                                                        Outhouse Selesai
-                                                    @elseif($existingActionStatus === 'closed')
-                                                        Selesai
-                                                    @endif
-                                                </span>
-                                            </p>
+                                            
+                                            <!-- Status text untuk inhouse dan outhouse saja -->
+                                            @if(in_array($existingActionType, ['inhouse', 'outhouse']))
+                                                <p class="text-xs text-blue-700 mt-1">
+                                                    Status: 
+                                                    <span data-action-status="{{ $existingActionStatus }}">
+                                                        @if($existingActionStatus === 'waiting_pdd_confirm')
+                                                            Menunggu Konfirmasi PDD
+                                                        @elseif($existingActionStatus === 'inhouse_on_process')
+                                                            Inhouse Sedang Dikerjakan
+                                                        @elseif($existingActionStatus === 'inhouse_completed')
+                                                            Inhouse Selesai
+                                                        @elseif($existingActionStatus === 'waiting_subcont_confirm')
+                                                            Menunggu Konfirmasi Subcont
+                                                        @elseif($existingActionStatus === 'outhouse_on_process')
+                                                            Outhouse Sedang Dikerjakan
+                                                        @elseif($existingActionStatus === 'outhouse_completed')
+                                                            Outhouse Selesai
+                                                        @elseif($existingActionStatus === 'closed')
+                                                            ✅ Selesai
+                                                        @endif
+                                                    </span>
+                                                </p>
+                                            @endif
                                         </div>
-
-                                        <!-- Close Button (muncul jika status completed) -->
-                                        @if(in_array($existingActionStatus, ['waiting_part_installation', 'inhouse_completed', 'outhouse_completed']))
-                                            <button 
-                                                type="button"
-                                                onclick="closeAction('{{ $existingActionType }}', {{ $existingDetail->id }}, {{ $standard->id }})"
-                                                class="px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition"
-                                            >
-                                                Close
-                                            </button>
-                                        @endif
                                     </div>
 
                                     <!-- Hidden input untuk track action status -->
@@ -343,16 +334,101 @@
                                     >
 
                                     <!-- Show part list if action type is part -->
-                                    @if($existingActionType === 'part' && $existingDetail->partReplacements->count() > 0)
-                                        <div class="mt-3 space-y-2">
-                                            <p class="text-xs font-semibold text-blue-900">Part yang digunakan:</p>
+                                    @if($existingActionType === 'part')
+                                        <div class="space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <p class="text-xs font-semibold text-blue-900">Part yang digunakan:</p>
+                                                <div class="flex items-center space-x-2">
+                                                    <!-- Button Close All (muncul jika ada part yang belum installed) -->
+                                                    @if($existingDetail->partReplacements->where('is_installed', false)->count() > 0)
+                                                        <button 
+                                                            type="button"
+                                                            onclick="closeAllParts({{ $existingDetail->id }}, {{ $standard->id }})"
+                                                            class="inline-flex items-center px-2 py-1 bg-green-600 text-white rounded text-xs font-medium hover:bg-green-700 transition"
+                                                        >
+                                                            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                                            </svg>
+                                                            Close All ({{ $existingDetail->partReplacements->where('is_installed', false)->count() }})
+                                                        </button>
+                                                    @endif
+                                                    
+                                                    <!-- Button tambah part -->
+                                                    <button 
+                                                        type="button"
+                                                        onclick="openAddPartModal({{ $checkup->id }}, {{ $standard->id }})"
+                                                        class="inline-flex items-center px-2 py-1 bg-orange-500 text-white rounded text-xs font-medium hover:bg-orange-600 transition"
+                                                    >
+                                                        <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                                                        </svg>
+                                                        Tambah Part
+                                                    </button>
+                                                </div>
+                                            </div>
+
                                             @foreach($existingDetail->partReplacements as $partReplacement)
-                                                <div class="bg-white p-2 rounded border border-blue-200">
-                                                    <p class="text-sm font-medium text-gray-900">{{ $partReplacement->part->nama }}</p>
-                                                    <p class="text-xs text-gray-600">{{ $partReplacement->part->kode_part }} - Qty: {{ $partReplacement->quantity_used }}</p>
+                                                <div class="bg-white p-3 rounded border border-blue-200" data-part-item="{{ $partReplacement->id }}">
+                                                    <div class="flex items-start justify-between">
+                                                        <div class="flex-1">
+                                                            <p class="text-sm font-medium text-gray-900">{{ $partReplacement->part->nama }}</p>
+                                                            <p class="text-xs text-gray-600">{{ $partReplacement->part->kode_part }} - Qty: {{ $partReplacement->quantity_used }}</p>
+                                                            @if($partReplacement->catatan)
+                                                                <p class="text-xs text-gray-500 mt-1 italic">{{ $partReplacement->catatan }}</p>
+                                                            @endif
+                                                            
+                                                            <!-- Status Badge -->
+                                                            <div class="mt-2">
+                                                                @if($partReplacement->is_installed)
+                                                                    <span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs font-medium">
+                                                                        ✓ Terpasang
+                                                                    </span>
+                                                                @else
+                                                                    <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs font-medium">
+                                                                        ⏳ Menunggu Pemasangan
+                                                                    </span>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+
+                                                        <div class="flex flex-col space-y-1 ml-3">
+                                                            @if(!$partReplacement->is_installed)
+                                                                <!-- Button Close untuk part ini -->
+                                                                <button 
+                                                                    type="button"
+                                                                    onclick="closeIndividualPart({{ $partReplacement->id }}, {{ $standard->id }})"
+                                                                    class="px-3 py-1 bg-green-500 text-white rounded text-xs font-medium hover:bg-green-600 transition whitespace-nowrap"
+                                                                >
+                                                                    Close
+                                                                </button>
+                                                            @endif
+                                                            
+                                                            @if(!$partReplacement->is_committed)
+                                                                <!-- Button Delete hanya jika belum committed -->
+                                                                <button 
+                                                                    type="button"
+                                                                    onclick="removePart({{ $partReplacement->id }}, {{ $standard->id }})"
+                                                                    class="text-red-500 hover:text-red-700 text-xs"
+                                                                >
+                                                                    Hapus
+                                                                </button>
+                                                            @endif
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             @endforeach
                                         </div>
+                                    @endif
+
+                                    <!-- Show existing action for inhouse/outhouse -->
+                                    @if(in_array($existingActionType, ['inhouse', 'outhouse']) && in_array($existingActionStatus, ['inhouse_completed', 'outhouse_completed']))
+                                        <button 
+                                            type="button"
+                                            onclick="closeAction('{{ $existingActionType }}', {{ $existingDetail->id }}, {{ $standard->id }})"
+                                            class="mt-3 w-full px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition"
+                                        >
+                                            Close
+                                        </button>
                                     @endif
                                 </div>
                             @endif
@@ -413,648 +489,14 @@
 @endsection
 
 @push('scripts')
+<script src="{{ asset('js/general-checkups/process.js') }}"></script>
 <script>
-const checkupId = {{ $checkup->id }};
-let selectedStandardId = null;
-
-// Update duration display
-@if($checkup->mulai_perbaikan)
-function updateDuration() {
-    const mulaiPerbaikan = new Date('{{ $checkup->mulai_perbaikan->format('Y-m-d H:i:s') }}');
-    const now = new Date();
-    const diffMs = now - mulaiPerbaikan;
-    const diffMins = Math.floor(diffMs / 60000);
+    // Set global checkup ID
+    window.checkupId = {{ $checkup->id }};
     
-    const hours = Math.floor(diffMins / 60);
-    const mins = diffMins % 60;
-    
-    document.getElementById('durationDisplay').textContent = 
-        hours > 0 ? `⏱️ ${hours} jam ${mins} menit` : `⏱️ ${mins} menit`;
-}
-
-updateDuration();
-setInterval(updateDuration, 60000); // Update every minute
-@endif
-
-// Set Status
-function setStatus(standardId, status) {
-    // Update hidden input
-    const statusInput = document.querySelector(`input[data-status-input="${standardId}"]`);
-    statusInput.value = status;
-
-    // Update button styles
-    const buttons = document.querySelectorAll(`button[data-standard-id="${standardId}"]`);
-    buttons.forEach(btn => {
-        const btnStatus = btn.getAttribute('data-status');
-        if (btnStatus === status) {
-            btn.classList.remove('bg-gray-100', 'text-gray-600');
-            if (status === 'ok') {
-                btn.classList.add('bg-green-500', 'text-white');
-            } else {
-                btn.classList.add('bg-red-500', 'text-white');
-            }
-        } else {
-            btn.classList.add('bg-gray-100', 'text-gray-600');
-            btn.classList.remove('bg-green-500', 'bg-red-500', 'text-white');
-        }
-    });
-
-    // Show/hide NG actions
-    const ngSection = document.querySelector(`div[data-ng-section="${standardId}"]`);
-    if (status === 'ng') {
-        ngSection.classList.remove('hidden');
-    } else {
-        ngSection.classList.add('hidden');
-    }
-
-    // Update action buttons
-    updateActionButtons();
-}
-
-// Show action form based on selected type
-function showActionForm(standardId) {
-    const actionType = document.getElementById(`actionTypeSelect-${standardId}`).value;
-    
-    // Hide all forms
-    document.getElementById(`partForm-${standardId}`).classList.add('hidden');
-    document.getElementById(`inhouseForm-${standardId}`).classList.add('hidden');
-    document.getElementById(`outhouseForm-${standardId}`).classList.add('hidden');
-    
-    // Show selected form
-    if (actionType === 'part') {
-        document.getElementById(`partForm-${standardId}`).classList.remove('hidden');
-    } else if (actionType === 'inhouse') {
-        document.getElementById(`inhouseForm-${standardId}`).classList.remove('hidden');
-    } else if (actionType === 'outhouse') {
-        document.getElementById(`outhouseForm-${standardId}`).classList.remove('hidden');
-    }
-}
-
-// Update action buttons based on status
-function updateActionButtons() {
-    const statusInputs = document.querySelectorAll('input[data-status-input]');
-    let hasNGNotClosed = false;
-    let allFilled = true;
-
-    statusInputs.forEach(input => {
-        const standardId = input.getAttribute('data-status-input');
-        const status = input.value;
-
-        // Check if filled
-        if (!status) {
-            allFilled = false;
-            return;
-        }
-
-        // Check if NG
-        if (status === 'ng') {
-            // Check action status from hidden input
-            const actionStatusInput = document.querySelector(`input[data-ng-action-status="${standardId}"]`);
-            
-            if (actionStatusInput) {
-                const actionStatus = actionStatusInput.value;
-                // If action status is NOT 'closed', then it's not complete yet
-                if (actionStatus !== 'closed') {
-                    hasNGNotClosed = true;
-                }
-            } else {
-                // No action selected/completed yet
-                hasNGNotClosed = true;
-            }
-        }
-    });
-
-    const saveTempBtn = document.getElementById('saveTempBtn');
-    const finishBtn = document.getElementById('finishBtn');
-
-    // Show "Selesai" only if:
-    // 1. All parameters are filled
-    // 2. No NG that is not closed yet
-    if (allFilled && !hasNGNotClosed) {
-        saveTempBtn.classList.add('hidden');
-        finishBtn.classList.remove('hidden');
-    } else {
-        saveTempBtn.classList.remove('hidden');
-        finishBtn.classList.add('hidden');
-    }
-}
-
-// Submit Inhouse Request
-async function submitInhouseRequest(checkupId, standardId) {
-    const problem = document.getElementById(`inhouseProblem-${standardId}`).value;
-    const proses = document.getElementById(`inhouseProses-${standardId}`).value;
-    const mesin = document.getElementById(`inhouseMesin-${standardId}`).value;
-
-    if (!problem || !proses || !mesin) {
-        Swal.fire('Peringatan!', 'Semua field harus diisi!', 'warning');
-        return;
-    }
-
-    // Get checkup_detail_id
-    const detailId = await getOrCreateDetailId(checkupId, standardId);
-
-    if (!detailId) {
-        Swal.fire('Error!', 'Gagal mendapatkan detail ID!', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch('/inhouse-requests/store', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                general_checkup_id: checkupId,
-                checkup_detail_id: detailId,
-                problem: problem,
-                proses_dilakukan: proses,
-                mesin: mesin
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            await Swal.fire({
-                icon: 'success',
-                title: 'Berhasil!',
-                text: result.message,
-                showConfirmButton: false,
-                timer: 1500
-            });
-            location.reload();
-        } else {
-            Swal.fire('Error!', result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire('Error!', 'Gagal mengajukan permintaan inhouse!', 'error');
-    }
-}
-
-// Submit Outhouse Request
-async function submitOuthouseRequest(checkupId, standardId) {
-    const problem = document.getElementById(`outhouseProblem-${standardId}`).value;
-    const mesin = document.getElementById(`outhouseMesin-${standardId}`).value;
-    const supplier = document.getElementById(`outhouseSupplier-${standardId}`).value;
-
-    if (!problem || !mesin || !supplier) {
-        Swal.fire('Peringatan!', 'Semua field harus diisi!', 'warning');
-        return;
-    }
-
-    // Get checkup_detail_id
-    const detailId = await getOrCreateDetailId(checkupId, standardId);
-
-    if (!detailId) {
-        Swal.fire('Error!', 'Gagal mendapatkan detail ID!', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch('/outhouse-requests/store', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                general_checkup_id: checkupId,
-                checkup_detail_id: detailId,
-                problem: problem,
-                mesin: mesin,
-                supplier: supplier
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            await Swal.fire({
-                icon: 'success',
-                title: 'Berhasil!',
-                text: result.message,
-                showConfirmButton: false,
-                timer: 1500
-            });
-            location.reload();
-        } else {
-            Swal.fire('Error!', result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire('Error!', 'Gagal mengajukan permintaan outhouse!', 'error');
-    }
-}
-
-// Helper function to get or create checkup detail ID
-async function getOrCreateDetailId(checkupId, standardId) {
-    // First save current status to create detail if not exists
-    const formData = new FormData(document.getElementById('checkupForm'));
-    const data = {};
-    data.details = [];
-
-    const statusInput = document.querySelector(`input[data-status-input="${standardId}"]`);
-    const status = statusInput.value;
-    const catatan = formData.get(`details[${standardId}][catatan]`);
-
-    data.details.push({
-        check_indicator_standard_id: standardId,
-        status: status,
-        catatan: catatan
-    });
-
-    try {
-        const response = await fetch(`/general-checkups/${checkupId}/save-checkup`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        });
-
-        const result = await response.json();
-        
-        if (result.success && result.detail_id) {
-            return result.detail_id;
-        }
-        
-        return null;
-    } catch (error) {
-        console.error('Error:', error);
-        return null;
-    }
-}
-
-// Close Action
-async function closeAction(actionType, detailId, standardId) {
-    const result = await Swal.fire({
-        title: 'Close Tindakan?',
-        text: "Tindakan akan ditandai selesai",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#10b981',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Ya, Close!',
-        cancelButtonText: 'Batal'
-    });
-
-    if (!result.isConfirmed) return;
-
-    let url = '';
-    if (actionType === 'part') {
-        url = `/checkup-parts/${detailId}/close`;
-    } else if (actionType === 'inhouse') {
-        url = `/inhouse-requests/${detailId}/close`;
-    } else if (actionType === 'outhouse') {
-        url = `/outhouse-requests/${detailId}/close`;
-    }
-
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            }
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            await Swal.fire({
-                icon: 'success',
-                title: 'Berhasil!',
-                text: data.message,
-                showConfirmButton: false,
-                timer: 1500
-            });
-            location.reload();
-        } else {
-            Swal.fire('Error!', data.message, 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire('Error!', 'Gagal menutup tindakan!', 'error');
-    }
-}
-
-// Save Temporary
-async function saveTemporary() {
-    const formData = new FormData(document.getElementById('checkupForm'));
-    const data = {};
-    data.details = [];
-    data.catatan_umum = formData.get('catatan_umum');
-
-    // Collect all details
-    const statusInputs = document.querySelectorAll('input[data-status-input]');
-    statusInputs.forEach(input => {
-        const standardId = input.getAttribute('data-status-input');
-        const status = input.value;
-        
-        if (status) {
-            const catatan = formData.get(`details[${standardId}][catatan]`);
-            data.details.push({
-                check_indicator_standard_id: standardId,
-                status: status,
-                catatan: catatan
-            });
-        }
-    });
-
-    if (data.details.length === 0) {
-        Swal.fire('Peringatan!', 'Minimal isi 1 checklist!', 'warning');
-        return;
-    }
-
-    try {
-        const response = await fetch(`/general-checkups/${checkupId}/save-checkup`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            await Swal.fire({
-                icon: 'success',
-                title: 'Tersimpan!',
-                text: result.message,
-                showConfirmButton: false,
-                timer: 1500
-            });
-        } else {
-            Swal.fire('Error!', result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire('Error!', 'Gagal menyimpan checkup!', 'error');
-    }
-}
-
-// Finish Checkup
-async function finishCheckup() {
-    const result = await Swal.fire({
-        title: 'Selesaikan Checkup?',
-        text: "Checkup akan diselesaikan dan dipindahkan ke history",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#10b981',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Ya, Selesai!',
-        cancelButtonText: 'Batal'
-    });
-
-    if (!result.isConfirmed) return;
-
-    const formData = new FormData(document.getElementById('checkupForm'));
-    const data = {};
-    data.details = [];
-    data.catatan_umum = formData.get('catatan_umum');
-
-    // Collect all details
-    const statusInputs = document.querySelectorAll('input[data-status-input]');
-    statusInputs.forEach(input => {
-        const standardId = input.getAttribute('data-status-input');
-        const status = input.value;
-        
-        if (status) {
-            const catatan = formData.get(`details[${standardId}][catatan]`);
-            data.details.push({
-                check_indicator_standard_id: standardId,
-                status: status,
-                catatan: catatan
-            });
-        }
-    });
-
-    try {
-        const response = await fetch(`/general-checkups/${checkupId}/finish-checkup`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            await Swal.fire({
-                icon: 'success',
-                title: 'Selesai!',
-                text: result.message,
-                showConfirmButton: false,
-                timer: 1500
-            });
-            window.location.href = result.redirect;
-        } else {
-            Swal.fire('Error!', result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire('Error!', 'Gagal menyelesaikan checkup!', 'error');
-    }
-}
-
-// Open Add Part Modal
-function openAddPartModal(checkupId, standardId) {
-    selectedStandardId = standardId;
-    loadAvailableParts();
-    
-    const modal = document.getElementById('addPartModal');
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-}
-
-function closeAddPartModal() {
-    selectedStandardId = null;
-    document.getElementById('addPartForm').reset();
-    
-    const modal = document.getElementById('addPartModal');
-    modal.classList.add('hidden');
-    modal.classList.remove('flex');
-}
-
-// Load Available Parts
-async function loadAvailableParts() {
-    try {
-        const response = await fetch('/checkup-parts/available');
-        const result = await response.json();
-
-        if (result.success) {
-            const select = document.getElementById('partSelect');
-            select.innerHTML = '<option value="">Pilih Part</option>';
-            
-            result.data.forEach(part => {
-                const option = document.createElement('option');
-                option.value = part.id;
-                option.textContent = `${part.kode_part} - ${part.nama} (Stock: ${part.stock} ${part.satuan})`;
-                option.dataset.stock = part.stock;
-                select.appendChild(option);
-            });
-        }
-    } catch (error) {
-        console.error('Error loading parts:', error);
-    }
-}
-
-// Add Part
-async function addPart() {
-    const partId = document.getElementById('partSelect').value;
-    const quantity = document.getElementById('partQuantity').value;
-    const catatan = document.getElementById('partCatatan').value;
-
-    if (!partId || !quantity) {
-        Swal.fire('Peringatan!', 'Part dan quantity harus diisi!', 'warning');
-        return;
-    }
-
-    const selectedOption = document.getElementById('partSelect').selectedOptions[0];
-    const availableStock = parseInt(selectedOption.dataset.stock);
-
-    if (parseInt(quantity) > availableStock) {
-        Swal.fire('Error!', `Stock tidak mencukupi! Available: ${availableStock}`, 'error');
-        return;
-    }
-
-    // Get checkup_detail_id
-    const detailId = await getOrCreateDetailId(checkupId, selectedStandardId);
-
-    if (!detailId) {
-        Swal.fire('Error!', 'Gagal mendapatkan detail ID!', 'error');
-        return;
-    }
-
-    try {
-        const response = await fetch('/checkup-parts/add', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                general_checkup_id: checkupId,
-                checkup_detail_id: detailId,
-                part_id: partId,
-                quantity_used: quantity,
-                catatan: catatan
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            await Swal.fire({
-                icon: 'success',
-                title: 'Berhasil!',
-                text: result.message,
-                showConfirmButton: false,
-                timer: 1500
-            });
-
-            // Add to part list
-            addPartToList(selectedStandardId, result.data);
-            closeAddPartModal();
-            
-            // Reload to update status
-            location.reload();
-        } else {
-            Swal.fire('Error!', result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire('Error!', 'Gagal menambahkan part!', 'error');
-    }
-}
-
-// Add part to visual list
-function addPartToList(standardId, partData) {
-    const partList = document.getElementById(`partList-${standardId}`);
-    const partItem = document.createElement('div');
-    partItem.className = 'flex items-center justify-between bg-gray-50 p-2 rounded border border-gray-200';
-    partItem.dataset.partId = partData.id;
-    partItem.innerHTML = `
-        <div class="flex-1">
-            <p class="text-sm font-medium text-gray-900">${partData.part.nama}</p>
-            <p class="text-xs text-gray-600">${partData.part.kode_part} - Qty: ${partData.quantity_used}</p>
-        </div>
-        <button 
-            type="button"
-            onclick="removePart(${partData.id}, ${standardId})"
-            class="text-red-500 hover:text-red-700"
-        >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-            </svg>
-        </button>
-    `;
-    partList.appendChild(partItem);
-}
-
-// Remove Part
-async function removePart(partReplacementId, standardId) {
-    const result = await Swal.fire({
-        title: 'Hapus Part?',
-        text: "Stock akan dikembalikan",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#6b7280',
-        confirmButtonText: 'Ya, Hapus!',
-        cancelButtonText: 'Batal'
-    });
-
-    if (!result.isConfirmed) return;
-
-    try {
-        const response = await fetch(`/checkup-parts/${partReplacementId}`, {
-            method: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            }
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            await Swal.fire({
-                icon: 'success',
-                title: 'Terhapus!',
-                text: result.message,
-                showConfirmButton: false,
-                timer: 1500
-            });
-
-            // Remove from visual list
-            const partItem = document.querySelector(`div[data-part-id="${partReplacementId}"]`);
-            if (partItem) partItem.remove();
-        } else {
-            Swal.fire('Error!', result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire('Error!', 'Gagal menghapus part!', 'error');
-    }
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    updateActionButtons();
-});
-
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeAddPartModal();
-    }
-});
+    // Initialize duration update if mulai_perbaikan exists
+    @if($checkup->mulai_perbaikan)
+        initializeDurationUpdate('{{ $checkup->mulai_perbaikan->format('Y-m-d H:i:s') }}');
+    @endif
 </script>
 @endpush

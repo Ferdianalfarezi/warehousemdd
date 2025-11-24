@@ -15,10 +15,14 @@ class CheckupPartReplacement extends Model
         'part_id',
         'quantity_used',
         'catatan',
+        'is_committed',
+        'is_installed',
     ];
 
     protected $casts = [
         'quantity_used' => 'integer',
+        'is_committed' => 'boolean',
+        'is_installed' => 'boolean',
     ];
 
     /**
@@ -46,22 +50,46 @@ class CheckupPartReplacement extends Model
     {
         parent::boot();
 
-        // Kurangi stock saat part replacement dibuat
-        static::created(function ($replacement) {
-            $part = $replacement->part;
-            if ($part) {
-                $part->stock -= $replacement->quantity_used;
-                $part->save();
+        // Kurangi stock HANYA saat part sudah di-commit (finish checkup)
+        static::updated(function ($replacement) {
+            // Jika status berubah dari not committed ke committed
+            if ($replacement->is_committed && $replacement->getOriginal('is_committed') === false) {
+                $part = $replacement->part;
+                if ($part) {
+                    $part->stock -= $replacement->quantity_used;
+                    $part->save();
+                }
             }
         });
 
         // Kembalikan stock saat part replacement dihapus
-        static::deleted(function ($replacement) {
-            $part = $replacement->part;
-            if ($part) {
-                $part->stock += $replacement->quantity_used;
-                $part->save();
+        // HANYA jika belum di-commit (masih temporary)
+        static::deleting(function ($replacement) {
+            // Jika part belum di-commit, tidak perlu kembalikan stock
+            // Karena stock belum dikurangi
+            if ($replacement->is_committed) {
+                $part = $replacement->part;
+                if ($part) {
+                    $part->stock += $replacement->quantity_used;
+                    $part->save();
+                }
             }
         });
+    }
+
+    /**
+     * Scope untuk part yang belum di-install
+     */
+    public function scopeNotInstalled($query)
+    {
+        return $query->where('is_installed', false);
+    }
+
+    /**
+     * Scope untuk part yang sudah di-install
+     */
+    public function scopeInstalled($query)
+    {
+        return $query->where('is_installed', true);
     }
 }

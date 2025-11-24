@@ -83,7 +83,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('checkup-parts/{id}', [CheckupPartController::class, 'destroy'])->name('checkup-parts.destroy');
     Route::get('checkup-parts/available', [CheckupPartController::class, 'getAvailableParts'])->name('checkup-parts.available');
     Route::post('checkup-parts/{id}/close', [CheckupPartController::class, 'close'])->name('checkup-parts.close');
-
+    Route::post('/checkup-parts/close-all/{checkupDetailId}', [CheckupPartController::class, 'closeAll'])->name('checkup-parts.close-all');
     // Inhouse Request
     Route::post('inhouse-requests/store', [InhouseRequestController::class, 'store'])->name('inhouse-requests.store');
     Route::post('inhouse-requests/{id}/close', [InhouseRequestController::class, 'close'])->name('inhouse-requests.close');

@@ -16,14 +16,14 @@
     <!-- Stats Cards -->
     <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
         <!-- Total History -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-600">Total History</p>
+                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Total History</p>
                     <p class="text-2xl font-bold text-gray-900 mt-1">{{ $stats['total'] }}</p>
                 </div>
-                <div class="p-2 bg-gray-100 rounded-lg">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-gray-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
@@ -31,14 +31,14 @@
         </div>
 
         <!-- This Month -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-600">This Month</p>
-                    <p class="text-2xl font-bold text-blue-600 mt-1">{{ $stats['this_month'] }}</p>
+                    <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider">This Month</p>
+                    <p class="text-2xl font-bold text-blue-900 mt-1">{{ $stats['this_month'] }}</p>
                 </div>
-                <div class="p-2 bg-blue-100 rounded-lg">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-blue-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                 </div>
@@ -46,15 +46,15 @@
         </div>
 
         <!-- Avg Duration -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-600">Avg Duration</p>
-                    <p class="text-2xl font-bold text-purple-600 mt-1">{{ $stats['avg_duration'] }}</p>
-                    <p class="text-xs text-gray-500 mt-1">minutes</p>
+                    <p class="text-xs font-semibold text-purple-600 uppercase tracking-wider">Avg Duration</p>
+                    <p class="text-2xl font-bold text-purple-900 mt-1">{{ $stats['avg_duration'] }}</p>
+                    <p class="text-xs text-purple-600 font-medium mt-1">minutes</p>
                 </div>
-                <div class="p-2 bg-purple-100 rounded-lg">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-purple-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                     </svg>
                 </div>
@@ -62,14 +62,14 @@
         </div>
 
         <!-- Total Parts Used -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-600">Parts Used</p>
-                    <p class="text-2xl font-bold text-orange-600 mt-1">{{ $stats['total_parts_used'] }}</p>
+                    <p class="text-xs font-semibold text-orange-600 uppercase tracking-wider">Parts Used</p>
+                    <p class="text-2xl font-bold text-orange-900 mt-1">{{ $stats['total_parts_used'] }}</p>
                 </div>
-                <div class="p-2 bg-orange-100 rounded-lg">
-                    <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-orange-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                     </svg>
                 </div>
@@ -77,14 +77,14 @@
         </div>
 
         <!-- Success Rate -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-600">Success Rate</p>
-                    <p class="text-2xl font-bold text-green-600 mt-1">{{ $stats['success_rate'] }}%</p>
+                    <p class="text-xs font-semibold text-green-600 uppercase tracking-wider">Success Rate</p>
+                    <p class="text-2xl font-bold text-green-900 mt-1">{{ $stats['success_rate'] }}%</p>
                 </div>
-                <div class="p-2 bg-green-100 rounded-lg">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-green-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>

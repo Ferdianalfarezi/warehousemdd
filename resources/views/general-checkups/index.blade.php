@@ -3,36 +3,36 @@
 @section('title', 'General Checkups')
 
 @section('content')
-<div class="space-y-6">
-    
-    <!-- Page Header -->
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900">General Checkups</h1>
-            <p class="text-gray-600 mt-1">Manage maintenance checkups for scheduled items</p>
+    <div class="space-y-6">
+        
+        <!-- Page Header -->
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-900">General Checkups</h1>
+                <p class="text-gray-600 mt-1">Manage maintenance checkups for scheduled items</p>
+            </div>
+            <button 
+                onclick="autoPopulate()"
+                class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <span>Auto Populate</span>
+            </button>
         </div>
-        <button 
-            onclick="autoPopulate()"
-            class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
-        >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-            <span>Auto Populate</span>
-        </button>
-    </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <!-- Total -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-600">Total Checkups</p>
+                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Checkups</p>
                     <p class="text-2xl font-bold text-gray-900 mt-1">{{ $stats['total'] }}</p>
                 </div>
-                <div class="p-2 bg-gray-100 rounded-lg">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-gray-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                     </svg>
                 </div>
@@ -40,14 +40,14 @@
         </div>
 
         <!-- Pending -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-600">Pending</p>
-                    <p class="text-2xl font-bold text-gray-600 mt-1">{{ $stats['pending'] }}</p>
+                    <p class="text-xs font-semibold text-orange-600 uppercase tracking-wider">Pending</p>
+                    <p class="text-2xl font-bold text-orange-900 mt-1">{{ $stats['pending'] }}</p>
                 </div>
-                <div class="p-2 bg-gray-100 rounded-lg">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-orange-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                     </svg>
                 </div>
@@ -55,30 +55,15 @@
         </div>
 
         <!-- On Process -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
-                    <p class="text-sm font-medium text-gray-600">On Process</p>
-                    <p class="text-2xl font-bold text-blue-600 mt-1">{{ $stats['on_process'] }}</p>
+                    <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider">On Process</p>
+                    <p class="text-2xl font-bold text-blue-900 mt-1">{{ $stats['on_process'] }}</p>
                 </div>
-                <div class="p-2 bg-blue-100 rounded-lg">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="bg-blue-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- Today -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600">Today</p>
-                    <p class="text-2xl font-bold text-green-600 mt-1">{{ $stats['today'] }}</p>
-                </div>
-                <div class="p-2 bg-green-100 rounded-lg">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                     </svg>
                 </div>
             </div>
