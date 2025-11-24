@@ -135,4 +135,12 @@ Route::middleware('auth')->group(function () {
     
 });
 
+// routes/web.php atau api.php
+Route::get('/api/approval-counts', function() {
+    return response()->json([
+        'inhouse' => \App\Models\InhouseRequest::where('status', 'pending')->count(),
+        'outhouse' => \App\Models\OuthouseRequest::where('status', 'pending')->count(),
+    ]);
+})->middleware('auth');
+
 require __DIR__.'/auth.php';

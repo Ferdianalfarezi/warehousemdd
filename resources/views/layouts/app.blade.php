@@ -337,6 +337,113 @@
     .animate-slideIn {
         animation: slideIn 0.3s ease-out;
     }
+
+    /* Tambahkan di file CSS atau dalam <style> tag di layout */
+.notification-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 400px;
+}
+
+.notification-toast {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 16px;
+    display: flex;
+    align-items: start;
+    gap: 12px;
+    animation: slideInRight 0.3s ease-out;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.notification-toast:hover {
+    transform: translateX(-5px);
+}
+
+.notification-toast.fade-out {
+    animation: slideOutRight 0.3s ease-out forwards;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.notification-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-icon.inhouse {
+    background: #3b82f6;
+}
+
+.notification-icon.outhouse {
+    background: #9333ea;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-title {
+    font-weight: 600;
+    color: #111827;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.notification-message {
+    color: #6b7280;
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.notification-time {
+    color: #9ca3af;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.notification-badge {
+    background: #ef4444;
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 12px;
+    min-width: 20px;
+    text-align: center;
+}
     
 </style>
 <body class="bg-gray-50 font-sans antialiased">
@@ -477,9 +584,12 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                             <span class="font-semibold text-sm">Approval</span>
+                            <span id="totalApprovalBadge" class="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display: none;">
+                                0
+                            </span>
                         </div>
                         <svg class="w-4 h-4 chevron-icon" :class="openMenus.approval ? 'open' : ''" 
-                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                         </svg>
                     </button>
@@ -487,19 +597,29 @@
                     <div class="submenu-container" :class="openMenus.approval ? 'open' : ''">
                         <div class="ml-8 mt-1 space-y-1">
                             <a href="{{ route('pdd.confirm.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('pdd.confirm.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                                </svg>
-                                Konfirmasi Inhouse
+                            class="submenu-item flex items-center justify-between px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('pdd.confirm.*') ? 'active' : '' }}">
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                    Inhouse
+                                </div>
+                                <span id="inhouseBadge" class="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display: none;">
+                                    0
+                                </span>
                             </a>
 
                             <a href="{{ route('subcont.confirm.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('subcont.confirm.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                                </svg>
-                                Konfirmasi Outhouse
+                            class="submenu-item flex items-center justify-between px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('subcont.confirm.*') ? 'active' : '' }}">
+                                <div class="flex items-center">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                    </svg>
+                                    Outhouse
+                                </div>
+                                <span id="outhouseBadge" class="bg-purple-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display: none;">
+                                    0
+                                </span>
                             </a>
                         </div>
                     </div>
@@ -764,6 +884,9 @@
         <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 animate-shimmer"></div>
     </div>
 </div>
+
+<!-- Notification Container -->
+<div id="notificationContainer" class="notification-container"></div>
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
@@ -919,11 +1042,178 @@
         // Update setiap detik
         updateDateTime();
         setInterval(updateDateTime, 1000);
+
+        // 🔔 NOTIFICATION SYSTEM
+        // Store previous counts untuk detect perubahan
+        let previousCounts = {
+            inhouse: 0,
+            outhouse: 0
+        };
+
+        // Function untuk show notification toast
+        function showNotification(type, count) {
+            const container = document.getElementById('notificationContainer');
+            
+            const notification = document.createElement('div');
+            notification.className = 'notification-toast';
+            
+            const iconBg = type === 'inhouse' ? 'inhouse' : 'outhouse';
+            const title = type === 'inhouse' ? 'Permintaan Inhouse Baru' : 'Permintaan Outhouse Baru';
+            const message = `Ada ${count} permintaan yang perlu di-approve`;
+            
+            notification.innerHTML = `
+                <div class="notification-icon ${iconBg}">
+                    <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                </div>
+                <div class="notification-content">
+                    <div class="notification-title">${title}</div>
+                    <div class="notification-message">${message}</div>
+                    <div class="notification-time">Baru saja</div>
+                </div>
+                <div class="notification-badge">${count}</div>
+            `;
+            
+            // Click handler untuk redirect
+            notification.addEventListener('click', function() {
+                if (type === 'inhouse') {
+                    window.location.href = '{{ route("pdd.confirm.index") }}';
+                } else {
+                    window.location.href = '{{ route("subcont.confirm.index") }}';
+                }
+            });
+            
+            container.appendChild(notification);
+            
+            // Play notification sound (optional)
+            playNotificationSound();
+            
+            // Auto remove setelah 10 detik
+            setTimeout(() => {
+                notification.classList.add('fade-out');
+                setTimeout(() => {
+                    notification.remove();
+                }, 300);
+            }, 10000);
+        }
+
+        // Optional: Play notification sound
+        function playNotificationSound() {
+            // Uncomment jika punya file sound
+            // const audio = new Audio('/sounds/notification.mp3');
+            // audio.volume = 0.5;
+            // audio.play().catch(e => console.log('Sound play failed:', e));
+        }
+
+        // Function untuk update approval counts dengan notification
+        async function updateApprovalCounts() {
+            try {
+                const response = await fetch('/api/approval-counts');
+                const data = await response.json();
+                
+                const inhouseCount = data.inhouse;
+                const outhouseCount = data.outhouse;
+                const totalCount = inhouseCount + outhouseCount;
+                
+                // 🔔 Check for new inhouse requests
+                if (inhouseCount > previousCounts.inhouse) {
+                    const newCount = inhouseCount - previousCounts.inhouse;
+                    showNotification('inhouse', newCount);
+                }
+                
+                // 🔔 Check for new outhouse requests
+                if (outhouseCount > previousCounts.outhouse) {
+                    const newCount = outhouseCount - previousCounts.outhouse;
+                    showNotification('outhouse', newCount);
+                }
+                
+                // Update previous counts
+                previousCounts.inhouse = inhouseCount;
+                previousCounts.outhouse = outhouseCount;
+                
+                // Update total badge
+                const totalBadge = document.getElementById('totalApprovalBadge');
+                if (totalCount > 0) {
+                    totalBadge.textContent = totalCount;
+                    totalBadge.style.display = 'inline-block';
+                } else {
+                    totalBadge.style.display = 'none';
+                }
+                
+                // Update inhouse badge
+                const inhouseBadge = document.getElementById('inhouseBadge');
+                if (inhouseCount > 0) {
+                    inhouseBadge.textContent = inhouseCount;
+                    inhouseBadge.style.display = 'inline-block';
+                } else {
+                    inhouseBadge.style.display = 'none';
+                }
+                
+                // Update outhouse badge
+                const outhouseBadge = document.getElementById('outhouseBadge');
+                if (outhouseCount > 0) {
+                    outhouseBadge.textContent = outhouseCount;
+                    outhouseBadge.style.display = 'inline-block';
+                } else {
+                    outhouseBadge.style.display = 'none';
+                }
+                
+            } catch (error) {
+                console.error('Error fetching approval counts:', error);
+            }
+        }
+
+        // Initialize: Load counts pertama kali tanpa notif
+        async function initializeApprovalCounts() {
+            try {
+                const response = await fetch('/api/approval-counts');
+                const data = await response.json();
+                
+                // Set initial counts tanpa trigger notif
+                previousCounts.inhouse = data.inhouse;
+                previousCounts.outhouse = data.outhouse;
+                
+                const totalCount = data.inhouse + data.outhouse;
+                
+                // Update badges
+                const totalBadge = document.getElementById('totalApprovalBadge');
+                if (totalCount > 0) {
+                    totalBadge.textContent = totalCount;
+                    totalBadge.style.display = 'inline-block';
+                }
+                
+                const inhouseBadge = document.getElementById('inhouseBadge');
+                if (data.inhouse > 0) {
+                    inhouseBadge.textContent = data.inhouse;
+                    inhouseBadge.style.display = 'inline-block';
+                }
+                
+                const outhouseBadge = document.getElementById('outhouseBadge');
+                if (data.outhouse > 0) {
+                    outhouseBadge.textContent = data.outhouse;
+                    outhouseBadge.style.display = 'inline-block';
+                }
+            } catch (error) {
+                console.error('Error initializing approval counts:', error);
+            }
+        }
+
+        // Initialize saat page load
+        initializeApprovalCounts();
+
+        // Polling setiap 10 detik untuk check update
+        setInterval(updateApprovalCounts, 10000);
+
+        // Update saat user kembali ke tab
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                updateApprovalCounts();
+            }
+        });
     </script>
     
     @stack('scripts')
 </body>
     
-    @stack('scripts')
-</body>
 </html>
