@@ -676,9 +676,18 @@ async function openDetailModal(id) {
             }
             
             const modal = document.getElementById('detailModal');
+            const modalContent = document.getElementById('detailModalContent');
+            
             modal.classList.remove('hidden');
             modal.classList.add('flex');
-            setTimeout(() => modal.classList.add('modal-fade-in'), 10);
+            
+            // Trigger animation
+            setTimeout(() => {
+                modal.classList.remove('bg-opacity-0');
+                modal.classList.add('bg-opacity-50');
+                modalContent.classList.remove('scale-95', 'opacity-0');
+                modalContent.classList.add('scale-100', 'opacity-100');
+            }, 10);
         }
     } catch (error) {
         console.error('Error:', error);
@@ -688,7 +697,14 @@ async function openDetailModal(id) {
 
 function closeDetailModal() {
     const modal = document.getElementById('detailModal');
-    modal.classList.remove('modal-fade-in');
+    const modalContent = document.getElementById('detailModalContent');
+    
+    // Animate out
+    modal.classList.remove('bg-opacity-50');
+    modal.classList.add('bg-opacity-0');
+    modalContent.classList.remove('scale-100', 'opacity-100');
+    modalContent.classList.add('scale-95', 'opacity-0');
+    
     setTimeout(() => {
         modal.classList.add('hidden');
         modal.classList.remove('flex');

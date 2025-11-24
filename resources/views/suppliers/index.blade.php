@@ -12,15 +12,29 @@
             <h1 class="text-3xl font-bold text-gray-900">Suppliers</h1>
             <p class="text-gray-600 mt-1">Manage your supplier data</p>
         </div>
-        <button 
-            onclick="openCreateModal()"
-            class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
-        >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-            </svg>
-            <span>Add Supplier</span>
-        </button>
+        <div class="flex space-x-3">
+            <!-- Button Import Excel -->
+            <button 
+                onclick="openImportModal()"
+                class="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-green-700 transition transform hover:scale-105 flex items-center space-x-2"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                </svg>
+                <span>Import Excel</span>
+            </button>
+            
+            <!-- Button Add Supplier -->
+            <button 
+                onclick="openCreateModal()"
+                class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                <span>Add Supplier</span>
+            </button>
+        </div>
     </div>
 
     <!-- Search & Per Page Bar -->
@@ -70,7 +84,6 @@
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">No</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Supplier</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Alamat</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tanggal Dibuat</th>
                         <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
@@ -80,7 +93,6 @@
                             <td class="px-6 py-4 text-sm text-gray-900">{{ $loop->iteration }}</td>
                             <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $supplier->nama }}</td>
                             <td class="px-6 py-4 text-sm text-gray-600">{{ $supplier->alamat }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">{{ $supplier->created_at->format('d M Y') }}</td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center space-x-2">
                                     <button onclick="openEditModal({{ $supplier->id }})"
@@ -109,9 +121,10 @@
             </table>
         </div>
 
-        <!-- Footer: Showing Entries -->
+        <!-- Footer: Showing Entries & Pagination -->
         <div class="bg-gray-50 border-t border-gray-200 px-6 py-4">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <!-- Showing Info -->
                 <div class="text-sm text-gray-600">
                     Showing <span id="showingFrom" class="font-medium">1</span> to 
                     <span id="showingTo" class="font-medium">0</span> of 
@@ -119,6 +132,11 @@
                     <span id="filteredInfo" class="hidden">
                         (filtered from <span id="totalEntriesOriginal" class="font-medium">0</span> total entries)
                     </span>
+                </div>
+
+                <!-- Pagination -->
+                <div id="paginationContainer" class="flex items-center space-x-2">
+                    <!-- Pagination buttons akan di-generate oleh JavaScript -->
                 </div>
             </div>
         </div>
@@ -131,7 +149,10 @@
 <!-- Include Edit Modal -->
 @include('suppliers.edit')
 
-{{-- Image Preview Modal (sama persis dengan parts) --}}
+<!-- Include Import Modal -->
+@include('suppliers.import')
+
+{{-- Image Preview Modal --}}
 <div id="imagePreviewModal" class="fixed inset-0 hidden items-center justify-center z-50 p-4" onclick="closeImagePreview()">
     <div class="relative max-w-4xl max-h-[90vh] w-full" onclick="event.stopPropagation()">
         <button onclick="closeImagePreview()" class="absolute -top-12 right-0 text-white hover:text-gray-300 transition">
@@ -163,6 +184,8 @@
     let allSuppliers   = [];
     let filteredSuppliers = [];
     let currentPerPage  = 20;
+    let currentPage = 1;
+    let totalPages = 1;
 
     // === INIT ===
     document.addEventListener('DOMContentLoaded', function () {
@@ -192,6 +215,7 @@
             document.getElementById('filteredInfo').classList.remove('hidden');
             document.getElementById('totalEntriesOriginal').textContent = allSuppliers.length;
         }
+        currentPage = 1; // Reset ke halaman 1 saat search
         updateTable();
     }
 
@@ -199,18 +223,133 @@
     function changePerPage() {
         const val = document.getElementById('perPageSelect').value;
         currentPerPage = val === 'all' ? filteredSuppliers.length : parseInt(val);
+        currentPage = 1; // Reset ke halaman 1 saat ganti per page
         updateTable();
+    }
+
+    // === GO TO PAGE ===
+    function goToPage(page) {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        updateTable();
+    }
+
+    // === RENDER PAGINATION ===
+    function renderPagination() {
+        const container = document.getElementById('paginationContainer');
+        
+        // Hide pagination jika cuma 1 halaman atau show all
+        if (totalPages <= 1 || currentPerPage >= filteredSuppliers.length) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let paginationHTML = '';
+
+        // Previous Button - UKURAN DIPERKECIL
+        paginationHTML += `
+            <button 
+                onclick="goToPage(${currentPage - 1})" 
+                ${currentPage === 1 ? 'disabled' : ''}
+                class="px-2 py-1.5 rounded-lg border text-xs ${currentPage === 1 ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300 text-gray-700 hover:bg-gray-50'} transition"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+        `;
+
+        // Page Numbers
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        // Adjust start page jika endPage mentok
+        if (endPage - startPage < maxVisiblePages - 1) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        // First page button - UKURAN DIPERKECIL
+        if (startPage > 1) {
+            paginationHTML += `
+                <button 
+                    onclick="goToPage(1)" 
+                    class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition text-xs"
+                >
+                    1
+                </button>
+            `;
+            if (startPage > 2) {
+                paginationHTML += `<span class="px-1 text-gray-500 text-xs">...</span>`;
+            }
+        }
+
+        // Middle page buttons - UKURAN DIPERKECIL
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHTML += `
+                <button 
+                    onclick="goToPage(${i})" 
+                    class="px-3 py-1.5 rounded-lg border transition text-xs ${i === currentPage ? 'bg-black text-white border-black font-semibold' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}"
+                >
+                    ${i}
+                </button>
+            `;
+        }
+
+        // Last page button - UKURAN DIPERKECIL
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                paginationHTML += `<span class="px-1 text-gray-500 text-xs">...</span>`;
+            }
+            paginationHTML += `
+                <button 
+                    onclick="goToPage(${totalPages})" 
+                    class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition text-xs"
+                >
+                    ${totalPages}
+                </button>
+            `;
+        }
+
+        // Next Button - UKURAN DIPERKECIL
+        paginationHTML += `
+            <button 
+                onclick="goToPage(${currentPage + 1})" 
+                ${currentPage === totalPages ? 'disabled' : ''}
+                class="px-2 py-1.5 rounded-lg border text-xs ${currentPage === totalPages ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300 text-gray-700 hover:bg-gray-50'} transition"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+        `;
+
+        container.innerHTML = paginationHTML;
     }
 
     // === RENDER TABLE ===
     function updateTable() {
-        const tbody      = document.getElementById('suppliersTableBody');
-        const total      = filteredSuppliers.length;
-        const toShow     = currentPerPage > total ? total : currentPerPage;
+        const tbody = document.getElementById('suppliersTableBody');
+        const total = filteredSuppliers.length;
+        
+        // Calculate pagination
+        if (currentPerPage >= total) {
+            totalPages = 1;
+            currentPage = 1;
+        } else {
+            totalPages = Math.ceil(total / currentPerPage);
+            // Pastikan currentPage tidak melebihi totalPages
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+        }
 
-        // update footer info
-        document.getElementById('showingFrom').textContent = total > 0 ? 1 : 0;
-        document.getElementById('showingTo').textContent   = toShow;
+        const startIndex = (currentPage - 1) * currentPerPage;
+        const endIndex = Math.min(startIndex + currentPerPage, total);
+
+        // Update footer info
+        document.getElementById('showingFrom').textContent = total > 0 ? startIndex + 1 : 0;
+        document.getElementById('showingTo').textContent = endIndex;
         document.getElementById('totalEntries').textContent = total;
 
         tbody.innerHTML = '';
@@ -226,17 +365,22 @@
                         <p class="text-gray-500 text-sm mt-1">Try adjusting your search</p>
                     </td>
                 </tr>`;
+            renderPagination();
             return;
         }
 
-        filteredSuppliers.slice(0, toShow).forEach((item, idx) => {
+        // Render rows untuk halaman saat ini
+        filteredSuppliers.slice(startIndex, endIndex).forEach((item, idx) => {
             const row = item.element.cloneNode(true);
-            row.querySelector('td:first-child').textContent = idx + 1;
+            row.querySelector('td:first-child').textContent = startIndex + idx + 1;
             tbody.appendChild(row);
         });
+
+        // Render pagination
+        renderPagination();
     }
 
-    // === IMAGE PREVIEW (sama persis dengan parts) ===
+    // === IMAGE PREVIEW ===
     function showImagePreview(src, title) {
         document.getElementById('previewImageSrc').src = src;
         document.getElementById('previewImageTitle').textContent = title;
@@ -318,7 +462,7 @@
         document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
     }
 
-    // === FORM SUBMIT (Create & Edit) – sama seperti parts ===
+    // === FORM SUBMIT (Create & Edit) ===
     document.getElementById('createForm')?.addEventListener('submit', async function (e) {
         e.preventDefault();
         clearErrors();
@@ -413,6 +557,7 @@
             closeCreateModal();
             closeEditModal();
             closeImagePreview();
+            closeImportModal();
         }
     });
 </script>

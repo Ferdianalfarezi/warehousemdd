@@ -43,6 +43,9 @@ Route::middleware('auth')->group(function () {
     // ==================== DATA MASTER ====================
     
     // Suppliers
+    Route::resource('suppliers', SupplierController::class);
+    Route::get('/suppliers/download/template', [SupplierController::class, 'downloadTemplate'])->name('suppliers.download.template');
+    Route::post('/suppliers/import', [SupplierController::class, 'import'])->name('suppliers.import');
     Route::resource('suppliers', SupplierController::class)->except(['create', 'edit']);
 
     // Parts

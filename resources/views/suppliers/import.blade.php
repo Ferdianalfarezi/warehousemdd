@@ -4,8 +4,8 @@
         <!-- Modal Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 sticky top-0 bg-white z-10">
             <div>
-                <h2 class="text-xl font-bold text-gray-900">Import Parts</h2>
-                <p class="text-sm text-gray-600 mt-0.5">Upload Excel file to import multiple parts</p>
+                <h2 class="text-xl font-bold text-gray-900">Import Suppliers</h2>
+                <p class="text-sm text-gray-600 mt-0.5">Upload Excel file to import multiple suppliers</p>
             </div>
             <button onclick="closeImportModal()" class="text-gray-400 hover:text-gray-600 transition">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -17,19 +17,19 @@
         <!-- Modal Body -->
         <div class="p-6 space-y-6">
 
-            <!-- Download Template -->
+            {{-- <!-- Download Template -->
             <div class="bg-white border border-gray-200 rounded-xl p-4">
                 <h3 class="font-semibold text-gray-900 mb-3 flex items-center text-sm">
                     Download Template Excel
                 </h3>
-                <a href="{{ route('parts.download.template') }}" 
+                <a href="{{ route('suppliers.download.template') }}" 
                    class="inline-flex items-center space-x-2 bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-green-700 transition text-sm">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                     </svg>
                     <span>Download Template</span>
                 </a>
-            </div>
+            </div> --}}
 
             <!-- Upload Form -->
             <div class="bg-white border border-gray-200 rounded-xl p-4">
@@ -116,27 +116,22 @@
                         <!-- Errors will be displayed here -->
                     </div>
                 </div>
-
-                
             </div>
         </div>
     </div>
 </div>
 
 <style>
-/* CSS khusus untuk import modal backdrop blur */
 #importModal {
     backdrop-filter: blur(4px);
     background-color: rgba(0, 0, 0, 0.5);
     transition: opacity 0.3s ease-in-out;
 }
 
-/* Fade in hanya opacity, tanpa scale */
 #importModal.modal-fade-in {
     opacity: 1;
 }
 
-/* Hidden state */
 #importModal:not(.modal-fade-in) {
     opacity: 0;
 }
@@ -176,7 +171,6 @@ function openImportModal() {
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     
-    // Trigger fade in animation (hanya opacity)
     setTimeout(() => {
         modal.classList.add('modal-fade-in');
     }, 10);
@@ -186,7 +180,6 @@ function closeImportModal() {
     const modal = document.getElementById('importModal');
     modal.classList.remove('modal-fade-in');
     
-    // Delay untuk animasi fade out
     setTimeout(() => {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
@@ -201,7 +194,6 @@ document.getElementById('importForm')?.addEventListener('submit', async function
     const submitButton = document.getElementById('importButton');
     const originalButtonContent = submitButton.innerHTML;
     
-    // Disable button & show loading
     submitButton.disabled = true;
     submitButton.innerHTML = `
         <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -211,12 +203,11 @@ document.getElementById('importForm')?.addEventListener('submit', async function
         <span>Importing...</span>
     `;
     
-    // Clear previous errors
     document.getElementById('error-import-file').textContent = '';
     document.getElementById('importResultsCard').classList.add('hidden');
     
     try {
-        const response = await fetch('{{ route("parts.import") }}', {
+        const response = await fetch('{{ route("suppliers.import") }}', {
             method: 'POST',
             headers: {
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
@@ -227,13 +218,11 @@ document.getElementById('importForm')?.addEventListener('submit', async function
         const data = await response.json();
         
         if (data.success) {
-            // Show results
             document.getElementById('totalRows').textContent = data.data.total;
             document.getElementById('successRows').textContent = data.data.success;
             document.getElementById('failedRows').textContent = data.data.failed;
             document.getElementById('importResultsCard').classList.remove('hidden');
             
-            // Show errors if any
             if (data.data.errors.length > 0) {
                 const errorsList = document.getElementById('errorsList');
                 errorsList.innerHTML = data.data.errors.map(error => 
@@ -244,7 +233,6 @@ document.getElementById('importForm')?.addEventListener('submit', async function
                 document.getElementById('errorsContainer').classList.add('hidden');
             }
             
-            // Show success message
             Swal.fire({
                 icon: 'success',
                 title: 'Import Completed!',
@@ -258,13 +246,11 @@ document.getElementById('importForm')?.addEventListener('submit', async function
                 confirmButtonColor: '#000',
                 confirmButtonText: 'OK'
             }).then(() => {
-                // Reload page otomatis setelah klik OK
                 if (data.data.success > 0) {
                     location.reload();
                 }
             });
             
-            // Clear file input
             document.getElementById('importFileInput').value = '';
             document.getElementById('filePreview').classList.add('hidden');
             
@@ -293,16 +279,8 @@ document.getElementById('importForm')?.addEventListener('submit', async function
             confirmButtonColor: '#000'
         });
     } finally {
-        // Re-enable button
         submitButton.disabled = false;
         submitButton.innerHTML = originalButtonContent;
-    }
-});
-
-// Close modal on Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeImportModal();
     }
 });
 </script>

@@ -46,7 +46,6 @@
     <table class="table-bordered theme-table table-dark-custom" style="width: 100%">
         <thead>
             <tr class="text-center" style="font-size: 1.25rem;">
-                <th>No</th>
                 <th>Barang</th>
                 <th>Kode</th>
                 <th>Mesin</th>
@@ -58,9 +57,8 @@
         <tbody class="table-dark-custom text-center" id="tableBody" style="font-size: 1.25rem;">
             @forelse($requests as $request)
                 <tr data-status="{{ $request->status }}">
-                    <td>{{ $loop->iteration }}</td>
-                    <td>{{ $request->generalCheckup->nama }}</td>
-                    <td>{{ $request->generalCheckup->kode_barang }}</td>
+                    <td style="font-weight: bold;">{{ $request->generalCheckup->nama }}</td>
+                    <td style="font-weight: bold;">{{ $request->generalCheckup->kode_barang }}</td>
                     <td>{{ $request->mesin }}</td>
                     <td>{{ Str::limit($request->problem, 50) }}</td>
                     <td>{{ $request->confirmed_at ? $request->confirmed_at->format('d/m/Y H:i') : '-' }}</td>

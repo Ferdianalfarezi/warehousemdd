@@ -20,7 +20,20 @@ class PartController extends Controller
     {
         $parts = Part::with('supplier')->latest()->get();
         $suppliers = Supplier::all();
-        return view('parts.index', compact('parts', 'suppliers'));
+        
+        // Hitung statistik stock
+        $totalParts = $parts->count();
+        $stockAman = $parts->filter(function($part) {
+            return $part->stock >= $part->min_stock;
+        })->count();
+        $hampirHabis = $parts->filter(function($part) {
+            return $part->stock > 0 && $part->stock < $part->min_stock;
+        })->count();
+        $habis = $parts->filter(function($part) {
+            return $part->stock == 0;
+        })->count();
+        
+        return view('parts.index', compact('parts', 'suppliers', 'totalParts', 'stockAman', 'hampirHabis', 'habis'));
     }
 
     /**

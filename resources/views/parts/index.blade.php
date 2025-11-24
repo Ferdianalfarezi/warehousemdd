@@ -6,6 +6,8 @@
 <div class="space-y-6">
     
     <!-- Page Header -->
+<div class="space-y-4">
+    <!-- Title & Buttons -->
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-3xl font-bold text-gray-900">Parts</h1>
@@ -35,6 +37,70 @@
             </button>
         </div>
     </div>
+
+    <!-- Statistics Badges -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Total Parts -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider">Total Parts</p>
+                    <p class="text-2xl font-bold text-blue-900 mt-1">{{ $totalParts }}</p>
+                </div>
+                <div class="bg-blue-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Aman -->
+        <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-green-600 uppercase tracking-wider">Stock Aman</p>
+                    <p class="text-2xl font-bold text-green-900 mt-1">{{ $stockAman }}</p>
+                </div>
+                <div class="bg-green-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hampir Habis -->
+        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-yellow-600 uppercase tracking-wider">Hampir Habis</p>
+                    <p class="text-2xl font-bold text-yellow-900 mt-1">{{ $hampirHabis }}</p>
+                </div>
+                <div class="bg-yellow-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Habis -->
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-semibold text-red-600 uppercase tracking-wider">Stock Habis</p>
+                    <p class="text-2xl font-bold text-red-900 mt-1">{{ $habis }}</p>
+                </div>
+                <div class="bg-red-100 p-3 rounded-lg">
+                    <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
         <div class="flex flex-col md:flex-row md:items-center md:justify-start md:space-x-4 space-y-3 md:space-y-0">
@@ -148,7 +214,7 @@
             </table>
         </div>
 
-        <!-- Footer: Showing Entries -->
+        <!-- Footer: Showing Entries & Pagination -->
         <div class="bg-gray-50 border-t border-gray-200 px-6 py-4">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <!-- Showing Info -->
@@ -159,6 +225,11 @@
                     <span id="filteredInfo" class="hidden">
                         (filtered from <span id="totalEntriesOriginal" class="font-medium">0</span> total entries)
                     </span>
+                </div>
+
+                <!-- Pagination -->
+                <div id="paginationContainer" class="flex items-center space-x-2">
+                    <!-- Pagination buttons akan di-generate oleh JavaScript -->
                 </div>
             </div>
         </div>
@@ -214,6 +285,8 @@
     let allParts = [];
     let filteredParts = [];
     let currentPerPage = 20;
+    let currentPage = 1;
+    let totalPages = 1;
 
     // Initialize data on page load
     document.addEventListener('DOMContentLoaded', function() {
@@ -283,6 +356,7 @@
             document.getElementById('totalEntriesOriginal').textContent = allParts.length;
         }
         
+        currentPage = 1; // Reset ke halaman 1 saat search
         updateTable();
     }
 
@@ -290,21 +364,136 @@
     function changePerPage() {
         const perPage = document.getElementById('perPageSelect').value;
         currentPerPage = perPage === 'all' ? filteredParts.length : parseInt(perPage);
+        currentPage = 1; // Reset ke halaman 1 saat ganti per page
         updateTable();
+    }
+
+    // Go to page
+    function goToPage(page) {
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        updateTable();
+    }
+
+    // Render pagination
+    function renderPagination() {
+        const container = document.getElementById('paginationContainer');
+        
+        // Hide pagination jika cuma 1 halaman atau show all
+        if (totalPages <= 1 || currentPerPage >= filteredParts.length) {
+            container.innerHTML = '';
+            return;
+        }
+
+        let paginationHTML = '';
+
+        // Previous Button
+        paginationHTML += `
+            <button 
+                onclick="goToPage(${currentPage - 1})" 
+                ${currentPage === 1 ? 'disabled' : ''}
+                class="px-2 py-1.5 rounded-lg border text-xs ${currentPage === 1 ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300 text-gray-700 hover:bg-gray-50'} transition"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+            </button>
+        `;
+
+        // Page Numbers
+        const maxVisiblePages = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+        let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+
+        // Adjust start page jika endPage mentok
+        if (endPage - startPage < maxVisiblePages - 1) {
+            startPage = Math.max(1, endPage - maxVisiblePages + 1);
+        }
+
+        // First page button
+        if (startPage > 1) {
+            paginationHTML += `
+                <button 
+                    onclick="goToPage(1)" 
+                    class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition text-xs"
+                >
+                    1
+                </button>
+            `;
+            if (startPage > 2) {
+                paginationHTML += `<span class="px-1 text-gray-500 text-xs">...</span>`;
+            }
+        }
+
+        // Middle page buttons
+        for (let i = startPage; i <= endPage; i++) {
+            paginationHTML += `
+                <button 
+                    onclick="goToPage(${i})" 
+                    class="px-3 py-1.5 rounded-lg border transition text-xs ${i === currentPage ? 'bg-black text-white border-black font-semibold' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}"
+                >
+                    ${i}
+                </button>
+            `;
+        }
+
+        // Last page button
+        if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+                paginationHTML += `<span class="px-1 text-gray-500 text-xs">...</span>`;
+            }
+            paginationHTML += `
+                <button 
+                    onclick="goToPage(${totalPages})" 
+                    class="px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 transition text-xs"
+                >
+                    ${totalPages}
+                </button>
+            `;
+        }
+
+        // Next Button
+        paginationHTML += `
+            <button 
+                onclick="goToPage(${currentPage + 1})" 
+                ${currentPage === totalPages ? 'disabled' : ''}
+                class="px-2 py-1.5 rounded-lg border text-xs ${currentPage === totalPages ? 'border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300 text-gray-700 hover:bg-gray-50'} transition"
+            >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+            </button>
+        `;
+
+        container.innerHTML = paginationHTML;
     }
 
     // Update table display
     function updateTable() {
         const tbody = document.getElementById('partsTableBody');
-        tbody.innerHTML = '';
-        
         const totalEntries = filteredParts.length;
-        const displayCount = currentPerPage > totalEntries ? totalEntries : currentPerPage;
+        
+        // Calculate pagination
+        if (currentPerPage >= totalEntries) {
+            totalPages = 1;
+            currentPage = 1;
+        } else {
+            totalPages = Math.ceil(totalEntries / currentPerPage);
+            // Pastikan currentPage tidak melebihi totalPages
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+        }
+
+        const startIndex = (currentPage - 1) * currentPerPage;
+        const endIndex = Math.min(startIndex + currentPerPage, totalEntries);
         
         // Update info
-        document.getElementById('showingFrom').textContent = totalEntries > 0 ? '1' : '0';
-        document.getElementById('showingTo').textContent = displayCount;
+        document.getElementById('showingFrom').textContent = totalEntries > 0 ? startIndex + 1 : '0';
+        document.getElementById('showingTo').textContent = endIndex;
         document.getElementById('totalEntries').textContent = totalEntries;
+        
+        tbody.innerHTML = '';
         
         if (totalEntries === 0) {
             // Show empty state
@@ -319,19 +508,23 @@
                     </td>
                 </tr>
             `;
+            renderPagination();
             return;
         }
         
-        // Display parts
-        filteredParts.slice(0, displayCount).forEach((part, index) => {
+        // Display parts untuk halaman saat ini
+        filteredParts.slice(startIndex, endIndex).forEach((part, index) => {
             const row = part.element.cloneNode(true);
             // Update row number
             const firstCell = row.querySelector('td:first-child');
             if (firstCell) {
-                firstCell.textContent = index + 1;
+                firstCell.textContent = startIndex + index + 1;
             }
             tbody.appendChild(row);
         });
+
+        // Render pagination
+        renderPagination();
     }
 
     // Show Image Preview Modal with fade animation
@@ -416,8 +609,6 @@
             const response = await fetch(`/parts/${id}`);
             const data = await response.json();
             
-            console.log('API Response:', data); // DEBUG
-            
             if (data.success) {
                 const part = data.data;
                 document.getElementById('editPartId').value = part.id;
@@ -433,28 +624,21 @@
                 // Set supplier value untuk Select2
                 $('#editSupplierId').val(part.supplier_id).trigger('change');
                 
-                // Show existing image menggunakan accessor image_path
+                // Show existing image
                 const previewImg = document.getElementById('editPreview');
                 const noImageText = document.getElementById('noImageText');
-                
-                console.log('Part gambar:', part.gambar); // DEBUG
-                console.log('Part gambar_source:', part.gambar_source); // DEBUG
-                console.log('Part image_path:', part.image_path); // DEBUG
                 
                 if (part.gambar && part.image_path) {
                     previewImg.src = part.image_path;
                     previewImg.style.display = 'block';
                     noImageText.style.display = 'none';
                     
-                    // Check if image loads
                     previewImg.onerror = function() {
-                        console.error('Image failed to load:', part.image_path);
                         previewImg.style.display = 'none';
                         noImageText.style.display = 'block';
                         noImageText.textContent = 'Image file not found';
                     };
                 } else {
-                    console.log('No image found'); // DEBUG
                     previewImg.style.display = 'none';
                     noImageText.style.display = 'block';
                     noImageText.textContent = 'No image uploaded';
@@ -648,6 +832,7 @@
             closeCreateModal();
             closeEditModal();
             closeImagePreview();
+            closeImportModal();
         }
     });
 </script>

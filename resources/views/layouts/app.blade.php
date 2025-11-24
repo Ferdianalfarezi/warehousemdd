@@ -600,8 +600,6 @@
 
         <!-- Main Content -->
         <div class="flex-1 flex flex-col transition-all duration-300" :class="sidebarOpen ? 'ml-64' : 'ml-0'">
-            
-            <!-- Top Navbar -->
             <header class="bg-white shadow-sm z-40 sticky top-0">
                 <div class="flex items-center justify-between px-6 py-4">
                     <!-- Menu Toggle -->
@@ -614,56 +612,68 @@
                         </svg>
                     </button>
 
-                    <!-- User Menu -->
-                    <div class="relative" x-data="{ open: false }">
-                        <button 
-                            @click="open = !open"
-                            class="flex items-center space-x-3 hover:bg-gray-50 px-4 py-2 rounded-xl transition-all duration-200"
-                        >
-                            @if(auth()->user()->avatar)
-                                <img src="{{ asset('storage/users/'.auth()->user()->avatar) }}" class="w-9 h-9 rounded-full object-cover ring-2 ring-gray-200">
-                            @else
-                                <div class="w-9 h-9 bg-gradient-to-br from-gray-800 to-black text-white rounded-full flex items-center justify-center font-bold ring-2 ring-gray-200">
-                                    {{ strtoupper(substr(auth()->user()->username, 0, 1)) }}
-                                </div>
-                            @endif
-                            <div class="text-left">
-                                <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->username }}</p>
-                                <p class="text-xs text-gray-500">{{ auth()->user()->role->nama ?? 'User' }}</p>
+                    <!-- Right Side: Date/Time & User Menu -->
+                    <div class="flex items-center space-x-4">
+                        <!-- Date & Time Display -->
+                        <div class="flex items-center space-x-2 text-gray-600">
+                            <div class="text-sm">
+                                <span id="current-date" class="font-medium"></span>
+                                <span class="mx-2">|</span>
+                                <span id="current-time" class="font-semibold"></span>
                             </div>
-                            <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" 
-                                 :class="open ? 'rotate-180' : ''"
-                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                            </svg>
-                        </button>
+                        </div>
 
-                        <!-- Dropdown -->
-                        <div 
-                            x-show="open"
-                            @click.away="open = false"
-                            x-transition:enter="transition ease-out duration-200"
-                            x-transition:enter-start="opacity-0 scale-95"
-                            x-transition:enter-end="opacity-100 scale-100"
-                            x-transition:leave="transition ease-in duration-150"
-                            x-transition:leave-start="opacity-100 scale-100"
-                            x-transition:leave-end="opacity-0 scale-95"
-                            class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg py-2 z-50 border border-gray-100"
-                            x-cloak
-                        >
-                            <a href="#" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        <!-- User Menu -->
+                        <div class="relative" x-data="{ open: false }">
+                            <button 
+                                @click="open = !open"
+                                class="flex items-center space-x-3 hover:bg-gray-50 px-4 py-2 rounded-xl transition-all duration-200"
+                            >
+                                @if(auth()->user()->avatar)
+                                    <img src="{{ asset('storage/users/'.auth()->user()->avatar) }}" class="w-9 h-9 rounded-full object-cover ring-2 ring-gray-200">
+                                @else
+                                    <div class="w-9 h-9 bg-gradient-to-br from-gray-800 to-black text-white rounded-full flex items-center justify-center font-bold ring-2 ring-gray-200">
+                                        {{ strtoupper(substr(auth()->user()->username, 0, 1)) }}
+                                    </div>
+                                @endif
+                                <div class="text-left">
+                                    <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->username }}</p>
+                                    <p class="text-xs text-gray-500">{{ auth()->user()->role->nama ?? 'User' }}</p>
+                                </div>
+                                <svg class="w-4 h-4 text-gray-500 transition-transform duration-200" 
+                                    :class="open ? 'rotate-180' : ''"
+                                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                                 </svg>
-                                Profile
-                            </a>
-                            <div class="border-t border-gray-100 my-1"></div>
-                            <button onclick="confirmLogout()" class="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                                </svg>
-                                Logout
                             </button>
+
+                            <!-- Dropdown -->
+                            <div 
+                                x-show="open"
+                                @click.away="open = false"
+                                x-transition:enter="transition ease-out duration-200"
+                                x-transition:enter-start="opacity-0 scale-95"
+                                x-transition:enter-end="opacity-100 scale-100"
+                                x-transition:leave="transition ease-in duration-150"
+                                x-transition:leave-start="opacity-100 scale-100"
+                                x-transition:leave-end="opacity-0 scale-95"
+                                class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg py-2 z-50 border border-gray-100"
+                                x-cloak
+                            >
+                                <a href="#" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                    Profile
+                                </a>
+                                <div class="border-t border-gray-100 my-1"></div>
+                                <button onclick="confirmLogout()" class="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                                    </svg>
+                                    Logout
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -852,7 +862,7 @@
                 text: "Apakah Anda yakin ingin keluar dari sistem?",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#000000',
+                confirmButtonColor: '#E4080A',
                 cancelButtonColor: '#6b7280',
                 confirmButtonText: '<i class="fas fa-sign-out-alt mr-2"></i> Ya, Logout',
                 cancelButtonText: '<i class="fas fa-times mr-2"></i> Batal',
@@ -891,6 +901,24 @@
                 }
             });
         }
+
+        function updateDateTime() {     
+            const now = new Date();
+            
+            // Format tanggal: Senin, 25 November 2024
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateStr = now.toLocaleDateString('id-ID', options);
+            
+            // Format waktu: 14:30:45
+            const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            document.getElementById('current-date').textContent = dateStr;
+            document.getElementById('current-time').textContent = timeStr;
+        }
+
+        // Update setiap detik
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
     </script>
     
     @stack('scripts')

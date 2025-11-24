@@ -23,82 +23,82 @@
     </div>
 
     <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <!-- Total -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600">Total</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ $stats['total'] }}</p>
-                </div>
-                <div class="p-2 bg-gray-100 rounded-lg">
-                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                    </svg>
-                </div>
+<div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+    <!-- Total -->
+    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Total</p>
+                <p class="text-2xl font-bold text-gray-900 mt-1">{{ $stats['total'] }}</p>
             </div>
-        </div>
-
-        <!-- Terjadwal -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600">Terjadwal</p>
-                    <p class="text-2xl font-bold text-green-600 mt-1">{{ $stats['terjadwal'] }}</p>
-                </div>
-                <div class="p-2 bg-green-100 rounded-lg">
-                    <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- Segera -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600">Segera</p>
-                    <p class="text-2xl font-bold text-yellow-600 mt-1">{{ $stats['segera'] }}</p>
-                </div>
-                <div class="p-2 bg-yellow-100 rounded-lg">
-                    <svg class="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- Hari Ini -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600">Hari Ini</p>
-                    <p class="text-2xl font-bold text-blue-600 mt-1">{{ $stats['hari_ini'] }}</p>
-                </div>
-                <div class="p-2 bg-blue-100 rounded-lg">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- Terlambat -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-sm font-medium text-gray-600">Terlambat</p>
-                    <p class="text-2xl font-bold text-red-600 mt-1">{{ $stats['terlambat'] }}</p>
-                </div>
-                <div class="p-2 bg-red-100 rounded-lg">
-                    <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
+            <div class="bg-gray-100 p-3 rounded-lg">
+                <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
             </div>
         </div>
     </div>
+
+    <!-- Terjadwal -->
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-green-600 uppercase tracking-wider">Terjadwal</p>
+                <p class="text-2xl font-bold text-green-900 mt-1">{{ $stats['terjadwal'] }}</p>
+            </div>
+            <div class="bg-green-100 p-3 rounded-lg">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Segera -->
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-yellow-600 uppercase tracking-wider">Segera</p>
+                <p class="text-2xl font-bold text-yellow-900 mt-1">{{ $stats['segera'] }}</p>
+            </div>
+            <div class="bg-yellow-100 p-3 rounded-lg">
+                <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hari Ini -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider">Hari Ini</p>
+                <p class="text-2xl font-bold text-blue-900 mt-1">{{ $stats['hari_ini'] }}</p>
+            </div>
+            <div class="bg-blue-100 p-3 rounded-lg">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terlambat -->
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="text-xs font-semibold text-red-600 uppercase tracking-wider">Terlambat</p>
+                <p class="text-2xl font-bold text-red-900 mt-1">{{ $stats['terlambat'] }}</p>
+            </div>
+            <div class="bg-red-100 p-3 rounded-lg">
+                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+        </div>
+    </div>
+</div>
 
     <!-- Filters & Search -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">

@@ -88,12 +88,11 @@ tr[data-status="on_process"] {
                 <th style="width: 150px;">Status</th>
             </tr>
         </thead>
-        <tbody class="table-dark-custom text-center" id="tableBody" style="font-size: 1rem;">
+        <tbody class="table-dark-custom text-center" id="tableBody" style="font-size: 1.25rem;">
             @forelse($checkups as $checkup)
                 <tr data-status="{{ $checkup->status }}">
-                    
-                    <td>{{ $checkup->kode_barang }}</td>
-                    <td>{{ $checkup->nama }}</td>
+                    <td style="font-weight: bold;">{{ $checkup->kode_barang }}</td>
+                    <td style="font-weight: bold;">{{ $checkup->nama }}</td>
                     <td>{{ $checkup->line ?? '-' }}</td>
                     <td>{{ $checkup->tanggal_terjadwal->format('d/m/Y') }}</td>
                     <td>
