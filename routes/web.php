@@ -17,6 +17,7 @@ use App\Http\Controllers\PddConfirmController;
 use App\Http\Controllers\SubcontConfirmController;
 use App\Http\Controllers\AndonInhouseController;
 use App\Http\Controllers\AndonOuthouseController;
+use App\Http\Controllers\AndonGeneralCheckupController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -117,6 +118,9 @@ Route::middleware('auth')->group(function () {
     Route::get('andon/outhouse', [AndonOuthouseController::class, 'index'])->name('andon.outhouse.index');
     Route::get('andon/outhouse/{id}', [AndonOuthouseController::class, 'show'])->name('andon.outhouse.show');
     // ❌ REMOVED: Route::post('andon/outhouse/{id}/complete', ...)
+
+    Route::get('andon/general-checkup', [AndonGeneralCheckupController::class, 'index'])->name('andon.general-checkup.index');
+    Route::get('andon/general-checkup/{id}', [AndonGeneralCheckupController::class, 'show'])->name('andon.general-checkup.show');
 
     // ==================== DATA HISTORY ====================
     

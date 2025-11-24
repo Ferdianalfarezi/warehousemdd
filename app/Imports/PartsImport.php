@@ -35,9 +35,6 @@ class PartsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnErr
         $this->results['total']++;
         
         try {
-            // Debug: uncomment baris ini untuk lihat struktur data
-            // \Log::info('Row data:', $row);
-            
             // Handle different possible key formats
             $kodePart = $row['kode_part'] ?? $row['kodepart'] ?? null;
             $nama = $row['nama'] ?? null;
@@ -81,10 +78,15 @@ class PartsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnErr
                 return null;
             }
 
-            // Process gambar - copy dari public/images/part ke public/storage/parts
+            // Process gambar - cari file yang cocok dan simpan nama filenya
             $imageName = null;
             if (!empty($gambar)) {
-                $imageName = $this->copyImageToStorage($gambar, $kodePart);
+                $imageName = $this->findMatchingImage($gambar);
+                
+                if (!$imageName) {
+                    // Jika gambar tidak ditemukan, catat warning tapi tetap lanjut import
+                    $this->results['errors'][] = "Row {$this->results['total']}: Warning - Image '{$gambar}' not found, part created without image";
+                }
             }
 
             $part = Part::create([
@@ -97,7 +99,8 @@ class PartsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnErr
                 'address' => $address,
                 'line' => $line,
                 'supplier_id' => $supplier->id,
-                'gambar' => $imageName
+                'gambar' => $imageName,
+                'gambar_source' => $imageName ? 'import' : null // Flag sumber gambar
             ]);
 
             $this->results['success']++;
@@ -111,55 +114,51 @@ class PartsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnErr
     }
 
     /**
-     * Copy gambar dari public/images/part ke public/storage/parts
+     * Cari gambar yang cocok di folder public/images/parts
      * 
-     * @param string $fileName - Nama file gambar yang ada di kolom Excel
-     * @param string $kodePart - Kode part untuk nama file baru
-     * @return string|null - Nama file baru atau null jika gagal/tidak ditemukan
+     * @param string $fileName - Nama file gambar dari Excel
+     * @return string|null - Nama file yang ditemukan atau null
      */
-    private function copyImageToStorage($fileName, $kodePart)
-{
-    $sourceDirectory = public_path('images/part');
-    $destinationDirectory = public_path('storage/parts');
+    private function findMatchingImage($fileName)
+    {
+        $sourceDirectory = public_path('images/parts'); // 🔥 GANTI JADI 'parts'
 
-    if (!File::exists($sourceDirectory)) return null;
-    if (!File::exists($destinationDirectory)) {
-        File::makeDirectory($destinationDirectory, 0777, true);
-    }
-
-    $clean = strtolower(str_replace([' ', '_'], '', $fileName));
-
-    $files = File::files($sourceDirectory);
-
-    $matched = null;
-
-    foreach ($files as $file) {
-        $base = strtolower(str_replace([' ', '_'], '', $file->getFilename()));
-
-        // Jika Excel menulis `abc` tapi file aslinya `abc.png`
-        if (str_contains($base, $clean)) {
-            $matched = $file->getRealPath();
-            break;
+        if (!File::exists($sourceDirectory)) {
+            \Log::error("Directory not found: {$sourceDirectory}");
+            return null;
         }
+
+        // Bersihkan nama file dari Excel
+        $cleanFileName = strtolower(trim($fileName));
+        
+        // Hilangkan extension jika ada
+        $cleanFileName = preg_replace('/\.(png|jpg|jpeg|gif|webp)$/i', '', $cleanFileName);
+        
+        // Hilangkan spasi, underscore, dash
+        $cleanFileName = str_replace([' ', '_', '-'], '', $cleanFileName);
+
+        // Ambil semua file di folder
+        $files = File::files($sourceDirectory);
+
+        foreach ($files as $file) {
+            $actualFileName = $file->getFilename();
+            $actualFileBaseName = pathinfo($actualFileName, PATHINFO_FILENAME);
+            
+            // Bersihkan nama file asli juga
+            $cleanActualFileName = strtolower(str_replace([' ', '_', '-'], '', $actualFileBaseName));
+            
+            // Exact match
+            if ($cleanFileName === $cleanActualFileName) {
+                return $actualFileName;
+            }
+        }
+
+        return null;
     }
-
-    if (!$matched) return null;
-
-    $extension = pathinfo($matched, PATHINFO_EXTENSION);
-    $newFileName = time().'_'.str_replace(' ', '_', $kodePart).'.'.$extension;
-
-    File::copy($matched, $destinationDirectory.'/'.$newFileName);
-
-    return $newFileName;
-}
-
-
 
     public function rules(): array
     {
-        return [
-            // Removed validation rules, we'll handle it manually in model() method
-        ];
+        return [];
     }
 
     public function getResults()

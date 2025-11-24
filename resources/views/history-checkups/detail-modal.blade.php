@@ -2,7 +2,7 @@
 <div id="historyDetailModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center p-4 backdrop-blur-sm transition-all duration-300">
     <div class="bg-white rounded-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col transform transition-all duration-300 scale-95 opacity-0" id="historyModalContent">
         <!-- Modal Header -->
-        <div class="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4 flex items-center justify-between">
+        <div class="bg-white px-6 py-4 flex items-center justify-between">
             <h3 class="text-2xl font-bold text-black">Detail History Checkup</h3>
 
             <button onclick="closeHistoryDetailModal()" class="text-black hover:text-gray-700 transition">

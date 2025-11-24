@@ -12,6 +12,7 @@ class Part extends Model
     protected $fillable = [
         'kode_part',
         'gambar',
+        'gambar_source', // 🔥 TAMBAH INI
         'nama',
         'stock',
         'min_stock',
@@ -21,6 +22,11 @@ class Part extends Model
         'line',
         'supplier_id',
     ];
+
+    /**
+     * Append accessor to array/JSON
+     */
+    protected $appends = ['image_path'];
 
     /**
      * Get the supplier that owns the part.
@@ -62,5 +68,25 @@ class Part extends Model
     public function isAboveMaxStock()
     {
         return $this->stock > $this->max_stock;
+    }
+
+    /**
+     * Get full image path berdasarkan source
+     * 
+     * @return string|null
+     */
+    public function getImagePathAttribute()
+    {
+        if (!$this->gambar) {
+            return null;
+        }
+
+        // Jika dari import, ambil dari public/images/parts
+        if ($this->gambar_source === 'import') {
+            return asset('images/parts/' . $this->gambar); // 🔥 GANTI JADI 'parts'
+        }
+
+        // Jika dari CRUD manual, ambil dari storage/parts
+        return asset('storage/parts/' . $this->gambar);
     }
 }

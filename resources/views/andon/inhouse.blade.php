@@ -64,7 +64,7 @@
                     <td>{{ $request->mesin }}</td>
                     <td>{{ Str::limit($request->problem, 50) }}</td>
                     <td>{{ $request->confirmed_at ? $request->confirmed_at->format('d/m/Y H:i') : '-' }}</td>
-                    <td class="status">
+                    <td class="status py-1">
                         @php
                             $statusStyles = [
                                 'on_process' => 'background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);',

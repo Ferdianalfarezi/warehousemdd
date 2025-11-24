@@ -35,10 +35,10 @@
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-sm font-medium text-gray-600">On Process</p>
-                    <p class="text-2xl font-bold text-purple-600 mt-1">{{ $stats['on_process'] }}</p>
+                    <p class="text-2xl font-bold text-blue-600 mt-1">{{ $stats['on_process'] }}</p>
                 </div>
-                <div class="p-2 bg-purple-100 rounded-lg">
-                    <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div class="p-2 bg-blue-100 rounded-lg">
+                    <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                     </svg>
                 </div>
@@ -96,7 +96,7 @@
                                     @if($request->status === 'pending')
                                         <button 
                                             onclick="approveRequest({{ $request->id }})"
-                                            class="bg-purple-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-purple-600 transition"
+                                            class="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-600 transition"
                                         >
                                             Approve
                                         </button>

@@ -46,7 +46,7 @@
     <table class="table-bordered theme-table table-dark-custom" style="width: 100%">
         <thead>
             <tr class="text-center" style="font-size: 1.25rem;">
-                <th>No</th>
+                
                 <th>Barang</th>
                 <th>Kode</th>
                 <th>Mesin</th>
@@ -59,17 +59,17 @@
         <tbody class="table-dark-custom text-center" id="tableBody" style="font-size: 1.25rem;">
             @forelse($requests as $request)
                 <tr data-status="{{ $request->status }}">
-                    <td>{{ $loop->iteration }}</td>
+                    
                     <td>{{ $request->generalCheckup->nama }}</td>
                     <td>{{ $request->generalCheckup->kode_barang }}</td>
                     <td>{{ $request->mesin }}</td>
                     <td>{{ $request->supplier }}</td>
                     <td>{{ Str::limit($request->problem, 50) }}</td>
                     <td>{{ $request->confirmed_at ? $request->confirmed_at->format('d/m/Y H:i') : '-' }}</td>
-                    <td class="status">
+                    <td class="status py-1">
                         @php
                             $statusStyles = [
-                                'on_process' => 'background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%); color: white; box-shadow: 0 4px 6px -1px rgba(147, 51, 234, 0.3);',
+                                'on_process' => 'background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: white; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.3);',
                                 'completed' => 'background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);',
                             ];
                             $style = $statusStyles[$request->status] ?? '';

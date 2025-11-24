@@ -337,26 +337,10 @@
     .animate-slideIn {
         animation: slideIn 0.3s ease-out;
     }
+    
 </style>
 <body class="bg-gray-50 font-sans antialiased">
-    <div class="flex h-screen overflow-hidden" x-data="{ 
-        sidebarOpen: true,
-        openMenus: {
-            master: {{ request()->routeIs('parts.*') || request()->routeIs('barangs.*') || request()->routeIs('schedules.*') || request()->routeIs('check-indicators.*') || request()->routeIs('suppliers.*') || request()->routeIs('users.*') ? 'true' : 'false' }},
-            transaction: {{ request()->routeIs('general-checkups.*') ? 'true' : 'false' }},
-            approval: {{ request()->routeIs('pdd.confirm.*') || request()->routeIs('subcont.confirm.*') ? 'true' : 'false' }},
-            andon: {{ request()->routeIs('andon.inhouse.*') || request()->routeIs('andon.outhouse.*') ? 'true' : 'false' }},
-            history: {{ request()->routeIs('history-checkups.*') ? 'true' : 'false' }}
-        },
-        toggleMenu(menu) {
-            Object.keys(this.openMenus).forEach(key => {
-                if (key !== menu) {
-                    this.openMenus[key] = false;
-                }
-            });
-            this.openMenus[menu] = !this.openMenus[menu];
-        }
-    }">
+    <div class="flex h-screen overflow-hidden" x-data="menuState()">
         
         <!-- Sidebar -->
         <aside 
@@ -365,8 +349,7 @@
         >
             <!-- Logo -->
             <div class="logo-container flex items-center justify-center h-20 border-b border-gray-800 border-opacity-50 px-4">
-                <!-- Ganti src dengan path logo Anda -->
-                <img src="{{ asset('images/logomdd.png') }}" alt="Logo" class="logo-image  ">
+                <img src="{{ asset('images/logomdd.png') }}" alt="Logo" class="logo-image">
                 <h1 class="text-xl tracking-wider mt-2"><i>Warehouse</i></h1>
             </div>
 
@@ -546,7 +529,7 @@
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                                 </svg>
-                                Andon Inhouse
+                                Inhouse
                             </a>
 
                             <a href="{{ route('andon.outhouse.index') }}" 
@@ -554,7 +537,15 @@
                                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                                 </svg>
-                                Andon Outhouse
+                                Outhouse
+                            </a>
+
+                            <a href="{{ route('andon.general-checkup.index') }}" 
+                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.general-checkup.*') ? 'active' : '' }}">
+                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                </svg>
+                                General Checkup
                             </a>
                         </div>
                     </div>
@@ -685,10 +676,176 @@
         </div>
     </div>
 
+    <div x-data="notificationBadge()" x-init="init()" x-show="show" x-cloak
+     class="fixed bottom-6 right-6 z-50 transition-all duration-300"
+     x-transition:enter="transform ease-out duration-300"
+     x-transition:enter-start="translate-y-full opacity-0"
+     x-transition:enter-end="translate-y-0 opacity-100"
+     x-transition:leave="transform ease-in duration-200"
+     x-transition:leave-start="translate-y-0 opacity-100"
+     x-transition:leave-end="translate-y-full opacity-0">
+    
+    <div class="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-2xl shadow-2xl p-4 pr-12 min-w-[320px] relative overflow-hidden">
+        <!-- Close Button -->
+        <button @click="close()" 
+                class="absolute top-3 right-3 text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-all duration-200">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+        </button>
+
+        <!-- Icon -->
+        <div class="flex items-start space-x-3">
+            <div class="flex-shrink-0">
+                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm animate-pulse">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="flex-1">
+                <h3 class="font-bold text-lg mb-1">Approval Needed!</h3>
+                <p class="text-sm text-white/90 mb-3">You have pending requests to review</p>
+                
+                <!-- Stats -->
+                <div class="space-y-2">
+                    <!-- Inhouse -->
+                    <a :href="inhouseUrl" 
+                       x-show="inhouseCount > 0"
+                       class="flex items-center justify-between bg-white/20 backdrop-blur-sm rounded-lg px-3 py-2 hover:bg-white/30 transition-all duration-200 group">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                            </svg>
+                            <span class="text-sm font-medium">Inhouse</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg font-bold" x-text="inhouseCount"></span>
+                            <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </div>
+                    </a>
+
+                    <!-- Outhouse -->
+                    <a :href="outhouseUrl" 
+                       x-show="outhouseCount > 0"
+                       class="flex items-center justify-between bg-white/20 backdrop-blur-sm rounded-lg px-3 py-2 hover:bg-white/30 transition-all duration-200 group">
+                        <div class="flex items-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                            </svg>
+                            <span class="text-sm font-medium">Outhouse</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-lg font-bold" x-text="outhouseCount"></span>
+                            <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Animated background effect -->
+        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 animate-shimmer"></div>
+    </div>
+</div>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
     <script>
+        // 🔥 PRELOAD STATE SEBELUM ALPINE INIT (Critical!)
+        (function() {
+            const savedState = localStorage.getItem('sidebar_menu_state');
+            if (savedState) {
+                window.__PRELOADED_MENU_STATE__ = JSON.parse(savedState);
+            }
+        })();
+
+        // 🔥 GLOBAL MENU STATE HANDLER
+        function menuState() {
+            // Get current path untuk auto-detect menu yang harus dibuka
+            const currentPath = window.location.pathname;
+            
+            // Default state berdasarkan route
+            let defaultState = {
+                master: false,
+                transaction: false,
+                approval: false,
+                andon: false,
+                history: false
+            };
+            
+            // Auto-detect menu berdasarkan current path
+            if (currentPath.includes('/parts') || 
+                currentPath.includes('/barangs') || 
+                currentPath.includes('/schedules') || 
+                currentPath.includes('/check-indicators') || 
+                currentPath.includes('/suppliers') || 
+                currentPath.includes('/users')) {
+                defaultState.master = true;
+            }
+            
+            if (currentPath.includes('/general-checkups')) {
+                defaultState.transaction = true;
+            }
+            
+            if (currentPath.includes('/pdd/confirm') || 
+                currentPath.includes('/subcont/confirm')) {
+                defaultState.approval = true;
+            }
+            
+            if (currentPath.includes('/andon/inhouse') || 
+                currentPath.includes('/andon/outhouse')) {
+                defaultState.andon = true;
+            }
+            
+            if (currentPath.includes('/history-checkups')) {
+                defaultState.history = true;
+            }
+
+            return {
+                sidebarOpen: true,
+                
+                // 🔥 MERGE: Preloaded state + current route state
+                openMenus: {
+                    master: window.__PRELOADED_MENU_STATE__?.master ?? defaultState.master,
+                    transaction: window.__PRELOADED_MENU_STATE__?.transaction ?? defaultState.transaction,
+                    approval: window.__PRELOADED_MENU_STATE__?.approval ?? defaultState.approval,
+                    andon: window.__PRELOADED_MENU_STATE__?.andon ?? defaultState.andon,
+                    history: window.__PRELOADED_MENU_STATE__?.history ?? defaultState.history
+                },
+                
+                init() {
+                    // 🔥 FORCE OPEN MENU YANG SESUAI DENGAN ROUTE (Override localStorage if needed)
+                    if (defaultState.master) this.openMenus.master = true;
+                    if (defaultState.transaction) this.openMenus.transaction = true;
+                    if (defaultState.approval) this.openMenus.approval = true;
+                    if (defaultState.andon) this.openMenus.andon = true;
+                    if (defaultState.history) this.openMenus.history = true;
+                    
+                    // 🔥 SAVE STATE SETIAP KALI ADA PERUBAHAN
+                    this.$watch('openMenus', value => {
+                        localStorage.setItem('sidebar_menu_state', JSON.stringify(value));
+                    }, { deep: true });
+
+                    console.log('Menu initialized:', this.openMenus); // Debug
+                },
+                
+                toggleMenu(menu) {
+                    // Toggle menu yang diklik
+                    this.openMenus[menu] = !this.openMenus[menu];
+                }
+            }
+        }
+
         function confirmLogout() {
             Swal.fire({
                 title: 'Konfirmasi Logout',
@@ -713,6 +870,9 @@
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
+                    // 🔥 CLEAR LOCALSTORAGE PAS LOGOUT
+                    localStorage.removeItem('sidebar_menu_state');
+                    
                     Swal.fire({
                         title: 'Logging out...',
                         html: '<div class="flex items-center justify-center"><div class="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div></div>',
@@ -732,6 +892,9 @@
             });
         }
     </script>
+    
+    @stack('scripts')
+</body>
     
     @stack('scripts')
 </body>

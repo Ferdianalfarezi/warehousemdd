@@ -235,6 +235,12 @@
             border: 2px solid #22c55e;
         }
 
+        .status-pending {
+            background: #facc15 !important;  /* kuning */
+            color: #000000 !important;
+            border: 2px solid #fbbf24 !important;
+        }
+
         .status-delay {
             background: #dc2626;
             color: #ffffff;
