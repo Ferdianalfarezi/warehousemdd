@@ -18,22 +18,33 @@
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 </head>
 <style>
+
+    
     [x-cloak] { display: none !important; }
     
     /* Custom scrollbar */
     ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
+    width: 8px;
+    height: 8px;
     }
     ::-webkit-scrollbar-track {
-        background: transparent;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
     }
     ::-webkit-scrollbar-thumb {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 3px;
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
     }
     ::-webkit-scrollbar-thumb:hover {
-        background: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    .sidebar-nav-container {
+        height: calc(100vh - 80px - 80px); /* Total height - header - footer */
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.05);
     }
 
     /* Modal backdrop blur animation */
@@ -178,6 +189,7 @@
         display: grid;
         grid-template-rows: 0fr;
         transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden; /* Pindahkan overflow ke parent */
     }
 
     .submenu-container.open {
@@ -185,7 +197,8 @@
     }
 
     .submenu-container > div {
-        overflow: hidden;
+        min-height: 0; /* Important untuk grid layout */
+        overflow: visible; /* Ganti dari hidden ke visible */
     }
 
     /* Menu Item Styles */
@@ -460,248 +473,250 @@
                 <h1 class="text-xl tracking-wider mt-2"><i>Warehouse</i></h1>
             </div>
 
-            <!-- Navigation -->
-            <nav class="mt-4 px-3 space-y-1 overflow-y-auto h-[calc(100vh-11rem)] pb-4">
-                
-                <!-- Dashboard - Direct Link (No Dropdown) -->
-                <a href="{{ route('dashboard') }}" 
-                   class="menu-item flex items-center px-4 py-2.5 text-gray-300 {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                    <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                    </svg>
-                    <span class="font-semibold text-sm">Dashboard</span>
-                </a>
-
-                <!-- Data Master Group -->
-                <div>
-                    <button @click="toggleMenu('master')" 
-                            class="menu-group-header w-full flex items-center justify-between"
-                            :class="openMenus.master ? 'active' : ''">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
-                            </svg>
-                            <span class="font-semibold text-sm">Data Master</span>
-                        </div>
-                        <svg class="w-4 h-4 chevron-icon" :class="openMenus.master ? 'open' : ''" 
-                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </button>
+            <!-- Navigation - UPDATE BAGIAN INI -->
+            <div class="sidebar-nav-container px-3 space-y-1">
+                <nav class="mt-4 space-y-1 pb-4">
                     
-                    <div class="submenu-container" :class="openMenus.master ? 'open' : ''">
-                        <div class="ml-8 mt-1 space-y-1">
-                            <a href="{{ route('parts.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('parts.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                </svg>
-                                Parts
-                            </a>
-                            
-                            <a href="{{ route('barangs.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('barangs.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
-                                </svg>
-                                Items
-                            </a>
-                            
-                            <a href="{{ route('schedules.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('schedules.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                </svg>
-                                Schedules
-                            </a>
-                            
-                            <a href="{{ route('check-indicators.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('check-indicators.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                                </svg>
-                                Check Indicators
-                            </a>
-                            
-                            <a href="{{ route('suppliers.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                                </svg>
-                                Suppliers
-                            </a>
-                            
-                            @can('manage-users')
-                            <a href="{{ route('users.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('users.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                                </svg>
-                                Users
-                            </a>
-                            @endcan
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Data Transaksi Group -->
-                <div>
-                    <button @click="toggleMenu('transaction')" 
-                            class="menu-group-header w-full flex items-center justify-between"
-                            :class="openMenus.transaction ? 'active' : ''">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                            </svg>
-                            <span class="font-semibold text-sm">Data Transaksi</span>
-                        </div>
-                        <svg class="w-4 h-4 chevron-icon" :class="openMenus.transaction ? 'open' : ''" 
-                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    <!-- Dashboard - Direct Link (No Dropdown) -->
+                    <a href="{{ route('dashboard') }}" 
+                    class="menu-item flex items-center px-4 py-2.5 text-gray-300 {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                        <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
                         </svg>
-                    </button>
-                    
-                    <div class="submenu-container" :class="openMenus.transaction ? 'open' : ''">
-                        <div class="ml-8 mt-1 space-y-1">
-                            <a href="{{ route('general-checkups.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('general-checkups.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                                </svg>
-                                General Checkups
-                            </a>
-                        </div>
-                    </div>
-                </div>
+                        <span class="font-semibold text-sm">Dashboard</span>
+                    </a>
 
-                <!-- Approval Group -->
-                <div>
-                    <button @click="toggleMenu('approval')" 
-                            class="menu-group-header w-full flex items-center justify-between"
-                            :class="openMenus.approval ? 'active' : ''">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    <!-- Data Master Group -->
+                    <div>
+                        <button @click="toggleMenu('master')" 
+                                class="menu-group-header w-full flex items-center justify-between"
+                                :class="openMenus.master ? 'active' : ''">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
+                                </svg>
+                                <span class="font-semibold text-sm">Data Master</span>
+                            </div>
+                            <svg class="w-4 h-4 chevron-icon" :class="openMenus.master ? 'open' : ''" 
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
-                            <span class="font-semibold text-sm">Approval</span>
-                            <span id="totalApprovalBadge" class="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display: none;">
-                                0
-                            </span>
-                        </div>
-                        <svg class="w-4 h-4 chevron-icon" :class="openMenus.approval ? 'open' : ''" 
-                            fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </button>
-                    
-                    <div class="submenu-container" :class="openMenus.approval ? 'open' : ''">
-                        <div class="ml-8 mt-1 space-y-1">
-                            <a href="{{ route('pdd.confirm.index') }}" 
-                            class="submenu-item flex items-center justify-between px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('pdd.confirm.*') ? 'active' : '' }}">
-                                <div class="flex items-center">
+                        </button>
+                        
+                        <div class="submenu-container" :class="openMenus.master ? 'open' : ''">
+                            <div class="ml-8 mt-1 space-y-1">
+                                <a href="{{ route('parts.index') }}" 
+                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('parts.*') ? 'active' : '' }}">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                     </svg>
-                                    Inhouse
-                                </div>
-                                <span id="inhouseBadge" class="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display: none;">
-                                    0
-                                </span>
-                            </a>
-
-                            <a href="{{ route('subcont.confirm.index') }}" 
-                            class="submenu-item flex items-center justify-between px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('subcont.confirm.*') ? 'active' : '' }}">
-                                <div class="flex items-center">
+                                    Parts
+                                </a>
+                                
+                                <a href="{{ route('barangs.index') }}" 
+                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('barangs.*') ? 'active' : '' }}">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/>
                                     </svg>
-                                    Outhouse
-                                </div>
-                                <span id="outhouseBadge" class="bg-purple-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display: none;">
-                                    0
-                                </span>
-                            </a>
+                                    Items
+                                </a>
+                                
+                                <a href="{{ route('schedules.index') }}" 
+                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('schedules.*') ? 'active' : '' }}">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                    Schedules
+                                </a>
+                                
+                                <a href="{{ route('check-indicators.index') }}" 
+                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('check-indicators.*') ? 'active' : '' }}">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                    </svg>
+                                    Check Indicators
+                                </a>
+                                
+                                <a href="{{ route('suppliers.index') }}" 
+                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('suppliers.*') ? 'active' : '' }}">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    Suppliers
+                                </a>
+                                
+                                @can('manage-users')
+                                <a href="{{ route('users.index') }}" 
+                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('users.*') ? 'active' : '' }}">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                                    </svg>
+                                    Users
+                                </a>
+                                @endcan
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Andon Group -->
-                <div>
-                    <button @click="toggleMenu('andon')" 
-                            class="menu-group-header w-full flex items-center justify-between"
-                            :class="openMenus.andon ? 'active' : ''">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                            </svg>
-                            <span class="font-semibold text-sm">Andon</span>
-                        </div>
-                        <svg class="w-4 h-4 chevron-icon" :class="openMenus.andon ? 'open' : ''" 
-                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </button>
-                    
-                    <div class="submenu-container" :class="openMenus.andon ? 'open' : ''">
-                        <div class="ml-8 mt-1 space-y-1">
-                            <a href="{{ route('andon.inhouse.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.inhouse.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                                </svg>
-                                Inhouse
-                            </a>
-
-                            <a href="{{ route('andon.outhouse.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.outhouse.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                                </svg>
-                                Outhouse
-                            </a>
-
-                            <a href="{{ route('andon.general-checkup.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.general-checkup.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                                </svg>
-                                General Checkup
-                            </a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Data History Group -->
-                <div>
-                    <button @click="toggleMenu('history')" 
-                            class="menu-group-header w-full flex items-center justify-between"
-                            :class="openMenus.history ? 'active' : ''">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                            <span class="font-semibold text-sm">Data History</span>
-                        </div>
-                        <svg class="w-4 h-4 chevron-icon" :class="openMenus.history ? 'open' : ''" 
-                             fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </button>
-                    
-                    <div class="submenu-container" :class="openMenus.history ? 'open' : ''">
-                        <div class="ml-8 mt-1 space-y-1">
-                            <a href="{{ route('history-checkups.index') }}" 
-                               class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('history-checkups.*') ? 'active' : '' }}">
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <!-- Data Transaksi Group -->
+                    <div>
+                        <button @click="toggleMenu('transaction')" 
+                                class="menu-group-header w-full flex items-center justify-between"
+                                :class="openMenus.transaction ? 'active' : ''">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                                 </svg>
-                                History Checkups
-                            </a>
+                                <span class="font-semibold text-sm">Data Transaksi</span>
+                            </div>
+                            <svg class="w-4 h-4 chevron-icon" :class="openMenus.transaction ? 'open' : ''" 
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        
+                        <div class="submenu-container" :class="openMenus.transaction ? 'open' : ''">
+                            <div class="ml-8 mt-1 space-y-1">
+                                <a href="{{ route('general-checkups.index') }}" 
+                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('general-checkups.*') ? 'active' : '' }}">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                    </svg>
+                                    General Checkups
+                                </a>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-            </nav>
+                    <!-- Approval Group -->
+                    <div>
+                        <button @click="toggleMenu('approval')" 
+                                class="menu-group-header w-full flex items-center justify-between"
+                                :class="openMenus.approval ? 'active' : ''">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span class="font-semibold text-sm">Approval</span>
+                                <span id="totalApprovalBadge" class="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display: none;">
+                                    0
+                                </span>
+                            </div>
+                            <svg class="w-4 h-4 chevron-icon" :class="openMenus.approval ? 'open' : ''" 
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        
+                        <div class="submenu-container" :class="openMenus.approval ? 'open' : ''">
+                            <div class="ml-8 mt-1 space-y-1">
+                                <a href="{{ route('pdd.confirm.index') }}" 
+                                class="submenu-item flex items-center justify-between px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('pdd.confirm.*') ? 'active' : '' }}">
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                        </svg>
+                                        Inhouse
+                                    </div>
+                                    <span id="inhouseBadge" class="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display: none;">
+                                        0
+                                    </span>
+                                </a>
+
+                                <a href="{{ route('subcont.confirm.index') }}" 
+                                class="submenu-item flex items-center justify-between px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('subcont.confirm.*') ? 'active' : '' }}">
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                        </svg>
+                                        Outhouse
+                                    </div>
+                                    <span id="outhouseBadge" class="bg-purple-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display: none;">
+                                        0
+                                    </span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Andon Group -->
+                    <div>
+                        <button @click="toggleMenu('andon')" 
+                                class="menu-group-header w-full flex items-center justify-between"
+                                :class="openMenus.andon ? 'active' : ''">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+                                </svg>
+                                <span class="font-semibold text-sm">Andon</span>
+                            </div>
+                            <svg class="w-4 h-4 chevron-icon" :class="openMenus.andon ? 'open' : ''" 
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        
+                        <div class="submenu-container" :class="openMenus.andon ? 'open' : ''">
+                            <div class="ml-8 mt-1 space-y-1">
+                                <a href="{{ route('andon.inhouse.index') }}" 
+                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.inhouse.*') ? 'active' : '' }}">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                                    </svg>
+                                    Inhouse
+                                </a>
+
+                                <a href="{{ route('andon.outhouse.index') }}" 
+                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.outhouse.*') ? 'active' : '' }}">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                    Outhouse
+                                </a>
+
+                                <a href="{{ route('andon.general-checkup.index') }}" 
+                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.general-checkup.*') ? 'active' : '' }}">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+                                    </svg>
+                                    General Checkup
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data History Group -->
+                    <div>
+                        <button @click="toggleMenu('history')" 
+                                class="menu-group-header w-full flex items-center justify-between"
+                                :class="openMenus.history ? 'active' : ''">
+                            <div class="flex items-center">
+                                <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span class="font-semibold text-sm">Data History</span>
+                            </div>
+                            <svg class="w-4 h-4 chevron-icon" :class="openMenus.history ? 'open' : ''" 
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                        </button>
+                        
+                        <div class="submenu-container" :class="openMenus.history ? 'open' : ''">
+                            <div class="ml-8 mt-1 space-y-1">
+                                <a href="{{ route('history-checkups.index') }}" 
+                                class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('history-checkups.*') ? 'active' : '' }}">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                    History Checkups
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                </nav>
+            </div>
 
             <!-- Logout Button - Fixed at bottom -->
             <div class="absolute bottom-0 left-0 right-0 p-3 border-t border-gray-800 border-opacity-50 bg-gradient-to-t from-black to-transparent">
