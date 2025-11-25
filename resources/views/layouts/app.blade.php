@@ -16,6 +16,12 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <!-- Favicon default (light mode) -->
+    <link rel="icon" type="image/png" href="{{ asset('images/logomdddark.png') }}" media="(prefers-color-scheme: light)">
+
+    <!-- Favicon untuk dark mode -->
+    <link rel="icon" type="image/png" href="{{ asset('images/logomddwhite.png') }}" media="(prefers-color-scheme: dark)">
 </head>
 <style>
 
@@ -352,111 +358,111 @@
     }
 
     /* Tambahkan di file CSS atau dalam <style> tag di layout */
-.notification-container {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    z-index: 9999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-width: 400px;
-}
-
-.notification-toast {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    padding: 16px;
-    display: flex;
-    align-items: start;
-    gap: 12px;
-    animation: slideInRight 0.3s ease-out;
-    cursor: pointer;
-    transition: transform 0.2s;
-}
-
-.notification-toast:hover {
-    transform: translateX(-5px);
-}
-
-.notification-toast.fade-out {
-    animation: slideOutRight 0.3s ease-out forwards;
-}
-
-@keyframes slideInRight {
-    from {
-        transform: translateX(400px);
-        opacity: 0;
+    .notification-container {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        max-width: 400px;
     }
-    to {
-        transform: translateX(0);
-        opacity: 1;
+
+    .notification-toast {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        padding: 16px;
+        display: flex;
+        align-items: start;
+        gap: 12px;
+        animation: slideInRight 0.3s ease-out;
+        cursor: pointer;
+        transition: transform 0.2s;
     }
-}
 
-@keyframes slideOutRight {
-    from {
-        transform: translateX(0);
-        opacity: 1;
+    .notification-toast:hover {
+        transform: translateX(-5px);
     }
-    to {
-        transform: translateX(400px);
-        opacity: 0;
+
+    .notification-toast.fade-out {
+        animation: slideOutRight 0.3s ease-out forwards;
     }
-}
 
-.notification-icon {
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
+    @keyframes slideInRight {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
 
-.notification-icon.inhouse {
-    background: #3b82f6;
-}
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
 
-.notification-icon.outhouse {
-    background: #9333ea;
-}
+    .notification-icon {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-.notification-content {
-    flex: 1;
-}
+    .notification-icon.inhouse {
+        background: #3b82f6;
+    }
 
-.notification-title {
-    font-weight: 600;
-    color: #111827;
-    font-size: 14px;
-    margin-bottom: 4px;
-}
+    .notification-icon.outhouse {
+        background: #9333ea;
+    }
 
-.notification-message {
-    color: #6b7280;
-    font-size: 13px;
-    line-height: 1.4;
-}
+    .notification-content {
+        flex: 1;
+    }
 
-.notification-time {
-    color: #9ca3af;
-    font-size: 11px;
-    margin-top: 4px;
-}
+    .notification-title {
+        font-weight: 600;
+        color: #111827;
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
 
-.notification-badge {
-    background: #ef4444;
-    color: white;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 12px;
-    min-width: 20px;
-    text-align: center;
-}
+    .notification-message {
+        color: #6b7280;
+        font-size: 13px;
+        line-height: 1.4;
+    }
+
+    .notification-time {
+        color: #9ca3af;
+        font-size: 11px;
+        margin-top: 4px;
+    }
+
+    .notification-badge {
+        background: #ef4444;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 12px;
+        min-width: 20px;
+        text-align: center;
+    }
     
 </style>
 <body class="bg-gray-50 font-sans antialiased">
@@ -658,7 +664,10 @@
                         
                         <div class="submenu-container" :class="openMenus.andon ? 'open' : ''">
                             <div class="ml-8 mt-1 space-y-1">
+
+                                <!-- Inhouse -->
                                 <a href="{{ route('andon.inhouse.index') }}" 
+                                target="_blank"
                                 class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.inhouse.*') ? 'active' : '' }}">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
@@ -666,7 +675,9 @@
                                     Inhouse
                                 </a>
 
+                                <!-- Outhouse -->
                                 <a href="{{ route('andon.outhouse.index') }}" 
+                                target="_blank"
                                 class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.outhouse.*') ? 'active' : '' }}">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
@@ -674,16 +685,20 @@
                                     Outhouse
                                 </a>
 
+                                <!-- General Checkup -->
                                 <a href="{{ route('andon.general-checkup.index') }}" 
+                                target="_blank"
                                 class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('andon.general-checkup.*') ? 'active' : '' }}">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                                     </svg>
                                     General Checkup
                                 </a>
+
                             </div>
                         </div>
                     </div>
+
 
                     <!-- Data History Group -->
                     <div>
@@ -795,13 +810,8 @@
                                 class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg py-2 z-50 border border-gray-100"
                                 x-cloak
                             >
-                                <a href="#" class="flex items-center px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors duration-150">
-                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                    </svg>
-                                    Profile
-                                </a>
-                                <div class="border-t border-gray-100 my-1"></div>
+                                
+                                
                                 <button onclick="confirmLogout()" class="flex items-center w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-150">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
@@ -821,87 +831,11 @@
         </div>
     </div>
 
-    <div x-data="notificationBadge()" x-init="init()" x-show="show" x-cloak
-     class="fixed bottom-6 right-6 z-50 transition-all duration-300"
-     x-transition:enter="transform ease-out duration-300"
-     x-transition:enter-start="translate-y-full opacity-0"
-     x-transition:enter-end="translate-y-0 opacity-100"
-     x-transition:leave="transform ease-in duration-200"
-     x-transition:leave-start="translate-y-0 opacity-100"
-     x-transition:leave-end="translate-y-full opacity-0">
     
-    <div class="bg-gradient-to-br from-red-500 to-red-600 text-white rounded-2xl shadow-2xl p-4 pr-12 min-w-[320px] relative overflow-hidden">
-        <!-- Close Button -->
-        <button @click="close()" 
-                class="absolute top-3 right-3 text-white/80 hover:text-white hover:bg-white/20 rounded-lg p-1.5 transition-all duration-200">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </button>
-
-        <!-- Icon -->
-        <div class="flex items-start space-x-3">
-            <div class="flex-shrink-0">
-                <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm animate-pulse">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                    </svg>
-                </div>
-            </div>
-
-            <!-- Content -->
-            <div class="flex-1">
-                <h3 class="font-bold text-lg mb-1">Approval Needed!</h3>
-                <p class="text-sm text-white/90 mb-3">You have pending requests to review</p>
-                
-                <!-- Stats -->
-                <div class="space-y-2">
-                    <!-- Inhouse -->
-                    <a :href="inhouseUrl" 
-                       x-show="inhouseCount > 0"
-                       class="flex items-center justify-between bg-white/20 backdrop-blur-sm rounded-lg px-3 py-2 hover:bg-white/30 transition-all duration-200 group">
-                        <div class="flex items-center space-x-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
-                            </svg>
-                            <span class="text-sm font-medium">Inhouse</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-lg font-bold" x-text="inhouseCount"></span>
-                            <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                            </svg>
-                        </div>
-                    </a>
-
-                    <!-- Outhouse -->
-                    <a :href="outhouseUrl" 
-                       x-show="outhouseCount > 0"
-                       class="flex items-center justify-between bg-white/20 backdrop-blur-sm rounded-lg px-3 py-2 hover:bg-white/30 transition-all duration-200 group">
-                        <div class="flex items-center space-x-2">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                            </svg>
-                            <span class="text-sm font-medium">Outhouse</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-lg font-bold" x-text="outhouseCount"></span>
-                            <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
-                            </svg>
-                        </div>
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- Animated background effect -->
-        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 animate-shimmer"></div>
-    </div>
 </div>
 
-<!-- Notification Container -->
-<div id="notificationContainer" class="notification-container"></div>
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     

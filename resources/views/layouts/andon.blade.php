@@ -17,6 +17,12 @@
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    <!-- Favicon default (light mode) -->
+    <link rel="icon" type="image/png" href="{{ asset('images/logomdddark.png') }}" media="(prefers-color-scheme: light)">
+
+    <!-- Favicon untuk dark mode -->
+    <link rel="icon" type="image/png" href="{{ asset('images/logomddwhite.png') }}" media="(prefers-color-scheme: dark)">
+
     <style>
         /* Base styles */
         body {
@@ -77,13 +83,9 @@
             width: 120px;
             height: auto;
             cursor: pointer;
-            transition: transform 0.2s;
         }
 
-        .logo:hover {
-            transform: scale(1.05);
-        }
-
+        
         .page-title {
             font-weight: bold;
             font-size: 60px;
@@ -469,9 +471,9 @@
             <div class="table-row">
                 <!-- Logo -->
                 <div class="table-cell logo-cell">
-                    <a href="{{ route('dashboard') }}">
+                    {{-- <a href="{{ route('dashboard') }}"> --}}
                         <img src="{{ asset('images/logostep.png') }}" alt="Logo" class="logo">
-                    </a>
+                    {{-- </a> --}}
                 </div>
                 <!-- Title -->
                 <div class="table-cell title-cell">

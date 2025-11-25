@@ -110,20 +110,7 @@ Route::middleware('auth')->group(function () {
         Route::post('confirm/{id}/complete', [SubcontConfirmController::class, 'complete'])->name('confirm.complete'); // 🔥 NEW
     });
 
-    // ==================== ANDON (READ-ONLY) ====================
     
-    // Andon Inhouse - Display Only
-    Route::get('andon/inhouse', [AndonInhouseController::class, 'index'])->name('andon.inhouse.index');
-    Route::get('andon/inhouse/{id}', [AndonInhouseController::class, 'show'])->name('andon.inhouse.show');
-    // ❌ REMOVED: Route::post('andon/inhouse/{id}/complete', ...)
-
-    // Andon Outhouse - Display Only
-    Route::get('andon/outhouse', [AndonOuthouseController::class, 'index'])->name('andon.outhouse.index');
-    Route::get('andon/outhouse/{id}', [AndonOuthouseController::class, 'show'])->name('andon.outhouse.show');
-    // ❌ REMOVED: Route::post('andon/outhouse/{id}/complete', ...)
-
-    Route::get('andon/general-checkup', [AndonGeneralCheckupController::class, 'index'])->name('andon.general-checkup.index');
-    Route::get('andon/general-checkup/{id}', [AndonGeneralCheckupController::class, 'show'])->name('andon.general-checkup.show');
 
     // ==================== DATA HISTORY ====================
     
@@ -142,5 +129,16 @@ Route::get('/api/approval-counts', function() {
         'outhouse' => \App\Models\OuthouseRequest::where('status', 'pending')->count(),
     ]);
 })->middleware('auth');
+
+// ==================== ANDON (READ-ONLY) ====================
+    
+Route::get('andon/inhouse', [AndonInhouseController::class, 'index'])->name('andon.inhouse.index');
+Route::get('andon/inhouse/{id}', [AndonInhouseController::class, 'show'])->name('andon.inhouse.show');
+
+Route::get('andon/outhouse', [AndonOuthouseController::class, 'index'])->name('andon.outhouse.index');
+Route::get('andon/outhouse/{id}', [AndonOuthouseController::class, 'show'])->name('andon.outhouse.show');
+
+Route::get('andon/general-checkup', [AndonGeneralCheckupController::class, 'index'])->name('andon.general-checkup.index');
+Route::get('andon/general-checkup/{id}', [AndonGeneralCheckupController::class, 'show'])->name('andon.general-checkup.show');
 
 require __DIR__.'/auth.php';
