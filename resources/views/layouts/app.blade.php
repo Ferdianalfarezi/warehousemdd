@@ -828,6 +828,12 @@
             <main class="flex-1 overflow-y-auto p-6 bg-gray-50">
                 @yield('content')
             </main>
+
+            <footer style="background: #ffffff00; border-top: 1px solid #ffffffa2; padding: 1.5rem 2rem; text-align: center; margin-left:0px; transition: all 0.3s ease;">
+                <p style="margin: 0; font-size: 0.875rem; color: #888888;">
+                    &copy; {{ date('Y') }} <strong style="color: #000000;"><i>STEP IT DEPT</i></strong> - All rights reserved.
+                </p>
+            </footer>
         </div>
     </div>
 
@@ -836,9 +842,6 @@
 
     <!-- Notification Container -->
     <div id="notificationContainer" class="notification-container"></div>
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     
