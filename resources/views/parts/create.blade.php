@@ -68,6 +68,8 @@
                     <select id="createSatuan" name="satuan" required
                         class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition">
                         <option value="pcs">Pcs</option>
+                        <option value="pcs">Pack</option>
+                        <option value="pcs">Psg</option>
                         <option value="kg">Kg</option>
                         <option value="liter">Liter</option>
                         <option value="meter">Meter</option>
@@ -90,7 +92,7 @@
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-3 gap-4">
                 <!-- Address -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Address/Location</label>
@@ -107,6 +109,15 @@
                         class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition"
                         placeholder="e.g., Line 1">
                     <span class="text-red-500 text-sm error-message" id="error-create-line"></span>
+                </div>
+
+                <!-- ID PUD -->
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">ID PUD</label>
+                    <input type="number" id="createIdPud" name="id_pud"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition"
+                        placeholder="Enter ID PUD">
+                    <span class="text-red-500 text-sm error-message" id="error-create-id_pud"></span>
                 </div>
             </div>
 

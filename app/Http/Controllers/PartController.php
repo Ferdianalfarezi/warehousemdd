@@ -7,12 +7,21 @@ use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;          // ✅ Pastikan ada
+use Illuminate\Support\Facades\Log;         // 🔥 TAMBAHKAN INI
 use Maatwebsite\Excel\Facades\Excel;
 use App\Imports\PartsImport;
 use App\Exports\PartsTemplateExport;
+use App\Services\WarehouseOrderService;     // ✅ Pastikan ada
 
 class PartController extends Controller
 {
+    protected $warehouseOrderService;
+
+    public function __construct(WarehouseOrderService $warehouseOrderService)
+    {
+        $this->warehouseOrderService = $warehouseOrderService;
+    }
     /**
      * Display a listing of the resource.
      */
@@ -21,17 +30,11 @@ class PartController extends Controller
         $parts = Part::with('supplier')->latest()->get();
         $suppliers = Supplier::all();
         
-        // Hitung statistik stock
+        // Hitung statistik stock berdasarkan status
         $totalParts = $parts->count();
-        $stockAman = $parts->filter(function($part) {
-            return $part->stock >= $part->min_stock;
-        })->count();
-        $hampirHabis = $parts->filter(function($part) {
-            return $part->stock > 0 && $part->stock < $part->min_stock;
-        })->count();
-        $habis = $parts->filter(function($part) {
-            return $part->stock == 0;
-        })->count();
+        $stockAman = $parts->where('status', 'normal')->count();
+        $hampirHabis = $parts->where('status', 'low')->count();
+        $habis = $parts->where('status', 'habis')->count();
         
         return view('parts.index', compact('parts', 'suppliers', 'totalParts', 'stockAman', 'hampirHabis', 'habis'));
     }
@@ -51,6 +54,7 @@ class PartController extends Controller
             'address' => 'nullable|string|max:255',
             'line' => 'nullable|string|max:255',
             'supplier_id' => 'required|exists:suppliers,id',
+            'id_pud' => 'nullable|integer',
             'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
@@ -79,6 +83,7 @@ class PartController extends Controller
             $data['gambar'] = $imageName;
         }
 
+        // Status akan otomatis di-calculate di model boot()
         $part = Part::create($data);
         $part->load('supplier');
 
@@ -116,6 +121,7 @@ class PartController extends Controller
             'address' => 'nullable|string|max:255',
             'line' => 'nullable|string|max:255',
             'supplier_id' => 'required|exists:suppliers,id',
+            'id_pud' => 'nullable|integer',
             'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
@@ -152,6 +158,7 @@ class PartController extends Controller
             $data['gambar'] = $imageName;
         }
 
+        // Status akan otomatis di-calculate di model boot()
         $part->update($data);
         $part->load('supplier');
 
@@ -243,4 +250,153 @@ class PartController extends Controller
             ], 500);
         }
     }
+
+    // app/Http/Controllers/PartController.php
+
+/**
+ * Request part ke warehouse system
+ */
+public function requestToWarehouse(Request $request, Part $part)
+{
+    $validator = Validator::make($request->all(), [
+        'quantity' => 'required|integer|min:1',
+        'keterangan' => 'nullable|string|max:500',
+    ], [
+        'quantity.required' => 'Jumlah harus diisi',
+        'quantity.integer' => 'Jumlah harus berupa angka',
+        'quantity.min' => 'Jumlah minimal 1',
+        'keterangan.max' => 'Keterangan maksimal 500 karakter',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            'success' => false,
+            'errors' => $validator->errors()
+        ], 422);
+    }
+
+    // Validasi id_pud (barang_id warehouse)
+    if (!$part->id_pud) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Part ini belum di-mapping ke warehouse system (ID PUD kosong).'
+        ], 400);
+    }
+
+    // Get user
+    $user = auth()->user();
+    
+    // 🔥 FIX: Fallback untuk requester name
+    $requesterName = $user->name ?? $user->username ?? $user->email ?? 'MDD User';
+    
+    // Default department ID
+    $departmentId = $user->department_id ?? 10;
+    
+    Log::info('Warehouse request - User & Department info', [
+        'user_id' => $user->id,
+        'user_name' => $user->name,
+        'user_username' => $user->username ?? null,
+        'user_email' => $user->email ?? null,
+        'requester_name' => $requesterName,
+        'user_department_id' => $user->department_id,
+        'final_department_id' => $departmentId,
+        'is_default' => !$user->department_id
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        // Prepare items untuk warehouse API
+        $items = [
+            [
+                'barang_id' => (int) $part->id_pud,
+                'quantity' => (int) $request->quantity,
+                'keterangan' => $request->keterangan ?? "Request part: {$part->kode_part} - {$part->nama}"
+            ]
+        ];
+
+        Log::info('Submitting warehouse request', [
+            'part_id' => $part->id,
+            'part_kode' => $part->kode_part,
+            'part_nama' => $part->nama,
+            'id_pud' => $part->id_pud,
+            'department_id' => $departmentId,
+            'quantity' => $request->quantity,
+            'requester' => $requesterName
+        ]);
+
+        // Submit ke warehouse
+        $response = $this->warehouseOrderService->submitOrder(
+            items: $items,
+            requesterName: $requesterName, // 🔥 Gunakan requesterName yang sudah ada fallback
+            departmentId: (int) $departmentId,
+            catatan: "Request dari MDD Warehouse - Part: {$part->kode_part}"
+        );
+
+        Log::info('Warehouse API response', [
+            'success' => $response['success'],
+            'status_code' => $response['status_code'] ?? null,
+            'has_data' => isset($response['data'])
+        ]);
+
+        if (!$response['success']) {
+            DB::rollBack();
+            
+            $errorMessage = 'Gagal mengirim request ke warehouse.';
+            
+            if (isset($response['data']['message'])) {
+                $errorMessage .= ' ' . $response['data']['message'];
+            } elseif (isset($response['error'])) {
+                $errorMessage .= ' Error: ' . $response['error'];
+            }
+
+            Log::warning('Warehouse request failed', [
+                'part_id' => $part->id,
+                'error_message' => $errorMessage,
+                'full_response' => $response
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $errorMessage
+            ], 400);
+        }
+
+        DB::commit();
+
+        $warehouseOrderId = $response['data']['data']['id'] ?? null;
+        
+        Log::info('Warehouse request successful', [
+            'part_id' => $part->id,
+            'user_id' => $user->id,
+            'warehouse_order_id' => $warehouseOrderId
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Request berhasil dikirim ke warehouse!',
+            'data' => [
+                'warehouse_order_id' => $warehouseOrderId,
+                'part_kode' => $part->kode_part,
+                'quantity' => $request->quantity
+            ]
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        
+        Log::error('Error requesting part to warehouse', [
+            'part_id' => $part->id,
+            'user_id' => $user->id,
+            'error_message' => $e->getMessage(),
+            'error_file' => $e->getFile(),
+            'error_line' => $e->getLine()
+        ]);
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Terjadi kesalahan sistem: ' . $e->getMessage()
+        ], 500);
+    }
+}
 }

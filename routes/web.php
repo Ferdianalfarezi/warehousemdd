@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/parts/import', [PartController::class, 'importForm'])->name('parts.import.form');
     Route::post('/parts/import', [PartController::class, 'import'])->name('parts.import');
     Route::get('/parts/download-template', [PartController::class, 'downloadTemplate'])->name('parts.download.template');
+    Route::post('/parts/{part}/request-warehouse', [PartController::class, 'requestToWarehouse'])->name('parts.requestWarehouse'); // 🔥 NEW
     Route::resource('parts', PartController::class);
     
     // Barangs

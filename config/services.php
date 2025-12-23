@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'warehouse' => [
+        'base_url' => env('WAREHOUSE_API_URL', 'http://127.0.0.1:8001'), // Sesuaikan dengan URL warehouse
+        'timeout' => env('WAREHOUSE_API_TIMEOUT', 30),
+        'default_department_id' => env('WAREHOUSE_DEFAULT_DEPARTMENT_ID', 10), 
+
+    ],
+
 ];
