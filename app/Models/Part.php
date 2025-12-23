@@ -166,7 +166,7 @@ class Part extends Model
      */
     public function getStatusBadgeClass(): string
     {
-        return $this->status_badge_class;
+        return $this->status_badge_class;satus_badge_class;
     }
 
     /**
@@ -176,4 +176,5 @@ class Part extends Model
     {
         return $this->status_label;
     }
+
 }
