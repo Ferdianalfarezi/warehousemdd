@@ -176,8 +176,8 @@
                                 </td>
                                 <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $part->kode_part }}</td>
                                 <td class="px-6 py-4">
-                                    <p class="text-sm font-semibold text-gray-900">{{ $part->nama }}</p>
-                                    <p class="text-xs text-gray-500">{{ $part->line ?? 'N/A' }}</p>
+                                    <p class="text-ms font-semibold text-gray-900">{{ $part->nama }}</p>
+                                    
                                 </td>
                                 <td class="px-6 py-4">
                                     <span class="text-sm font-bold {{ $part->isBelowMinStock() ? 'text-red-600' : 'text-green-600' }}">
@@ -637,63 +637,65 @@
             }, 10);
         }
 
-        async function openEditModal(id) {
-            try {
-                const response = await fetch(`/parts/${id}`);
-                const data = await response.json();
-                
-                if (data.success) {
-                    const part = data.data;
-                    document.getElementById('editPartId').value = part.id;
-                    document.getElementById('editKodePart').value = part.kode_part;
-                    document.getElementById('editNama').value = part.nama;
-                    document.getElementById('editStock').value = part.stock;
-                    document.getElementById('editMinStock').value = part.min_stock;
-                    document.getElementById('editMaxStock').value = part.max_stock;
-                    document.getElementById('editSatuan').value = part.satuan;
-                    document.getElementById('editAddress').value = part.address || '';
-                    document.getElementById('editLine').value = part.line || '';
-                    document.getElementById('editIdPud').value = part.id_pud || '';
-                    
-                    // Set supplier value untuk Select2
-                    $('#editSupplierId').val(part.supplier_id).trigger('change');
-                    
-                    // Show existing image
-                    const previewImg = document.getElementById('editPreview');
-                    const noImageText = document.getElementById('noImageText');
-                    
-                    if (part.gambar && part.image_path) {
-                        previewImg.src = part.image_path;
-                        previewImg.style.display = 'block';
-                        noImageText.style.display = 'none';
-                        
-                        previewImg.onerror = function() {
-                            previewImg.style.display = 'none';
-                            noImageText.style.display = 'block';
-                            noImageText.textContent = 'Image file not found';
-                        };
-                    } else {
-                        previewImg.style.display = 'none';
-                        noImageText.style.display = 'block';
-                        noImageText.textContent = 'No image uploaded';
-                    }
-                    
-                    clearErrors();
-                    
-                    const modal = document.getElementById('editModal');
-                    modal.classList.remove('hidden');
-                    modal.classList.add('flex');
-                    
-                    // Trigger fade in animation
-                    setTimeout(() => {
-                        modal.classList.add('modal-fade-in');
-                    }, 10);
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                Swal.fire('Error!', 'Failed to load part data', 'error');
+       async function openEditModal(id) {
+        try {
+            const response = await fetch(`/parts/${id}`);
+            const res = await response.json();
+
+            if (!res.success) throw new Error('API error');
+
+            const part = res.data;
+
+            document.getElementById('editPartId').value = part.id;
+            document.getElementById('editKodePart').value = part.kode_part;
+            document.getElementById('editNama').value = part.nama;
+            document.getElementById('editStock').value = part.stock;
+            document.getElementById('editMinStock').value = part.min_stock;
+            document.getElementById('editMaxStock').value = part.max_stock;
+            document.getElementById('editSatuan').value = part.satuan;
+            document.getElementById('editAddress').value = part.address ?? '';
+
+            const editLine = document.getElementById('editLine');
+            if (editLine) editLine.value = part.line ?? '';
+
+            const editIdPud = document.getElementById('editIdPud');
+            if (editIdPud) editIdPud.value = part.id_pud ?? '';
+
+            if (part.supplier_id) {
+                $('#editSupplierId').val(part.supplier_id).trigger('change');
+            } else {
+                $('#editSupplierId').val(null).trigger('change');
             }
+
+            const previewImg = document.getElementById('editPreview');
+            const noImageText = document.getElementById('noImageText');
+
+            if (part.gambar) {
+                previewImg.src = part.image_path ?? `/storage/parts/${part.gambar}`;
+                previewImg.style.display = 'block';
+                noImageText.style.display = 'none';
+            } else {
+                previewImg.style.display = 'none';
+                noImageText.style.display = 'block';
+                noImageText.textContent = 'No image uploaded';
+            }
+
+            clearErrors();
+
+            const modal = document.getElementById('editModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+
+            setTimeout(() => {
+                modal.classList.add('modal-fade-in');
+            }, 10);
+
+        } catch (error) {
+            console.error(error);
+            Swal.fire('Error!', 'Failed to load part data', 'error');
         }
+    }
+
 
         function closeCreateModal() {
             const modal = document.getElementById('createModal');

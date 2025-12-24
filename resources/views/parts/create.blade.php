@@ -102,15 +102,6 @@
                     <span class="text-red-500 text-sm error-message" id="error-create-address"></span>
                 </div>
 
-                <!-- Line -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Line</label>
-                    <input type="text" id="createLine" name="line"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition"
-                        placeholder="e.g., Line 1">
-                    <span class="text-red-500 text-sm error-message" id="error-create-line"></span>
-                </div>
-
                 <!-- ID PUD -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">ID PUD</label>

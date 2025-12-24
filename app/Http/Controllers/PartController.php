@@ -52,7 +52,6 @@ class PartController extends Controller
             'max_stock' => 'required|integer|min:0',
             'satuan' => 'required|string|max:50',
             'address' => 'nullable|string|max:255',
-            'line' => 'nullable|string|max:255',
             'supplier_id' => 'required|exists:suppliers,id',
             'id_pud' => 'nullable|integer',
             'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -119,7 +118,6 @@ class PartController extends Controller
             'max_stock' => 'required|integer|min:0',
             'satuan' => 'required|string|max:50',
             'address' => 'nullable|string|max:255',
-            'line' => 'nullable|string|max:255',
             'supplier_id' => 'required|exists:suppliers,id',
             'id_pud' => 'nullable|integer',
             'gambar' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
@@ -390,7 +388,6 @@ public function requestToWarehouse(Request $request, Part $part)
             'user_id' => $user->id,
             'error_message' => $e->getMessage(),
             'error_file' => $e->getFile(),
-            'error_line' => $e->getLine()
         ]);
 
         return response()->json([

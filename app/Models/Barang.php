@@ -19,6 +19,7 @@ class Barang extends Model
         'satuan',
         'address',
         'line',
+        'supplier_id',
     ];
 
     /**

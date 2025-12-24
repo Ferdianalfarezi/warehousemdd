@@ -25,7 +25,6 @@ class Part extends Model
         'max_stock',
         'satuan',
         'address',
-        'line',
         'supplier_id',
         'id_pud',
     ];

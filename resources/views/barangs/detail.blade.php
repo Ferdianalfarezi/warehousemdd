@@ -36,10 +36,6 @@
                         <p class="text-sm text-gray-600 mb-1">Address</p>
                         <p class="text-base font-semibold text-gray-900" id="detailAddress">-</p>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-600 mb-1">Line</p>
-                        <p class="text-base font-semibold text-gray-900" id="detailLine">-</p>
-                    </div>
                 </div>
             </div>
 

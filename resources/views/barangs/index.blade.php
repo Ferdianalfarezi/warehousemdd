@@ -96,7 +96,7 @@
                                 <p class="text-sm font-semibold text-gray-900">{{ $barang->nama }}</p>
                                 <p class="text-xs text-gray-500">{{ $barang->line ?? 'N/A' }}</p>
                             </td>
-                            <td class="px-6 py-4 text-sm text-gray-600">{{ $barang->supplier->nama }}</td>
+                            <td class="px-6 py-4 text-sm text-gray-600"> {{ $barang->supplier?->nama ?? '-' }}</td>
                             <td class="px-6 py-4 text-sm text-gray-600">{{ $barang->address ?? 'N/A' }}</td>
                             <td class="px-6 py-4">
                                 <div class="flex items-center justify-center space-x-2">
@@ -636,64 +636,64 @@ function closeEditModal() {
 async function openDetailModal(id) {
     try {
         const response = await fetch(`/barangs/${id}`);
-        const data = await response.json();
-        
-        if (data.success) {
-            const barang = data.data;
-            
-            document.getElementById('detailKodeBarang').textContent = barang.kode_barang;
-            document.getElementById('detailNama').textContent = barang.nama;
-            document.getElementById('detailSupplier').textContent = barang.supplier.nama;
-            document.getElementById('detailAddress').textContent = barang.address || 'N/A';
-            document.getElementById('detailLine').textContent = barang.line || 'N/A';
-            
-            const tbody = document.getElementById('detailPartsTableBody');
-            tbody.innerHTML = '';
-            
-            if (barang.parts && barang.parts.length > 0) {
-                barang.parts.forEach((part, index) => {
-                    tbody.innerHTML += `
-                        <tr class="hover:bg-gray-50">
-                            <td class="px-4 py-3 text-sm">${index + 1}</td>
-                            <td class="px-4 py-3 text-sm font-medium">${part.kode_part}</td>
-                            <td class="px-4 py-3 text-sm">${part.nama}</td>
-                            <td class="px-4 py-3 text-center">
-                                <span class="px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
-                                    ${part.pivot.quantity} ${part.satuan}
-                                </span>
-                            </td>
-                        </tr>
-                    `;
-                });
-            } else {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="4" class="px-4 py-8 text-center text-gray-500">
-                            No parts found
+        const res = await response.json();
+
+        if (!res.success) throw new Error('API error');
+
+        const barang = res.data;
+
+        document.getElementById('detailKodeBarang').textContent = barang.kode_barang;
+        document.getElementById('detailNama').textContent = barang.nama;
+        document.getElementById('detailAddress').textContent = barang.address ?? '-';
+
+        document.getElementById('detailSupplier').textContent =
+            barang.supplier?.nama ?? '-';
+
+        const tbody = document.getElementById('detailPartsTableBody');
+        tbody.innerHTML = '';
+
+        if (barang.parts?.length) {
+            barang.parts.forEach((part, index) => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-3 text-sm">${index + 1}</td>
+                        <td class="px-4 py-3 text-sm font-medium">${part.kode_part}</td>
+                        <td class="px-4 py-3 text-sm">${part.nama}</td>
+                        <td class="px-4 py-3 text-center">
+                            <span class="px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
+                                ${part.pivot.quantity} ${part.satuan}
+                            </span>
                         </td>
                     </tr>
                 `;
-            }
-            
-            const modal = document.getElementById('detailModal');
-            const modalContent = document.getElementById('detailModalContent');
-            
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            
-            // Trigger animation
-            setTimeout(() => {
-                modal.classList.remove('bg-opacity-0');
-                modal.classList.add('bg-opacity-50');
-                modalContent.classList.remove('scale-95', 'opacity-0');
-                modalContent.classList.add('scale-100', 'opacity-100');
-            }, 10);
+            });
+        } else {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                        No parts found
+                    </td>
+                </tr>
+            `;
         }
+
+        const modal = document.getElementById('detailModal');
+        const modalContent = document.getElementById('detailModalContent');
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        setTimeout(() => {
+            modalContent.classList.remove('scale-95', 'opacity-0');
+            modalContent.classList.add('scale-100', 'opacity-100');
+        }, 10);
+
     } catch (error) {
-        console.error('Error:', error);
+        console.error(error);
         Swal.fire('Error!', 'Gagal memuat detail', 'error');
     }
 }
+
 
 function closeDetailModal() {
     const modal = document.getElementById('detailModal');

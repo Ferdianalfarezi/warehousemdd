@@ -101,15 +101,6 @@
                     <span class="text-red-500 text-sm error-message" id="error-edit-address"></span>
                 </div>
 
-                <!-- Line -->
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">Line</label>
-                    <input type="text" id="editLine" name="line"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition"
-                        placeholder="e.g., Line 1">
-                    <span class="text-red-500 text-sm error-message" id="error-edit-line"></span>
-                </div>
-
                 <!-- ID PUD -->
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">ID PUD</label>

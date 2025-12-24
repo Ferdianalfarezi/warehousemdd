@@ -24,7 +24,6 @@ class PartsTemplateExport implements FromArray, WithHeadings, WithStyles, WithCo
                 500,
                 'pcs',
                 'A1-01',
-                'Line 1',
                 'PT Supplier ABC',
                 'PART-001.jpg'  // Contoh nama file gambar
             ],
@@ -36,7 +35,6 @@ class PartsTemplateExport implements FromArray, WithHeadings, WithStyles, WithCo
                 1000,
                 'pcs',
                 'A1-02',
-                'Line 1',
                 'PT Supplier XYZ',
                 'bearing-6203.png'  // Contoh nama file gambar
             ],
@@ -48,7 +46,6 @@ class PartsTemplateExport implements FromArray, WithHeadings, WithStyles, WithCo
                 200,
                 'pcs',
                 'B2-05',
-                'Line 2',
                 'PT Supplier ABC',
                 ''  // Kosongkan jika tidak ada gambar
             ],
@@ -65,7 +62,6 @@ class PartsTemplateExport implements FromArray, WithHeadings, WithStyles, WithCo
             'max_stock',
             'satuan',
             'address',
-            'line',
             'supplier',
             'gambar'  // Tambahkan kolom gambar
         ];
@@ -74,7 +70,7 @@ class PartsTemplateExport implements FromArray, WithHeadings, WithStyles, WithCo
     public function styles(Worksheet $sheet)
     {
         // Style untuk header
-        $sheet->getStyle('A1:J1')->applyFromArray([
+        $sheet->getStyle('A1:I1')->applyFromArray([
             'font' => [
                 'bold' => true,
                 'color' => ['rgb' => 'FFFFFF'],
@@ -91,7 +87,7 @@ class PartsTemplateExport implements FromArray, WithHeadings, WithStyles, WithCo
         ]);
 
         // Style untuk contoh data
-        $sheet->getStyle('A2:J4')->applyFromArray([
+        $sheet->getStyle('A2:I4')->applyFromArray([
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_LEFT,
                 'vertical' => Alignment::VERTICAL_CENTER,
@@ -99,7 +95,7 @@ class PartsTemplateExport implements FromArray, WithHeadings, WithStyles, WithCo
         ]);
 
         // Border untuk semua cell yang berisi data
-        $sheet->getStyle('A1:J4')->applyFromArray([
+        $sheet->getStyle('A1:I4')->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
@@ -124,9 +120,8 @@ class PartsTemplateExport implements FromArray, WithHeadings, WithStyles, WithCo
             'E' => 12,  // max_stock
             'F' => 12,  // satuan
             'G' => 15,  // address
-            'H' => 15,  // line
-            'I' => 30,  // supplier
-            'J' => 25,  // gambar (nama file)
+            'H' => 30,  // supplier
+            'I' => 25,  // gambar (nama file)
         ];
     }
 }

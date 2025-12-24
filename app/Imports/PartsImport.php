@@ -43,7 +43,6 @@ class PartsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnErr
             $maxStock = $row['max_stock'] ?? $row['maxstock'] ?? 0;
             $satuan = $row['satuan'] ?? 'pcs';
             $address = $row['address'] ?? null;
-            $line = $row['line'] ?? null;
             $supplierName = $row['supplier'] ?? 'supplier';
             $gambar = $row['gambar'] ?? null;
 
@@ -97,7 +96,6 @@ class PartsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnErr
                 'max_stock' => (int)$maxStock,
                 'satuan' => $satuan,
                 'address' => $address,
-                'line' => $line,
                 'supplier_id' => $supplier->id,
                 'gambar' => $imageName,
                 'gambar_source' => $imageName ? 'import' : null // Flag sumber gambar
