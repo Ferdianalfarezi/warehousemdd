@@ -35,16 +35,17 @@ class PartsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnErr
         $this->results['total']++;
         
         try {
-            // Handle different possible key formats
-            $kodePart = $row['kode_part'] ?? $row['kodepart'] ?? null;
-            $nama = $row['nama'] ?? null;
-            $stock = $row['stock'] ?? 0;
-            $minStock = $row['min_stock'] ?? $row['minstock'] ?? 0;
-            $maxStock = $row['max_stock'] ?? $row['maxstock'] ?? 0;
-            $satuan = $row['satuan'] ?? 'pcs';
-            $address = $row['address'] ?? null;
-            $supplierName = $row['supplier'] ?? 'supplier';
-            $gambar = $row['gambar'] ?? null;
+            // Handle different possible key formats (snake_case, lowercase, no separator)
+            $kodePart = $row['kode_part'] ?? $row['kodepart'] ?? $row['kode part'] ?? null;
+            $kodePud = $row['kode_pud'] ?? $row['kodepud'] ?? $row['kode pud'] ?? $row['id_pud'] ?? $row['idpud'] ?? null;
+            $nama = $row['nama'] ?? $row['name'] ?? null;
+            $stock = $row['stock'] ?? $row['stok'] ?? 0;
+            $minStock = $row['min_stock'] ?? $row['minstock'] ?? $row['min stock'] ?? 0;
+            $maxStock = $row['max_stock'] ?? $row['maxstock'] ?? $row['max stock'] ?? 0;
+            $satuan = $row['satuan'] ?? $row['unit'] ?? 'pcs';
+            $address = $row['address'] ?? $row['alamat'] ?? $row['location'] ?? null;
+            $supplierName = $row['supplier'] ?? $row['supplier_name'] ?? 'supplier';
+            $gambar = $row['gambar'] ?? $row['image'] ?? $row['foto'] ?? null;
 
             // Validasi manual untuk field required
             if (empty($kodePart)) {
@@ -90,6 +91,7 @@ class PartsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnErr
 
             $part = Part::create([
                 'kode_part' => $kodePart,
+                'id_pud' => !empty($kodePud) ? $kodePud : null, // 🔥 NEW: Kolom id_pud dari Excel (kode_pud)
                 'nama' => $nama,
                 'stock' => (int)$stock,
                 'min_stock' => (int)$minStock,
@@ -119,7 +121,7 @@ class PartsImport implements ToModel, WithHeadingRow, WithValidation, SkipsOnErr
      */
     private function findMatchingImage($fileName)
     {
-        $sourceDirectory = public_path('images/parts'); // 🔥 GANTI JADI 'parts'
+        $sourceDirectory = public_path('images/parts');
 
         if (!File::exists($sourceDirectory)) {
             \Log::error("Directory not found: {$sourceDirectory}");

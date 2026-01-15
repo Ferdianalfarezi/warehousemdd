@@ -18,6 +18,8 @@ use App\Http\Controllers\SubcontConfirmController;
 use App\Http\Controllers\AndonInhouseController;
 use App\Http\Controllers\AndonOuthouseController;
 use App\Http\Controllers\AndonGeneralCheckupController;
+use App\Http\Controllers\RequestPartController;
+use App\Http\Controllers\HistoryRequestPartController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -34,6 +36,9 @@ Route::middleware('auth')->group(function () {
     
     // ==================== DASHBOARD ====================
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/part-condition', [App\Http\Controllers\DashboardController::class, 'getPartConditionByMonth'])->name('dashboard.part-condition');
+    Route::get('/dashboard/top-parts', [App\Http\Controllers\DashboardController::class, 'getTopRequestedPartsByMonth'])->name('dashboard.top-parts');
+
 
     // ==================== PROFILE ====================
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -52,8 +57,29 @@ Route::middleware('auth')->group(function () {
     Route::get('/parts/import', [PartController::class, 'importForm'])->name('parts.import.form');
     Route::post('/parts/import', [PartController::class, 'import'])->name('parts.import');
     Route::get('/parts/download-template', [PartController::class, 'downloadTemplate'])->name('parts.download.template');
-    Route::post('/parts/{part}/request-warehouse', [PartController::class, 'requestToWarehouse'])->name('parts.requestWarehouse'); 
+    Route::post('/parts/bulk-request', [PartController::class, 'bulkRequestWarehouse'])->name('parts.bulkRequest');
+    Route::get('/parts/data', [PartController::class, 'getData'])->name('parts.data');
     Route::resource('parts', PartController::class);
+
+    // Request Parts
+    Route::prefix('request-parts')->name('request-parts.')->group(function () {
+        Route::get('/', [RequestPartController::class, 'index'])->name('index');
+        
+        // ⚠️ PENTING: Taruh SEBELUM route {requestPart}
+        Route::get('/check-updates', [RequestPartController::class, 'checkUpdates'])->name('check-updates');
+        
+        Route::get('/{requestPart}', [RequestPartController::class, 'show'])->name('show');
+        Route::post('/{requestPart}/verify', [RequestPartController::class, 'verify'])->name('verify');
+        Route::post('/{requestPart}/sync-status', [RequestPartController::class, 'syncWarehouseStatus'])->name('sync-status');
+        Route::post('/{requestPart}/submit-to-warehouse', [RequestPartController::class, 'submitToWarehouse'])
+            ->name('submit-to-warehouse');
+    });
+
+    // History Request Parts
+    Route::prefix('history-request-parts')->name('history-request-parts.')->group(function () {
+        Route::get('/', [HistoryRequestPartController::class, 'index'])->name('index');
+        Route::get('/{historyRequestPart}', [HistoryRequestPartController::class, 'show'])->name('show');
+    });
     
     // Barangs
     Route::resource('barangs', BarangController::class);
@@ -129,6 +155,38 @@ Route::get('/api/approval-counts', function() {
         'inhouse' => \App\Models\InhouseRequest::where('status', 'pending')->count(),
         'outhouse' => \App\Models\OuthouseRequest::where('status', 'pending')->count(),
     ]);
+})->middleware('auth');
+
+Route::get('/api/transaction-counts', function() {
+    try {
+        // Hitung Request Parts yang aktif (belum selesai)
+        $requestPartCount = \App\Models\RequestPart::whereIn('status', [
+            'pending',
+            'approved_kadiv',
+            'approved_kagud',
+            'ready',
+            'completed'
+        ])->count();
+        
+        // ✅ FIX: Hitung General Checkups dengan status yang BENAR
+        // Status: 'pending' dan 'on_process' (bukan 'in_progress')
+        $checkupCount = \App\Models\GeneralCheckup::whereIn('status', [
+            'pending',
+            'on_process'  // ← INI YANG DIPERBAIKI
+        ])->count();
+        
+        return response()->json([
+            'request_parts' => $requestPartCount,
+            'general_checkups' => $checkupCount,
+        ]);
+        
+    } catch (\Exception $e) {
+        return response()->json([
+            'request_parts' => 0,
+            'general_checkups' => 0,
+            'error' => $e->getMessage()  // Untuk debug
+        ]);
+    }
 })->middleware('auth');
 
 // ==================== ANDON (READ-ONLY) ====================

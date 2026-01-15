@@ -107,7 +107,9 @@
 
             <!-- Copyright -->
             <div class="text-center mt-6">
-                <p class="text-gray-500 text-sm">&copy; 2025 Warehouse MDD. All rights reserved.</p>
+                <p style="margin: 0; font-size: 0.875rem; color: #888888;">
+                    &copy; {{ date('Y') }} <strong style="color: #ffffff;"><i>STEP IT DEPT</i></strong> - All rights reserved.
+                </p>
             </div>
         </div>
     </div>

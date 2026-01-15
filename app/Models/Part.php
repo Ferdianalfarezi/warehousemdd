@@ -55,6 +55,11 @@ class Part extends Model
      */
     public function calculateStatus(): string
     {
+        // Check if part has active requests
+        if ($this->activeRequests()->exists()) {
+            return 'on_request';
+        }
+
         if ($this->stock == 0) {
             return 'habis';
         }
@@ -66,6 +71,7 @@ class Part extends Model
         return 'normal';
     }
 
+
     /**
      * Status Label Accessor
      */
@@ -76,11 +82,11 @@ class Part extends Model
                 'habis' => 'Habis',
                 'low' => 'Low Stock',
                 'normal' => 'Normal',
+                'on_request' => 'On Request',
                 default => ucfirst($this->status),
             }
         );
     }
-
     /**
      * Status Badge Class Accessor
      */
@@ -91,6 +97,7 @@ class Part extends Model
                 'habis' => 'bg-red-100 text-red-800',
                 'low' => 'bg-yellow-100 text-yellow-800',
                 'normal' => 'bg-green-100 text-green-800',
+                'on_request' => 'bg-blue-100 text-blue-800',
                 default => 'bg-gray-100 text-gray-800',
             }
         );
@@ -174,6 +181,19 @@ class Part extends Model
     public function getStatusLabel(): string
     {
         return $this->status_label;
+    }
+
+    public function requestPartItems()
+    {
+        return $this->hasMany(RequestPartItem::class);
+    }
+
+    public function activeRequests()
+    {
+        return $this->requestPartItems()
+            ->whereHas('requestPart', function($query) {
+                $query->whereIn('status', ['pending', 'approved_kadiv', 'approved_kagud', 'ready', 'completed']);
+            });
     }
 
 }
