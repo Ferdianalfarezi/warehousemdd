@@ -4,158 +4,186 @@
 
 @section('content')
 <div class="space-y-6">
-    
-    <!-- Page Header -->
+
+    {{-- Page Header --}}
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-3xl font-bold text-gray-900">Items</h1>
-            <p class="text-gray-600 mt-1">Manage warehouse goods and products</p>
+            <h1 class="text-3xl font-bold text-gray-900">Dies</h1>
+            <p class="text-gray-600 mt-1">Manage All Dies Data</p>
         </div>
-        <button 
-            onclick="openCreateModal()"
-            class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
-        >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-            </svg>
-            <span>Add Barang</span>
-        </button>
+        <div class="flex items-center space-x-3">
+            <button onclick="openImportModal()"
+                class="bg-green-600 text-white px-5 py-3 rounded-lg font-semibold hover:bg-green-700 transition transform hover:scale-105 flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                <span>Import Excel</span>
+            </button>
+            <button onclick="openCreateModal()"
+                class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                <span>Add Barang</span>
+            </button>
+        </div>
     </div>
 
+    {{-- Search & Filter Bar --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-start md:space-x-4 space-y-3 md:space-y-0">
-
-            <!-- Search Box -->
+        <div class="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-3 md:space-y-0">
             <div class="w-full md:w-1/2 lg:w-1/3 relative">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                 </div>
-                <input 
-                    type="text" 
-                    id="searchInput"
+                <input type="text" id="searchInput"
                     class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                    placeholder="Search by kode, nama, supplier..."
-                    onkeyup="searchTable()"
-                >
+                    placeholder="Search kode, nama, supplier, cust...">
             </div>
-
-            <!-- Per Page Selector -->
             <div class="flex-shrink-0">
-                <select 
-                    id="perPageSelect" 
-                    onchange="changePerPage()"
-                    class="px-5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                    style="line-height:1.5;"
-                >
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                    <option value="all">All</option>
+                <select id="perPageSelect"
+                    class="px-5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition">
+                    <option value="20">20 per page</option>
+                    <option value="50">50 per page</option>
+                    <option value="100">100 per page</option>
+                    <option value="all">Semua</option>
                 </select>
             </div>
-
         </div>
     </div>
 
-    <!-- Table Card -->
+    {{-- Table Card --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto relative">
+            <div id="loadingOverlay" class="hidden absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+                <div class="flex items-center space-x-3">
+                    <svg class="animate-spin h-8 w-8 text-black" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-gray-600 font-medium">Loading...</span>
+                </div>
+            </div>
             <table class="w-full">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">No</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kode Barang</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Supplier</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Location</th>
-                        <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-12">No</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-16">Image</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kode Barang</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cust</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Model</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Dies</th>
+                        <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200" id="barangsTableBody">
-                    @forelse($barangs as $index => $barang)
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="px-6 py-4 text-sm text-gray-900">{{ $loop->iteration }}</td>
-                            <td class="px-6 py-4">
-                                @if($barang->gambar)
-                                    <img src="{{ asset('storage/barangs/'.$barang->gambar) }}" 
-                                        onclick="showImagePreview('{{ asset('storage/barangs/'.$barang->gambar) }}', '{{ $barang->nama }}')"
-                                        class="w-12 h-12 rounded-lg object-cover border border-gray-200 cursor-pointer hover:opacity-80 hover:scale-110 transition">
-                                @else
-                                    <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                        </svg>
-                                    </div>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $barang->kode_barang }}</td>
-                            <td class="px-6 py-4">
-                                <p class="text-sm font-semibold text-gray-900">{{ $barang->nama }}</p>
-                                <p class="text-xs text-gray-500">{{ $barang->line ?? 'N/A' }}</p>
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-600"> {{ $barang->supplier?->nama ?? '-' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">{{ $barang->address ?? 'N/A' }}</td>
-                            <td class="px-6 py-4">
-                                <div class="flex items-center justify-center space-x-2">
-                                    <button onclick="openDetailModal({{ $barang->id }})"
-                                            class="bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-orange-600 transition">
-                                        Detail
-                                    </button>
-                                    <button onclick="openEditModal({{ $barang->id }})"
-                                            class="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-yellow-600 transition">
-                                        Edit
-                                    </button>
-                                    <button onclick="deleteBarang({{ $barang->id }})"
-                                            class="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition">
-                                        Delete
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="7" class="px-6 py-16 text-center">
-                                <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
-                                </svg>
-                                <p class="mt-4 text-gray-600 font-semibold">No barangs found</p>
-                                <p class="text-gray-500 text-sm">Click "Add Barang" to create one</p>
-                            </td>
-                        </tr>
-                    @endforelse
+                    <tr>
+                        <td colspan="10" class="px-6 py-16 text-center">
+                            <svg class="animate-spin h-8 w-8 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <p class="mt-4 text-gray-500">Loading data...</p>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
 
-        <!-- Footer: Showing Entries -->
         <div class="bg-gray-50 border-t border-gray-200 px-6 py-4">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div class="text-sm text-gray-600">
-                    Showing <span id="showingFrom" class="font-medium">1</span> to 
-                    <span id="showingTo" class="font-medium">0</span> of 
+                    Showing <span id="showingFrom" class="font-medium">0</span> to
+                    <span id="showingTo" class="font-medium">0</span> of
                     <span id="totalEntries" class="font-medium">0</span> entries
-                    <span id="filteredInfo" class="hidden">
-                        (filtered from <span id="totalEntriesOriginal" class="font-medium">0</span> total entries)
-                    </span>
                 </div>
+                <div id="paginationContainer" class="flex items-center space-x-2"></div>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Include Create Modal -->
-@include('barangs.create')
+{{-- IMPORT MODAL --}}
+<div id="importModal" class="fixed inset-0 hidden items-center justify-center z-50 p-4 bg-black bg-opacity-50">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
+        <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <h2 class="text-xl font-bold text-gray-900 flex items-center space-x-2">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                </svg>
+                <span>Import dari Excel</span>
+            </h2>
+            <button onclick="closeImportModal()" class="text-gray-400 hover:text-gray-600 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 text-xs text-blue-700 space-y-1">
+                <p class="font-semibold text-blue-800 mb-2">Format kolom Excel yang didukung:</p>
+                <p>• <strong>DELIVERY PART CODE</strong> → kode_barang</p>
+                <p>• <strong>CHILD PART CODE</strong> → child_part_code (detail)</p>
+                <p>• <strong>PART NAME</strong> → nama / part_name</p>
+                <p>• <strong>CUSTOMER</strong> → cust</p>
+                <p>• <strong>MODEL</strong> → model</p>
+                <p>• <strong>PROSES NAME</strong> → process_name</p>
+                <p>• <strong>PROSES NO</strong> → process_no</p>
+            </div>
+            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-800">
+                ⚠️ Kode yang sudah ada akan di-update details-nya. Kode baru akan dibuat otomatis (supplier perlu diisi manual).
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Pilih File Excel (.xlsx, .xls)</label>
+                <div id="dropZone"
+                    class="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-green-400 hover:bg-green-50 transition">
+                    <svg class="w-12 h-12 mx-auto text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    <p class="text-sm text-gray-600" id="dropZoneText">Klik atau drag & drop file Excel di sini</p>
+                    <input type="file" id="excelFileInput" accept=".xlsx,.xls" class="hidden" onchange="handleFileSelect(event)">
+                </div>
+                <div id="selectedFileInfo" class="mt-2 hidden">
+                    <div class="flex items-center space-x-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                        <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span class="text-sm text-green-700 font-medium" id="selectedFileName"></span>
+                        <button type="button" onclick="clearFileSelection()" class="ml-auto text-red-400 hover:text-red-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="importProgress" class="hidden">
+                <div class="flex items-center space-x-3">
+                    <svg class="animate-spin h-5 w-5 text-green-600" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span class="text-sm text-gray-600">Sedang mengimport data...</span>
+                </div>
+            </div>
+        </div>
+        <div class="border-t border-gray-200 px-6 py-4 flex items-center justify-end space-x-3">
+            <button type="button" onclick="closeImportModal()"
+                class="px-5 py-2.5 rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition">
+                Batal
+            </button>
+            <button type="button" onclick="submitImport()" id="importSubmitBtn"
+                class="px-5 py-2.5 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                Import Sekarang
+            </button>
+        </div>
+    </div>
+</div>
 
-<!-- Include Edit Modal -->
-@include('barangs.edit')
-
-<!-- Include Detail Modal -->
-@include('barangs.detail')
-
-<!-- Image Preview Modal -->
+{{-- Image Preview Modal --}}
 <div id="imagePreviewModal" class="fixed inset-0 hidden items-center justify-center z-50 p-4 bg-black bg-opacity-75" onclick="closeImagePreview()">
     <div class="relative max-w-4xl max-h-[90vh] w-full" onclick="event.stopPropagation()">
         <button onclick="closeImagePreview()" class="absolute -top-12 right-0 text-white hover:text-gray-300 transition">
@@ -163,17 +191,15 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
         </button>
-        
         <div class="text-white text-center mb-4">
             <h3 id="previewImageTitle" class="text-xl font-bold"></h3>
         </div>
-        
         <div class="bg-white rounded-lg p-4 flex items-center justify-center">
             <img id="previewImageSrc" src="" alt="Preview" class="max-w-full max-h-[70vh] object-contain rounded-lg">
         </div>
-        
         <div class="text-center mt-4">
-            <a id="downloadImageLink" href="" download class="inline-flex items-center space-x-2 bg-white text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition">
+            <a id="downloadImageLink" href="" download
+                class="inline-flex items-center space-x-2 bg-white text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
                 </svg>
@@ -183,694 +209,713 @@
     </div>
 </div>
 
+@include('barangs.create')
+@include('barangs.edit')
+@include('barangs.detail')
+
 @endsection
 
 @push('scripts')
 <script>
-let allBarangs = [];
-let filteredBarangs = [];
-let currentPerPage = 20;
-let partCounter = 0;
-let partsData = [];
-
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM Loaded');
-    
-    // Store parts data from Blade
-    partsData = [
-        @foreach($parts as $part)
-        {
-            id: {{ $part->id }},
-            nama: "{{ $part->nama }}",
-            kode: "{{ $part->kode_part }}"
-        },
-        @endforeach
-    ];
-    
-    console.log('Parts Data:', partsData);
-    
-    // Initialize table data
-    const rows = document.querySelectorAll('#barangsTableBody tr');
-    rows.forEach((row, index) => {
-        if (!row.querySelector('td[colspan]')) {
-            allBarangs.push({
-                element: row.cloneNode(true),
-                searchText: row.textContent.toLowerCase()
-            });
+function waitForJQuery(callback, maxWait = 5000) {
+    const start = Date.now();
+    const check = () => {
+        if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
+            callback();
+        } else if (Date.now() - start < maxWait) {
+            setTimeout(check, 50);
+        } else {
+            callback();
         }
+    };
+    check();
+}
+
+let currentPage   = 1;
+let perPage       = 20;
+let searchQuery   = '';
+let totalPages    = 1;
+let isLoading     = false;
+let searchTimeout = null;
+let partCounter   = 0;
+let partsData = {!! json_encode($parts->map(fn($p) => [
+    'id'   => $p->id,
+    'nama' => $p->nama,
+    'kode' => $p->kode_part,
+])->values()) !!};
+
+// ============================================
+// INIT
+// ============================================
+document.addEventListener('DOMContentLoaded', function () {
+    loadBarangs();
+    bindEvents();
+
+    const dz = document.getElementById('dropZone');
+    dz.addEventListener('click', () => document.getElementById('excelFileInput').click());
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('border-green-400', 'bg-green-50'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('border-green-400', 'bg-green-50'));
+    dz.addEventListener('drop', e => {
+        e.preventDefault();
+        dz.classList.remove('border-green-400', 'bg-green-50');
+        if (e.dataTransfer.files[0]) handleFileDrop(e.dataTransfer.files[0]);
     });
-    
-    filteredBarangs = [...allBarangs];
-    updateTable();
 });
 
-// ==================== CREATE FORM ====================
-function initializeCreateForm() {
-    const form = document.getElementById('createForm');
-    if (!form) {
-        console.error('Create form not found!');
-        return;
-    }
-    
-    form.removeEventListener('submit', handleCreateSubmit);
-    form.addEventListener('submit', handleCreateSubmit);
+function bindEvents() {
+    document.getElementById('searchInput').addEventListener('input', function () {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchQuery = this.value;
+            currentPage = 1;
+            loadBarangs();
+        }, 300);
+    });
+    document.getElementById('perPageSelect').addEventListener('change', function () {
+        perPage     = this.value === 'all' ? 'all' : parseInt(this.value);
+        currentPage = 1;
+        loadBarangs();
+    });
 }
 
-async function handleCreateSubmit(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('=== CREATE FORM SUBMITTED ===');
-    clearErrors();
-    
-    const formData = new FormData(e.target);
-    
+// ============================================
+// LOAD DATA
+// ============================================
+async function loadBarangs() {
+    if (isLoading) return;
+    isLoading = true;
+    showLoading(true);
     try {
-        const response = await fetch('/barangs', {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
-            },
-            body: formData
+        const params = new URLSearchParams({ page: currentPage, per_page: perPage, search: searchQuery });
+        const res    = await fetch(`/barangs/data?${params}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
         });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            await Swal.fire({
-                icon: 'success',
-                title: 'Berhasil!',
-                text: data.message,
-                showConfirmButton: false,
-                timer: 1500
-            });
-            location.reload();
+        const result = await res.json();
+        if (result.success) {
+            renderTable(result.data);
+            renderPagination(result.pagination);
+            updateShowingInfo(result.pagination);
         } else {
-            if (data.errors) {
-                displayErrors(data.errors, 'create');
-            } else {
-                Swal.fire('Error!', data.message || 'Unknown error', 'error');
-            }
+            showEmpty('Gagal memuat data');
         }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire('Error!', 'Terjadi kesalahan', 'error');
+    } catch (err) {
+        showEmpty('Error memuat data. Coba refresh halaman.');
+    } finally {
+        isLoading = false;
+        showLoading(false);
     }
 }
 
-// ==================== EDIT FORM ====================
-function initializeEditForm() {
-    const form = document.getElementById('editForm');
-    if (!form) {
-        console.error('Edit form not found!');
+// ============================================
+// RENDER TABLE
+// ============================================
+function renderTable(barangs) {
+    const tbody = document.getElementById('barangsTableBody');
+    if (!barangs || barangs.length === 0) {
+        tbody.innerHTML = `
+            <tr><td colspan="10" class="px-6 py-16 text-center">
+                <p class="mt-4 text-gray-600 font-semibold">Tidak ada barang ditemukan</p>
+                <p class="text-gray-500 text-sm">${searchQuery ? 'Coba kata kunci lain' : 'Klik "Add Barang" atau Import Excel untuk memulai'}</p>
+            </td></tr>`;
         return;
     }
-    
-    form.removeEventListener('submit', handleEditSubmit);
-    form.addEventListener('submit', handleEditSubmit);
+    tbody.innerHTML = barangs.map(b => `
+        <tr class="hover:bg-gray-50 transition">
+            <td class="px-4 py-4 text-sm text-gray-900">${b.row_number}</td>
+            <td class="px-4 py-4">
+                ${b.gambar_url
+                    ? `<img src="${b.gambar_url}" onclick="showImagePreview('${b.gambar_url}','${esc(b.nama)}')"
+                        class="w-12 h-12 rounded-lg object-cover border border-gray-200 cursor-pointer hover:opacity-80 hover:scale-110 transition">`
+                    : `<div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                        </svg></div>`
+                }
+            </td>
+            <td class="px-4 py-4 text-sm font-semibold text-gray-900 font-mono">${esc(b.kode_barang)}</td>
+            <td class="px-4 py-4">
+                <p class="text-sm font-semibold text-gray-900">${esc(b.nama)}</p>
+                ${b.line ? `<p class="text-xs text-gray-500">${esc(b.line)}</p>` : ''}
+            </td>
+            <td class="px-4 py-4 text-sm text-gray-600">${esc(b.cust) || '-'}</td>
+            <td class="px-4 py-4 text-sm text-gray-600">${esc(b.model) || '-'}</td>
+            <td class="px-4 py-4">
+                ${b.dies_count > 0
+                    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">${b.dies_count} proses</span>`
+                    : '<span class="text-xs text-gray-400">-</span>'
+                }
+            </td>
+            <td class="px-4 py-4">
+                <div class="flex items-center justify-center space-x-2">
+                    <button onclick="openDetailModal(${b.id})"
+                        class="bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-orange-600 transition">Detail</button>
+                    <button onclick="openEditModal(${b.id})"
+                        class="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-yellow-600 transition">Edit</button>
+                    <button onclick="deleteBarang(${b.id})"
+                        class="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition">Delete</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
 }
 
-async function handleEditSubmit(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    console.log('=== EDIT FORM SUBMITTED ===');
-    clearErrors();
-    
-    const formData = new FormData(e.target);
-    const id = document.getElementById('editBarangId').value;
-    formData.append('_method', 'PUT');
-    
-    try {
-        const response = await fetch(`/barangs/${id}`, {
-            method: 'POST',
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                'Accept': 'application/json'
-            },
-            body: formData
+// ============================================
+// PAGINATION
+// ============================================
+function renderPagination(pagination) {
+    const container = document.getElementById('paginationContainer');
+    totalPages = pagination.total_pages;
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+    const b  = 'px-3 py-1.5 rounded-lg border text-xs transition';
+    const bA = 'bg-black text-white border-black font-semibold';
+    const bN = 'border-gray-300 text-gray-700 hover:bg-gray-50';
+    const bD = 'border-gray-200 text-gray-400 cursor-not-allowed';
+
+    let html = `<button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="${b} ${currentPage === 1 ? bD : bN}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>`;
+
+    const max = 5;
+    let start = Math.max(1, currentPage - Math.floor(max / 2));
+    let end   = Math.min(totalPages, start + max - 1);
+    if (end - start < max - 1) start = Math.max(1, end - max + 1);
+
+    if (start > 1) {
+        html += `<button onclick="goToPage(1)" class="${b} ${bN}">1</button>`;
+        if (start > 2) html += `<span class="px-1 text-gray-500 text-xs">...</span>`;
+    }
+    for (let i = start; i <= end; i++) {
+        html += `<button onclick="goToPage(${i})" class="${b} ${i === currentPage ? bA : bN}">${i}</button>`;
+    }
+    if (end < totalPages) {
+        if (end < totalPages - 1) html += `<span class="px-1 text-gray-500 text-xs">...</span>`;
+        html += `<button onclick="goToPage(${totalPages})" class="${b} ${bN}">${totalPages}</button>`;
+    }
+    html += `<button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="${b} ${currentPage === totalPages ? bD : bN}">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>`;
+
+    container.innerHTML = html;
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages || page === currentPage) return;
+    currentPage = page;
+    loadBarangs();
+}
+
+function updateShowingInfo(p) {
+    document.getElementById('showingFrom').textContent  = p.from;
+    document.getElementById('showingTo').textContent    = p.to;
+    document.getElementById('totalEntries').textContent = p.total;
+}
+
+// ============================================
+// HELPERS
+// ============================================
+function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+function showLoading(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
+function showEmpty(msg) {
+    document.getElementById('barangsTableBody').innerHTML =
+        `<tr><td colspan="10" class="px-6 py-12 text-center text-gray-500">${msg}</td></tr>`;
+}
+function modalShow(id) {
+    const el = document.getElementById(id);
+    el.style.display = 'flex';
+    // pakai requestAnimationFrame biar transition jalan
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            el.classList.add('modal-fade-in');
         });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            await Swal.fire({
-                icon: 'success',
-                title: 'Berhasil!',
-                text: data.message,
-                showConfirmButton: false,
-                timer: 1500
-            });
-            location.reload();
-        } else {
-            if (data.errors) {
-                displayErrors(data.errors, 'edit');
-            }
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire('Error!', 'Terjadi kesalahan!', 'error');
-    }
-}
-
-// ==================== PARTS MANAGEMENT ====================
-function addPartRow(partId = '', quantity = 1) {
-    console.log('Adding part row, partId:', partId, 'quantity:', quantity);
-    
-    const container = document.getElementById('partsContainer');
-    if (!container) {
-        console.error('Parts container not found!');
-        return;
-    }
-    
-    const index = partCounter;
-    
-    const row = document.createElement('div');
-    row.className = 'part-row flex items-center space-x-3 p-3 border border-gray-200 rounded-lg';
-    
-    // Build options HTML
-    let optionsHtml = '<option value="">Select Part</option>';
-    partsData.forEach(part => {
-        const selected = partId == part.id ? 'selected' : '';
-        optionsHtml += `<option value="${part.id}" ${selected}>${part.nama} (${part.kode})</option>`;
     });
-    
-    row.innerHTML = `
-        <div class="flex-1">
-            <select name="parts[${index}][part_id]" required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black part-select">
-                ${optionsHtml}
-            </select>
-        </div>
-        <div class="w-32">
-            <input type="number" name="parts[${index}][quantity]" value="${quantity}" min="1" required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
-        </div>
-        <button type="button" onclick="removePartRow(this)" 
-                class="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </button>
-    `;
-    
-    container.appendChild(row);
-    
-    // Initialize Select2 for the new part select
-    $(row.querySelector('.part-select')).select2({
-        placeholder: "Select Part",
-        allowClear: false,
-        width: '100%',
-        dropdownParent: $('#createModal'),
-        language: {
-            noResults: function() {
-                return "Part tidak ditemukan";
-            },
-            searching: function() {
-                return "Mencari part...";
-            }
-        }
-    });
-    
-    partCounter++;
 }
 
-function removePartRow(button) {
-    const row = button.closest('.part-row');
-    const select = row.querySelector('.part-select');
-    
-    // Destroy Select2 instance before removing
-    if (select) {
-        $(select).select2('destroy');
-    }
-    
-    const container = document.getElementById('partsContainer');
-    const rows = container.querySelectorAll('.part-row');
-    
-    if (rows.length > 1) {
-        row.remove();
-    } else {
-        Swal.fire('Warning!', 'Minimal 1 part harus ada!', 'warning');
-    }
-}
-
-function addEditPartRow(partId = '', quantity = 1) {
-    const container = document.getElementById('editPartsContainer');
-    const index = partCounter;
-    
-    const row = document.createElement('div');
-    row.className = 'part-row flex items-center space-x-3 p-3 border border-gray-200 rounded-lg';
-    
-    // Build options HTML
-    let optionsHtml = '<option value="">Select Part</option>';
-    partsData.forEach(part => {
-        const selected = partId == part.id ? 'selected' : '';
-        optionsHtml += `<option value="${part.id}" ${selected}>${part.nama} (${part.kode})</option>`;
-    });
-    
-    row.innerHTML = `
-        <div class="flex-1">
-            <select name="parts[${index}][part_id]" required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black part-select">
-                ${optionsHtml}
-            </select>
-        </div>
-        <div class="w-32">
-            <input type="number" name="parts[${index}][quantity]" value="${quantity}" min="1" required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
-        </div>
-        <button type="button" onclick="removeEditPartRow(this)" 
-                class="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-            </svg>
-        </button>
-    `;
-    
-    container.appendChild(row);
-    
-    // Initialize Select2 for the new part select
-    $(row.querySelector('.part-select')).select2({
-        placeholder: "Select Part",
-        allowClear: false,
-        width: '100%',
-        dropdownParent: $('#editModal'),
-        language: {
-            noResults: function() {
-                return "Part tidak ditemukan";
-            },
-            searching: function() {
-                return "Mencari part...";
-            }
-        }
-    });
-    
-    partCounter++;
-}
-
-function removeEditPartRow(button) {
-    const row = button.closest('.part-row');
-    const select = row.querySelector('.part-select');
-    
-    // Destroy Select2 instance before removing
-    if (select) {
-        $(select).select2('destroy');
-    }
-    
-    const container = document.getElementById('editPartsContainer');
-    const rows = container.querySelectorAll('.part-row');
-    
-    if (rows.length > 1) {
-        row.remove();
-    } else {
-        Swal.fire('Warning!', 'Minimal 1 part harus ada!', 'warning');
-    }
-}
-
-// ==================== MODAL FUNCTIONS ====================
-function openCreateModal() {
-    console.log('Opening create modal...');
-    
-    const modal = document.getElementById('createModal');
-    const form = document.getElementById('createForm');
-    
-    if (!modal || !form) {
-        console.error('Create modal or form not found!');
-        return;
-    }
-    
-    form.reset();
-    document.getElementById('createPreviewContainer').classList.add('hidden');
-    
-    const container = document.getElementById('partsContainer');
-    container.innerHTML = '';
-    partCounter = 0;
-    
-    // Initialize Select2 for supplier
-    $('#createSupplierId').select2({
-        placeholder: "Select Supplier",
-        allowClear: false,
-        width: '100%',
-        dropdownParent: $('#createModal'),
-        language: {
-            noResults: function() {
-                return "Supplier tidak ditemukan";
-            },
-            searching: function() {
-                return "Mencari supplier...";
-            }
-        }
-    });
-    
-    // Initialize form submission
-    initializeCreateForm();
-    
-    // Add first part row
-    addPartRow();
-    
-    clearErrors();
-    
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    setTimeout(() => modal.classList.add('modal-fade-in'), 10);
-}
-
-function closeCreateModal() {
-    // Destroy Select2 instances
-    $('#createSupplierId').select2('destroy');
-    $('.part-select').select2('destroy');
-    
-    const modal = document.getElementById('createModal');
-    modal.classList.remove('modal-fade-in');
+function modalHide(id) {
+    const el = document.getElementById(id);
+    el.classList.remove('modal-fade-in');
+    // tunggu transition selesai baru hide
     setTimeout(() => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        el.style.display = 'none';
     }, 300);
 }
 
-async function openEditModal(id) {
+// ============================================
+// IMAGE PREVIEW
+// ============================================
+function showImagePreview(src, title) {
+    document.getElementById('previewImageSrc').src          = src;
+    document.getElementById('previewImageTitle').textContent = title;
+    document.getElementById('downloadImageLink').href        = src;
+    modalShow('imagePreviewModal');
+}
+function closeImagePreview() { modalHide('imagePreviewModal'); }
+
+function previewImage(e, id) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        document.getElementById(id).src = ev.target.result;
+        document.getElementById(id + 'Container').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+}
+function previewEditImage(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        document.getElementById('editPreview').src          = ev.target.result;
+        document.getElementById('editPreview').style.display = 'block';
+        document.getElementById('noImageText').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+}
+
+// ============================================
+// IMPORT MODAL
+// ============================================
+function openImportModal()  { modalShow('importModal'); }
+function closeImportModal() { modalHide('importModal'); clearFileSelection(); }
+
+function handleFileSelect(e) { if (e.target.files[0]) showSelectedFile(e.target.files[0]); }
+function handleFileDrop(file) {
+    if (!file.name.match(/\.(xlsx|xls)$/i)) { Swal.fire('Format Salah','Hanya file .xlsx atau .xls','error'); return; }
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    document.getElementById('excelFileInput').files = dt.files;
+    showSelectedFile(file);
+}
+function showSelectedFile(file) {
+    document.getElementById('selectedFileName').textContent = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+    document.getElementById('selectedFileInfo').classList.remove('hidden');
+    document.getElementById('dropZoneText').textContent = 'File dipilih';
+}
+function clearFileSelection() {
+    document.getElementById('excelFileInput').value = '';
+    document.getElementById('selectedFileInfo').classList.add('hidden');
+    document.getElementById('dropZoneText').textContent = 'Klik atau drag & drop file Excel di sini';
+}
+async function submitImport() {
+    const fi = document.getElementById('excelFileInput');
+    if (!fi.files.length) { Swal.fire('Pilih File','Silakan pilih file Excel terlebih dahulu','warning'); return; }
+    const btn  = document.getElementById('importSubmitBtn');
+    const prog = document.getElementById('importProgress');
+    btn.disabled = true;
+    prog.classList.remove('hidden');
+    const fd = new FormData();
+    fd.append('excel_file', fi.files[0]);
+    fd.append('_token', document.querySelector('meta[name="csrf-token"]').content);
     try {
-        const response = await fetch(`/barangs/${id}`);
-        const data = await response.json();
-        
+        const res  = await fetch('/barangs/import-excel', { method: 'POST', body: fd });
+        const data = await res.json();
         if (data.success) {
-            const barang = data.data;
-            
-            document.getElementById('editBarangId').value = barang.id;
-            document.getElementById('editKodeBarang').value = barang.kode_barang;
-            document.getElementById('editNama').value = barang.nama;
-            document.getElementById('editAddress').value = barang.address || '';
-            document.getElementById('editLine').value = barang.line || '';
-            
-            // Initialize Select2 for supplier and set value
-            $('#editSupplierId').select2({
-                placeholder: "Select Supplier",
-                allowClear: false,
-                width: '100%',
-                dropdownParent: $('#editModal'),
-                language: {
-                    noResults: function() {
-                        return "Supplier tidak ditemukan";
-                    },
-                    searching: function() {
-                        return "Mencari supplier...";
-                    }
-                }
-            }).val(barang.supplier_id).trigger('change');
-            
-            const container = document.getElementById('editPartsContainer');
-            container.innerHTML = '';
-            partCounter = 0;
-            
-            // Add parts with Select2
-            if (barang.parts && barang.parts.length > 0) {
-                barang.parts.forEach(part => {
-                    addEditPartRow(part.id, part.pivot.quantity);
-                });
+            closeImportModal();
+            await Swal.fire({
+                icon: 'success', title: 'Import Berhasil!',
+                html: `<div class="text-left text-sm space-y-1">
+                    <p>✅ <strong>${data.stats.imported}</strong> barang baru</p>
+                    <p>🔄 <strong>${data.stats.updated}</strong> barang diupdate</p>
+                    <p>📦 <strong>${data.stats.total}</strong> total delivery part code</p></div>`,
+                confirmButtonColor: '#000'
+            });
+            loadBarangs();
+        } else { Swal.fire('Error!', data.message, 'error'); }
+    } catch (e) { Swal.fire('Error!', 'Gagal mengirim file', 'error'); }
+    finally { btn.disabled = false; prog.classList.add('hidden'); }
+}
+
+function addDiesDetailRow(containerId, data = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const row = document.createElement('div');
+    row.className = 'dies-detail-row grid grid-cols-12 gap-1.5 items-center p-1.5 border border-gray-200 rounded-lg bg-gray-50';
+    row.innerHTML = `
+        <div class="col-span-2">
+            <input type="text" data-field="child_part_code" value="${esc(data.child_part_code||'')}"
+                placeholder="Child Code" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
+        </div>
+        <div class="col-span-3">
+            <input type="text" data-field="part_name" value="${esc(data.part_name||'')}"
+                placeholder="Part Name" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
+        </div>
+        <div class="col-span-1">
+            <input type="text" data-field="cust" value="${esc(data.cust||'')}"
+                placeholder="Cust" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
+        </div>
+        <div class="col-span-2">
+            <input type="text" data-field="model" value="${esc(data.model||'')}"
+                placeholder="Model" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
+        </div>
+        <div class="col-span-2">
+            <input type="text" data-field="process_name" value="${esc(data.process_name||'')}"
+                placeholder="Proses Name" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
+        </div>
+        <div class="col-span-1">
+            <input type="text" data-field="process_no" value="${esc(data.process_no||'')}"
+                placeholder="No" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
+        </div>
+        <div class="col-span-1 flex justify-center">
+            <button type="button" onclick="this.closest('.dies-detail-row').remove()"
+                class="bg-red-500 text-white p-1 rounded hover:bg-red-600">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>`;
+    container.appendChild(row);
+}
+
+function appendDiesDetailsToFormData(formData, containerId) {
+    document.querySelectorAll(`#${containerId} .dies-detail-row`).forEach((row, idx) => {
+        ['child_part_code','part_name','cust','model','process_name','process_no'].forEach(f => {
+            const inp = row.querySelector(`[data-field="${f}"]`);
+            if (inp) formData.append(`dies_details[${idx}][${f}]`, inp.value);
+        });
+    });
+}
+
+// ============================================
+// PART ROWS
+// ============================================
+function buildPartRow(idx, partId, qty, selectClass, modalId) {
+    let opts = '<option value="">Select Part</option>';
+    partsData.forEach(p => {
+        opts += `<option value="${p.id}" ${partId == p.id ? 'selected' : ''}>${p.nama} (${p.kode})</option>`;
+    });
+    const row = document.createElement('div');
+    row.className = 'part-row flex items-center space-x-3 p-3 border border-gray-200 rounded-lg';
+    row.innerHTML = `
+        <div class="flex-1">
+            <select name="parts[${idx}][part_id]" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black ${selectClass}">${opts}</select>
+        </div>
+        <div class="w-32">
+            <input type="number" name="parts[${idx}][quantity]" value="${qty}" min="1" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+        </div>
+        <button type="button" onclick="removePartRowFrom(this,'${modalId}')"
+            class="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>`;
+    return row;
+}
+
+function appendPartRow(containerId, selectClass, modalId, partId = '', qty = 1) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    const idx = partCounter++;
+    const row = buildPartRow(idx, partId, qty, selectClass, modalId);
+    container.appendChild(row);
+    waitForJQuery(() => {
+        $(row.querySelector('.' + selectClass)).select2({
+            placeholder: "Select Part", allowClear: false, width: '100%',
+            dropdownParent: $(`#${modalId}`),
+        });
+    });
+}
+
+function removePartRowFrom(btn, modalId) {
+    const row       = btn.closest('.part-row');
+    const container = row.parentElement;
+    if (container.querySelectorAll('.part-row').length > 1) {
+        waitForJQuery(() => { try { $(row.querySelector('select')).select2('destroy'); } catch(e){} });
+        row.remove();
+    } else {
+        Swal.fire('Warning!', 'Minimal 1 part harus ada!', 'warning');
+    }
+}
+
+// shorthand helpers (dipanggil dari tombol di HTML)
+function addPartRow()     { appendPartRow('partsContainer',     'part-select-create', 'createModal'); }
+function addEditPartRow() { appendPartRow('editPartsContainer', 'part-select-edit',   'editModal'); }
+
+// ============================================
+// CREATE MODAL  — sama persis polanya kayak detail
+// ============================================
+function openCreateModal() {
+    // 1. tampilkan modal dulu (style langsung, bypass Tailwind)
+    modalShow('createModal');
+
+    // 2. reset form
+    document.getElementById('createForm').reset();
+    document.getElementById('createPreviewContainer').classList.add('hidden');
+    document.getElementById('partsContainer').innerHTML       = '';
+    document.getElementById('diesDetailsContainer').innerHTML = '';
+    partCounter = 0;
+    clearErrors();
+
+    // 3. init select2 & tambah row awal — setelah modal visible
+    waitForJQuery(() => {
+        try { $('#createSupplierId').select2('destroy'); } catch(e) {}
+        $('#createSupplierId').select2({
+            placeholder: "Select Supplier", allowClear: false, width: '100%',
+            dropdownParent: $('#createModal'),
+        });
+        appendPartRow('partsContainer', 'part-select-create', 'createModal');
+    });
+
+    // 4. bind submit
+    document.getElementById('createForm').onsubmit = async function (e) {
+        e.preventDefault();
+        clearErrors();
+        const fd = new FormData(this);
+        appendDiesDetailsToFormData(fd, 'diesDetailsContainer');
+        try {
+            const res  = await fetch('/barangs', {
+                method: 'POST',
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+                body: fd
+            });
+            const data = await res.json();
+            if (data.success) {
+                await Swal.fire({ icon:'success', title:'Berhasil!', text: data.message, showConfirmButton:false, timer:1500 });
+                closeCreateModal();
+                loadBarangs();
             } else {
-                addEditPartRow();
+                if (data.errors) displayErrors(data.errors, 'create');
+                else Swal.fire('Error!', data.message || 'Unknown error', 'error');
             }
-            
-            const previewImg = document.getElementById('editPreview');
-            const noImageText = document.getElementById('noImageText');
-            
-            if (barang.gambar) {
-                previewImg.src = `/storage/barangs/${barang.gambar}`;
-                previewImg.style.display = 'block';
-                noImageText.style.display = 'none';
-            } else {
-                previewImg.style.display = 'none';
-                noImageText.style.display = 'block';
-            }
-            
-            // Initialize form submission
-            initializeEditForm();
-            
-            clearErrors();
-            
-            const modal = document.getElementById('editModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            setTimeout(() => modal.classList.add('modal-fade-in'), 10);
+        } catch (err) { Swal.fire('Error!', 'Terjadi kesalahan', 'error'); }
+    };
+}
+
+function closeCreateModal() {
+    waitForJQuery(() => {
+        try { $('#createSupplierId').select2('destroy'); } catch(e) {}
+        document.querySelectorAll('#createModal .part-select-create').forEach(s => {
+            try { $(s).select2('destroy'); } catch(e) {}
+        });
+    });
+    modalHide('createModal');
+}
+
+// ============================================
+// EDIT MODAL  — sama persis polanya kayak detail
+// ============================================
+async function openEditModal(id) {
+    // 1. tampilkan modal dulu
+    modalShow('editModal');
+
+    try {
+        // 2. fetch data
+        const res    = await fetch(`/barangs/${id}`);
+        const result = await res.json();
+        if (!result.success) throw new Error('Gagal fetch');
+        const b = result.data;
+
+        // 3. isi field
+        document.getElementById('editBarangId').value   = b.id;
+        document.getElementById('editKodeBarang').value = b.kode_barang;
+        document.getElementById('editNama').value       = b.nama;
+        document.getElementById('editAddress').value    = b.address || '';
+        document.getElementById('editLine').value       = b.line    || '';
+        document.getElementById('editCust').value       = b.cust    || '';
+        document.getElementById('editModel').value      = b.model   || '';
+
+        // 4. gambar
+        const prev     = document.getElementById('editPreview');
+        const noImgTxt = document.getElementById('noImageText');
+        if (b.gambar) {
+            prev.src = `/storage/barangs/${b.gambar}`;
+            prev.style.display = 'block'; noImgTxt.style.display = 'none';
+        } else {
+            prev.style.display = 'none'; noImgTxt.style.display = 'block';
         }
-    } catch (error) {
-        console.error('Error:', error);
+
+        // 5. parts
+        document.getElementById('editPartsContainer').innerHTML = '';
+        partCounter = 0;
+        if (b.parts && b.parts.length) {
+            b.parts.forEach(p => appendPartRow('editPartsContainer', 'part-select-edit', 'editModal', p.id, p.pivot.quantity));
+        } else {
+            appendPartRow('editPartsContainer', 'part-select-edit', 'editModal');
+        }
+
+        // 6. dies details
+        document.getElementById('editDiesDetailsContainer').innerHTML = '';
+        if (b.dies_details && b.dies_details.length) {
+            b.dies_details.forEach(d => addDiesDetailRow('editDiesDetailsContainer', d));
+        }
+
+        // 7. supplier select2
+        waitForJQuery(() => {
+            try { $('#editSupplierId').select2('destroy'); } catch(e) {}
+            $('#editSupplierId').select2({
+                placeholder: "Select Supplier", allowClear: false, width: '100%',
+                dropdownParent: $('#editModal'),
+            }).val(b.supplier_id).trigger('change');
+        });
+
+        clearErrors();
+
+        // 8. bind submit
+        document.getElementById('editForm').onsubmit = async function (e) {
+            e.preventDefault();
+            clearErrors();
+            const fd = new FormData(this);
+            fd.append('_method', 'PUT');
+            appendDiesDetailsToFormData(fd, 'editDiesDetailsContainer');
+            try {
+                const res  = await fetch(`/barangs/${id}`, {
+                    method: 'POST',
+                    headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+                    body: fd
+                });
+                const data = await res.json();
+                if (data.success) {
+                    await Swal.fire({ icon:'success', title:'Berhasil!', text: data.message, showConfirmButton:false, timer:1500 });
+                    closeEditModal();
+                    loadBarangs();
+                } else {
+                    if (data.errors) displayErrors(data.errors, 'edit');
+                }
+            } catch (err) { Swal.fire('Error!', 'Terjadi kesalahan!', 'error'); }
+        };
+
+    } catch (e) {
+        modalHide('editModal');
         Swal.fire('Error!', 'Gagal memuat data', 'error');
     }
 }
 
 function closeEditModal() {
-    // Destroy Select2 instances
-    $('#editSupplierId').select2('destroy');
-    $('.part-select').select2('destroy');
-    
-    const modal = document.getElementById('editModal');
-    modal.classList.remove('modal-fade-in');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }, 300);
+    waitForJQuery(() => {
+        try { $('#editSupplierId').select2('destroy'); } catch(e) {}
+        document.querySelectorAll('#editModal .part-select-edit').forEach(s => {
+            try { $(s).select2('destroy'); } catch(e) {}
+        });
+    });
+    modalHide('editModal');
 }
 
+// ============================================
+// DETAIL MODAL
+// ============================================
 async function openDetailModal(id) {
+    const modal   = document.getElementById('detailModal');
+    const content = document.getElementById('detailModalContent');
+
+    // 1. tampilkan modal dulu
+    modal.style.display = 'flex';
+    content.classList.remove('scale-100', 'opacity-100');
+    content.classList.add('scale-95', 'opacity-0');
+
     try {
-        const response = await fetch(`/barangs/${id}`);
-        const res = await response.json();
+        // 2. fetch data
+        const res    = await fetch(`/barangs/${id}`);
+        const result = await res.json();
+        if (!result.success) throw new Error();
+        const b = result.data;
 
-        if (!res.success) throw new Error('API error');
+        // 3. isi field
+        document.getElementById('detailKodeBarang').textContent = b.kode_barang;
+        document.getElementById('detailNama').textContent       = b.nama;
+        document.getElementById('detailAddress').textContent    = b.address ?? '-';
+        document.getElementById('detailCust').textContent       = b.cust    ?? '-';
+        document.getElementById('detailModel').textContent      = b.model   ?? '-';
+        document.getElementById('detailSupplier').textContent   = b.supplier?.nama ?? '-';
 
-        const barang = res.data;
-
-        document.getElementById('detailKodeBarang').textContent = barang.kode_barang;
-        document.getElementById('detailNama').textContent = barang.nama;
-        document.getElementById('detailAddress').textContent = barang.address ?? '-';
-
-        document.getElementById('detailSupplier').textContent =
-            barang.supplier?.nama ?? '-';
-
-        const tbody = document.getElementById('detailPartsTableBody');
-        tbody.innerHTML = '';
-
-        if (barang.parts?.length) {
-            barang.parts.forEach((part, index) => {
-                tbody.innerHTML += `
-                    <tr class="hover:bg-gray-50">
-                        <td class="px-4 py-3 text-sm">${index + 1}</td>
-                        <td class="px-4 py-3 text-sm font-medium">${part.kode_part}</td>
-                        <td class="px-4 py-3 text-sm">${part.nama}</td>
-                        <td class="px-4 py-3 text-center">
-                            <span class="px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">
-                                ${part.pivot.quantity} ${part.satuan}
-                            </span>
-                        </td>
-                    </tr>
-                `;
-            });
-        } else {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="4" class="px-4 py-8 text-center text-gray-500">
-                        No parts found
+        // 4. parts table
+        const partsTbody = document.getElementById('detailPartsTableBody');
+        partsTbody.innerHTML = b.parts?.length
+            ? b.parts.map((p, i) => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-4 py-3 text-sm">${i + 1}</td>
+                    <td class="px-4 py-3 text-sm font-medium">${esc(p.kode_part)}</td>
+                    <td class="px-4 py-3 text-sm">${esc(p.nama)}</td>
+                    <td class="px-4 py-3 text-center">
+                        <span class="px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800">${p.pivot.quantity} ${esc(p.satuan)}</span>
                     </td>
-                </tr>
-            `;
-        }
+                </tr>`).join('')
+            : `<tr><td colspan="4" class="px-4 py-8 text-center text-gray-500">No parts found</td></tr>`;
 
-        const modal = document.getElementById('detailModal');
-        const modalContent = document.getElementById('detailModalContent');
+        // 5. dies table
+        const diesTbody = document.getElementById('detailDiesTableBody');
+        diesTbody.innerHTML = b.dies_details?.length
+            ? b.dies_details.map((d, i) => `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2 text-xs text-gray-500">${i + 1}</td>
+                    <td class="px-3 py-2 text-xs font-mono font-medium text-gray-900">${esc(d.child_part_code) || '-'}</td>
+                    <td class="px-3 py-2 text-xs text-gray-700">${esc(d.part_name) || '-'}</td>
+                    <td class="px-3 py-2 text-xs text-gray-600">${esc(d.cust) || '-'}</td>
+                    <td class="px-3 py-2 text-xs text-gray-600">${esc(d.model) || '-'}</td>
+                    <td class="px-3 py-2 text-xs text-gray-600">${esc(d.process_name) || '-'}</td>
+                    <td class="px-3 py-2 text-xs text-center">
+                        <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-medium">${esc(d.process_no) || '-'}</span>
+                    </td>
+                </tr>`).join('')
+            : `<tr><td colspan="7" class="px-4 py-6 text-center text-gray-400 text-sm">Tidak ada data dies detail</td></tr>`;
 
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        // 6. animasi masuk
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            content.classList.remove('scale-95', 'opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+        }));
 
-        setTimeout(() => {
-            modalContent.classList.remove('scale-95', 'opacity-0');
-            modalContent.classList.add('scale-100', 'opacity-100');
-        }, 10);
-
-    } catch (error) {
-        console.error(error);
+    } catch (e) {
+        modal.style.display = 'none';
         Swal.fire('Error!', 'Gagal memuat detail', 'error');
     }
 }
 
-
 function closeDetailModal() {
-    const modal = document.getElementById('detailModal');
-    const modalContent = document.getElementById('detailModalContent');
-    
-    // Animate out
-    modal.classList.remove('bg-opacity-50');
-    modal.classList.add('bg-opacity-0');
-    modalContent.classList.remove('scale-100', 'opacity-100');
-    modalContent.classList.add('scale-95', 'opacity-0');
-    
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }, 300);
+    const modal   = document.getElementById('detailModal');
+    const content = document.getElementById('detailModalContent');
+    content.classList.remove('scale-100', 'opacity-100');
+    content.classList.add('scale-95', 'opacity-0');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
 }
 
-// ==================== DELETE ====================
+// ============================================
+// DELETE
+// ============================================
 async function deleteBarang(id) {
     const result = await Swal.fire({
-        title: 'Yakin hapus?',
-        text: "Data akan dihapus permanent!",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#000',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Ya, Hapus!',
-        cancelButtonText: 'Batal'
+        title: 'Yakin hapus?', text: 'Data akan dihapus permanent!', icon: 'warning',
+        showCancelButton: true, confirmButtonColor: '#000', cancelButtonColor: '#d33',
+        confirmButtonText: 'Ya, Hapus!', cancelButtonText: 'Batal'
     });
-
     if (result.isConfirmed) {
         try {
-            const response = await fetch(`/barangs/${id}`, {
+            const res  = await fetch(`/barangs/${id}`, {
                 method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                }
+                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
             });
-
-            const data = await response.json();
-
+            const data = await res.json();
             if (data.success) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'Terhapus!',
-                    text: data.message,
-                    showConfirmButton: false,
-                    timer: 1500
-                });
-                location.reload();
-            } else {
-                Swal.fire('Error!', data.message, 'error');
-            }
-        } catch (error) {
-            Swal.fire('Error!', 'Gagal menghapus!', 'error');
-        }
+                await Swal.fire({ icon:'success', title:'Terhapus!', text: data.message, showConfirmButton:false, timer:1500 });
+                loadBarangs();
+            } else Swal.fire('Error!', data.message, 'error');
+        } catch (e) { Swal.fire('Error!', 'Gagal menghapus!', 'error'); }
     }
 }
 
-// ==================== UTILITIES ====================
+// ============================================
+// ERROR DISPLAY
+// ============================================
 function displayErrors(errors, prefix) {
     Object.keys(errors).forEach(key => {
         const el = document.getElementById(`error-${prefix}-${key}`);
         if (el) el.textContent = errors[key][0];
     });
 }
-
 function clearErrors() {
     document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
 }
 
-function previewImage(event, previewId) {
-    const preview = document.getElementById(previewId);
-    const container = document.getElementById(previewId + 'Container');
-    const file = event.target.files[0];
-    
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            container.classList.remove('hidden');
-        }
-        reader.readAsDataURL(file);
-    }
-}
-
-function previewEditImage(event) {
-    const preview = document.getElementById('editPreview');
-    const file = event.target.files[0];
-    
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-            document.getElementById('noImageText').style.display = 'none';
-        }
-        reader.readAsDataURL(file);
-    }
-}
-
-function showImagePreview(src, title) {
-    const modal = document.getElementById('imagePreviewModal');
-    document.getElementById('previewImageSrc').src = src;
-    document.getElementById('previewImageTitle').textContent = title;
-    document.getElementById('downloadImageLink').href = src;
-    
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
-    setTimeout(() => modal.classList.add('modal-fade-in'), 10);
-}
-
-function closeImagePreview() {
-    const modal = document.getElementById('imagePreviewModal');
-    modal.classList.remove('modal-fade-in');
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }, 300);
-}
-
-function searchTable() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    
-    if (search === '') {
-        filteredBarangs = [...allBarangs];
-        document.getElementById('filteredInfo').classList.add('hidden');
-    } else {
-        filteredBarangs = allBarangs.filter(b => b.searchText.includes(search));
-        document.getElementById('filteredInfo').classList.remove('hidden');
-        document.getElementById('totalEntriesOriginal').textContent = allBarangs.length;
-    }
-    
-    updateTable();
-}
-
-function changePerPage() {
-    const val = document.getElementById('perPageSelect').value;
-    currentPerPage = val === 'all' ? filteredBarangs.length : parseInt(val);
-    updateTable();
-}
-
-function updateTable() {
-    const tbody = document.getElementById('barangsTableBody');
-    tbody.innerHTML = '';
-    
-    const total = filteredBarangs.length;
-    const display = currentPerPage > total ? total : currentPerPage;
-    
-    document.getElementById('showingFrom').textContent = total > 0 ? '1' : '0';
-    document.getElementById('showingTo').textContent = display;
-    document.getElementById('totalEntries').textContent = total;
-    
-    if (total === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
-                    No results found
-                </td>
-            </tr>
-        `;
-        return;
-    }
-    
-    filteredBarangs.slice(0, display).forEach((barang, i) => {
-        const row = barang.element.cloneNode(true);
-        row.querySelector('td:first-child').textContent = i + 1;
-        tbody.appendChild(row);
-    });
-}
-
-document.addEventListener('keydown', function(e) {
+// ============================================
+// KEYBOARD
+// ============================================
+document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') {
-        closeCreateModal();
-        closeEditModal();
-        closeDetailModal();
-        closeImagePreview();
+        closeCreateModal(); closeEditModal(); closeDetailModal();
+        closeImagePreview(); closeImportModal();
     }
 });
 </script>

@@ -20,11 +20,10 @@ class Barang extends Model
         'address',
         'line',
         'supplier_id',
+        'cust',
+        'model',
     ];
 
-    /**
-     * Get the parts for the barang.
-     */
     public function parts()
     {
         return $this->belongsToMany(Part::class, 'detail_barangs')
@@ -32,17 +31,16 @@ class Barang extends Model
                     ->withTimestamps();
     }
 
-    /**
-     * Get the detail barangs for the barang.
-     */
     public function detailBarangs()
     {
         return $this->hasMany(DetailBarang::class);
     }
 
-    /**
-     * Get the schedule for the barang.
-     */
+    public function diesDetails()
+    {
+        return $this->hasMany(DiesDetail::class)->orderBy('sort_order');
+    }
+
     public function schedule()
     {
         return $this->hasOne(Schedule::class);
@@ -53,41 +51,26 @@ class Barang extends Model
         return $this->belongsTo(Supplier::class);
     }
 
-    /**
-     * Get the check indicators for the barang.
-     */
     public function checkIndicators()
     {
         return $this->hasMany(CheckIndicator::class);
     }
 
-    /**
-     * Get general checkups for this barang
-     */
     public function generalCheckups()
     {
         return $this->hasMany(GeneralCheckup::class);
     }
 
-    /**
-     * Get history checkups for this barang
-     */
     public function historyCheckups()
     {
         return $this->hasMany(HistoryCheckup::class);
     }
 
-    /**
-     * Check if stock is below minimum
-     */
     public function isBelowMinStock()
     {
         return $this->stock < $this->min_stock;
     }
 
-    /**
-     * Check if stock is above maximum
-     */
     public function isAboveMaxStock()
     {
         return $this->stock > $this->max_stock;
