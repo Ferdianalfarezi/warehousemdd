@@ -326,6 +326,16 @@
                                     </div>
                                     <span id="checkupBadge" class="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display:none;">0</span>
                                 </a>
+                                <a href="{{ route('request-repairs.index') }}"
+                                    class="submenu-item flex items-center justify-between px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('request-repairs.*') ? 'active' : '' }}">
+                                    <div class="flex items-center">
+                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                        </svg>
+                                        Request Repair
+                                    </div>
+                                </a>
                             </div>
                         </div>
                     </div>
