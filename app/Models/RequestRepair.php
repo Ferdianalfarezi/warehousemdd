@@ -27,17 +27,26 @@ class RequestRepair extends Model
         'kategori_problem',
         'detail_proyek',
         'status',
-        // Additional info on trial
-        'penyebab_vc',
-        'tindakan_repair',
-        // Closed info
-        'status_after_trial',
-        'point_verifikasi',
-        'approval_section_chief',
+        // On Trial — Section 1: Tindakan Perbaikan
+        'analisa_penyebab',
+        'tindakan_perbaikan',
+        'catatan_penggantian_sparepart',
+        // On Trial — Section 2: Penanganan Problem Burry
+        'item',
+        'proses_grinding',
+        'shim_up',
+        'status_burry',
+        'standart_burry',
+        'group_leader',
+        'operator',
+        // On Trial — Section 3: Target Trial After Repair
+        'plan',
+        'actual',
+        'remark',
+        'judge',
         // Status timestamps
         'on_process_at',
         'on_trial_at',
-        'closed_at',
     ];
 
     protected $casts = [
@@ -46,7 +55,6 @@ class RequestRepair extends Model
         'jumlah_stroke'     => 'integer',
         'on_process_at'     => 'datetime',
         'on_trial_at'       => 'datetime',
-        'closed_at'         => 'datetime',
     ];
 
     // ── Constants ───────────────────────────────────────────
@@ -90,15 +98,13 @@ class RequestRepair extends Model
     public function getDurasiOnTrialSeconds(): ?int
     {
         if (!$this->on_trial_at) return null;
-        $end = $this->closed_at ?? now();
-        return (int) $this->on_trial_at->diffInSeconds($end);
+        return (int) $this->on_trial_at->diffInSeconds(now());
     }
 
     public function getDurasiTotalSeconds(): ?int
     {
         $start = $this->on_process_at ?? $this->created_at;
-        $end   = $this->closed_at ?? now();
-        return $start ? (int) $start->diffInSeconds($end) : null;
+        return $start ? (int) $start->diffInSeconds(now()) : null;
     }
 
     public static function formatDurasi(int $seconds): string
@@ -123,23 +129,16 @@ class RequestRepair extends Model
             ? (int) $start->diffInSeconds($this->on_trial_at)
             : null;
 
-        $onTrialSec = ($this->on_trial_at && $this->closed_at)
-            ? (int) $this->on_trial_at->diffInSeconds($this->closed_at)
-            : null;
-
-        $totalSec = ($start && $this->closed_at)
-            ? (int) $start->diffInSeconds($this->closed_at)
-            : null;
-
+        // request_repairs tidak punya closed_at, jadi on_trial & total tidak bisa dihitung di sini
         return [
             'on_process_at'             => $start?->toISOString(),
             'on_trial_at'               => $this->on_trial_at?->toISOString(),
-            'closed_at'                 => $this->closed_at?->toISOString(),
+            'closed_at'                 => null,
             'durasi_on_process'         => $onProcessSec !== null ? self::formatDurasi($onProcessSec) : null,
-            'durasi_on_trial'           => $onTrialSec   !== null ? self::formatDurasi($onTrialSec)   : null,
-            'durasi_total'              => $totalSec      !== null ? self::formatDurasi($totalSec)     : null,
+            'durasi_on_trial'           => null,
+            'durasi_total'              => null,
             'durasi_on_process_seconds' => $onProcessSec,
-            'durasi_on_trial_seconds'   => $onTrialSec,
+            'durasi_on_trial_seconds'   => null,
         ];
     }
 

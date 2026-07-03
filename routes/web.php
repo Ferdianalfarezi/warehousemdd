@@ -21,6 +21,7 @@ use App\Http\Controllers\AndonGeneralCheckupController;
 use App\Http\Controllers\RequestPartController;
 use App\Http\Controllers\HistoryRequestPartController;
 use App\Http\Controllers\RequestRepairController;
+use App\Http\Controllers\HistoryRepairController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -168,6 +169,16 @@ Route::middleware('auth')->group(function () {
         Route::put('{requestRepair}',            [RequestRepairController::class, 'update'])->name('update');
         Route::patch('{requestRepair}/status',   [RequestRepairController::class, 'updateStatus'])->name('update-status');
         Route::delete('{requestRepair}',         [RequestRepairController::class, 'destroy'])->name('destroy');
+    });
+
+    // ── History Repair ─────────────────────────────────────────────────────
+    Route::prefix('history-repairs')->name('history-repairs.')->group(function () {
+        Route::get('/',               [HistoryRepairController::class, 'index'])->name('index');
+        Route::get('data',            [HistoryRepairController::class, 'getData'])->name('data');
+        Route::get('summary',         [HistoryRepairController::class, 'getSummary'])->name('summary'); 
+        Route::get('by-part-no',      [HistoryRepairController::class, 'getByPartNo'])->name('by-part-no');
+        Route::get('{historyRepair}', [HistoryRepairController::class, 'show'])->name('show');
+        Route::get('{historyRepair}/print', [HistoryRepairController::class, 'print'])->name('print');
     });
 
     // ══════════════════════════════════════════════════════════════════════

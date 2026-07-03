@@ -44,6 +44,7 @@ class User extends Authenticatable
         return [
             'last_login' => 'datetime',
             'password' => 'hashed',
+            'role_id' => 'integer',
         ];
     }
 

@@ -28,6 +28,10 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        if ($request->user()->role_id == 4) {
+            return redirect()->route('request-repairs.index');
+        }
+
         return redirect()->intended(route('dashboard', absolute: false));
     }
 

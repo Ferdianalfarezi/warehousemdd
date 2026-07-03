@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\RequestRepair;
+use App\Models\RequestRepairHistory;
 use App\Models\Barang;
 use App\Models\DiesDetail;
 use Illuminate\Http\Request;
@@ -138,7 +139,7 @@ class RequestRepairController extends Controller
         return response()->json(['data' => $processNos]);
     }
 
-    // ── AJAX: get durasi realtime (untuk timer di modal) ────
+    // ── AJAX: get durasi realtime ────────────────────────────
     public function getDurasi(RequestRepair $requestRepair)
     {
         $start   = $requestRepair->on_process_at ?? $requestRepair->created_at;
@@ -194,7 +195,7 @@ class RequestRepairController extends Controller
                 'kategori_problem'  => $request->kategori_problem,
                 'detail_proyek'     => $request->detail_proyek,
                 'status'            => RequestRepair::STATUS_ON_PROCESS,
-                'on_process_at'     => now(), // ← catat waktu mulai
+                'on_process_at'     => now(),
             ]);
 
             DB::commit();
@@ -212,7 +213,7 @@ class RequestRepairController extends Controller
     {
         $requestRepair->load('barang:id,kode_barang,nama,cust');
 
-        $data           = $requestRepair->toArray();
+        $data             = $requestRepair->toArray();
         $data['timeline'] = $requestRepair->getTimelineData();
 
         return response()->json(['success' => true, 'data' => $data]);
@@ -282,8 +283,11 @@ class RequestRepairController extends Controller
         $userRoleId = auth()->user()->role_id ?? null;
         $newStatus  = $request->get('status');
 
+        // ════════════════════════════════════════════════════
+        // ON TRIAL
+        // ════════════════════════════════════════════════════
         if ($newStatus === RequestRepair::STATUS_ON_TRIAL) {
-            // Validasi transisi & role
+
             if (!$requestRepair->canConfirmToOnTrial()) {
                 return response()->json([
                     'success' => false,
@@ -297,13 +301,28 @@ class RequestRepairController extends Controller
                 ], 403);
             }
 
-            // Validasi additional info (wajib untuk on_trial)
             $validator = Validator::make($request->all(), [
-                'penyebab_vc'     => 'required|string|max:500',
-                'tindakan_repair' => 'required|in:Pertama,Berulang',
+                // Section 1 — Tindakan Perbaikan (required)
+                'analisa_penyebab'              => 'required|string|max:255',
+                'tindakan_perbaikan'            => 'required|string|max:255',
+                'catatan_penggantian_sparepart' => 'required|string|max:255',
+                // Section 2 — Penanganan Problem Burry (nullable)
+                'item'            => 'nullable|string|max:255',
+                'proses_grinding' => 'nullable|string|max:255',
+                'shim_up'         => 'nullable|string|max:255',
+                'status_burry'    => 'nullable|in:OK,NG',
+                'standart_burry'  => 'nullable|in:OK,NG',
+                'group_leader'    => 'nullable|string|max:255',
+                'operator'        => 'nullable|string|max:255',
+                // Section 3 — Target Trial After Repair (nullable)
+                'plan'   => 'nullable|string|max:255',
+                'actual' => 'nullable|string|max:255',
+                'remark' => 'nullable|string|max:255',
+                'judge'  => 'nullable|in:OK,NG',
             ], [
-                'penyebab_vc.required'     => 'Penyebab (VC) wajib diisi.',
-                'tindakan_repair.required' => 'Tindakan wajib dipilih.',
+                'analisa_penyebab.required'              => 'Analisa penyebab wajib diisi.',
+                'tindakan_perbaikan.required'            => 'Tindakan perbaikan wajib diisi.',
+                'catatan_penggantian_sparepart.required' => 'Catatan penggantian sparepart wajib diisi.',
             ]);
 
             if ($validator->fails()) {
@@ -311,15 +330,34 @@ class RequestRepairController extends Controller
             }
 
             $requestRepair->update([
-                'status'          => RequestRepair::STATUS_ON_TRIAL,
-                'penyebab_vc'     => $request->penyebab_vc,
-                'tindakan_repair' => $request->tindakan_repair,
-                'on_trial_at'     => now(),
+                'status'                        => RequestRepair::STATUS_ON_TRIAL,
+                // Section 1
+                'analisa_penyebab'              => $request->analisa_penyebab,
+                'tindakan_perbaikan'            => $request->tindakan_perbaikan,
+                'catatan_penggantian_sparepart' => $request->catatan_penggantian_sparepart,
+                // Section 2
+                'item'                          => $request->item,
+                'proses_grinding'               => $request->proses_grinding,
+                'shim_up'                       => $request->shim_up,
+                'status_burry'                  => $request->status_burry,
+                'standart_burry'                => $request->standart_burry,
+                'group_leader'                  => $request->group_leader,
+                'operator'                      => $request->operator,
+                // Section 3
+                'plan'                          => $request->plan,
+                'actual'                        => $request->actual,
+                'remark'                        => $request->remark,
+                'judge'                         => $request->judge,
+                'on_trial_at'                   => now(),
             ]);
 
             return response()->json(['success' => true, 'message' => 'Status berhasil diubah ke On Trial!']);
 
+        // ════════════════════════════════════════════════════
+        // CLOSED → pindah ke history, hard delete dari request_repairs
+        // ════════════════════════════════════════════════════
         } elseif ($newStatus === RequestRepair::STATUS_CLOSED) {
+
             if (!$requestRepair->canConfirmToClosed()) {
                 return response()->json([
                     'success' => false,
@@ -333,30 +371,131 @@ class RequestRepairController extends Controller
                 ], 403);
             }
 
-            // Validasi closed info (wajib untuk closed)
             $validator = Validator::make($request->all(), [
-                'status_after_trial'      => 'required|in:OK,NG',
-                'point_verifikasi'        => 'required|string|max:1000',
-                'approval_section_chief'  => 'required|string|max:255',
-            ], [
-                'status_after_trial.required'     => 'Status after trial wajib dipilih.',
-                'point_verifikasi.required'       => 'Point verifikasi wajib diisi.',
-                'approval_section_chief.required' => 'Approval section chief wajib diisi.',
+                // Section 1 — Monitoring Dies Temporary (nullable)
+                'tanggal_cek'       => 'nullable|date',
+                'lot_prod'          => 'nullable|string|max:255',
+                'awal'              => 'nullable|in:OK,NG',
+                'tengah'            => 'nullable|in:OK,NG',
+                'akhir'             => 'nullable|in:OK,NG',
+                'qty'               => 'nullable|in:OK,NG',
+                'remark_monitoring' => 'nullable|string|max:255',
+                'judge_monitoring'  => 'nullable|in:OK,NG',
+                // Section 2 — Target Permanen Action (nullable)
+                'plan_permanen'     => 'nullable|string|max:255',
+                'actual_permanen'   => 'nullable|string|max:255',
+                'rootcause'         => 'nullable|string|max:255',
+                'recovery'          => 'nullable|string|max:255',
+                'assy_trial_check'  => 'nullable|string|max:255',
+                'judge_permanen'    => 'nullable|in:OK,NG',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
             }
 
-            $requestRepair->update([
-                'status'                 => RequestRepair::STATUS_CLOSED,
-                'status_after_trial'     => $request->status_after_trial,
-                'point_verifikasi'       => $request->point_verifikasi,
-                'approval_section_chief' => $request->approval_section_chief,
-                'closed_at'              => now(),
-            ]);
+            DB::beginTransaction();
+            try {
+                $closedAt = now();
 
-            return response()->json(['success' => true, 'message' => 'Status berhasil diubah ke Closed!']);
+                // ── Hitung durasi tiap fase (detik)
+                $durasiOnProcessSeconds = null;
+                $durasiOnTrialSeconds   = null;
+                $durasiTotalSeconds     = null;
+
+                if ($requestRepair->on_process_at && $requestRepair->on_trial_at) {
+                    $durasiOnProcessSeconds = (int) $requestRepair->on_process_at
+                        ->diffInSeconds($requestRepair->on_trial_at);
+                }
+                if ($requestRepair->on_trial_at) {
+                    $durasiOnTrialSeconds = (int) $requestRepair->on_trial_at
+                        ->diffInSeconds($closedAt);
+                }
+                if ($requestRepair->on_process_at) {
+                    $durasiTotalSeconds = (int) $requestRepair->on_process_at
+                        ->diffInSeconds($closedAt);
+                }
+
+                // ── repair_count: berapa kali part_no ini sudah di-history + 1
+                $repairCount = RequestRepairHistory::where('part_no', $requestRepair->part_no)->count() + 1;
+
+                // ── Salin ke tabel history
+                RequestRepairHistory::create([
+                    'barang_id'                     => $requestRepair->barang_id,
+                    'no'                            => $requestRepair->no,
+                    'tanggal_pengajuan'             => $requestRepair->tanggal_pengajuan,
+                    'group'                         => $requestRepair->group,
+                    'shift'                         => $requestRepair->shift,
+                    'jumlah_stroke'                 => $requestRepair->jumlah_stroke,
+                    'line_mesin'                    => $requestRepair->line_mesin,
+                    'part_no'                       => $requestRepair->part_no,
+                    'nama'                          => $requestRepair->nama,
+                    'process_no'                    => $requestRepair->process_no,
+                    'customer'                      => $requestRepair->customer,
+                    'jenis'                         => $requestRepair->jenis,
+                    'target_selesai'                => $requestRepair->target_selesai,
+                    'kategori_problem'              => $requestRepair->kategori_problem,
+                    'detail_proyek'                 => $requestRepair->detail_proyek,
+                    // On Trial — Section 1
+                    'analisa_penyebab'              => $requestRepair->analisa_penyebab,
+                    'tindakan_perbaikan'            => $requestRepair->tindakan_perbaikan,
+                    'catatan_penggantian_sparepart' => $requestRepair->catatan_penggantian_sparepart,
+                    // On Trial — Section 2
+                    'item'                          => $requestRepair->item,
+                    'proses_grinding'               => $requestRepair->proses_grinding,
+                    'shim_up'                       => $requestRepair->shim_up,
+                    'status_burry'                  => $requestRepair->status_burry,
+                    'standart_burry'                => $requestRepair->standart_burry,
+                    'group_leader'                  => $requestRepair->group_leader,
+                    'operator'                      => $requestRepair->operator,
+                    // On Trial — Section 3
+                    'plan'                          => $requestRepair->plan,
+                    'actual'                        => $requestRepair->actual,
+                    'remark'                        => $requestRepair->remark,
+                    'judge'                         => $requestRepair->judge,
+                    // Closed — Section 1: Monitoring Dies Temporary
+                    'tanggal_cek'                   => $request->tanggal_cek,
+                    'lot_prod'                      => $request->lot_prod,
+                    'awal'                          => $request->awal,
+                    'tengah'                        => $request->tengah,
+                    'akhir'                         => $request->akhir,
+                    'qty'                           => $request->qty,
+                    'remark_monitoring'             => $request->remark_monitoring,
+                    'judge_monitoring'              => $request->judge_monitoring,
+                    // Closed — Section 2: Target Permanen Action
+                    'plan_permanen'                 => $request->plan_permanen,
+                    'actual_permanen'               => $request->actual_permanen,
+                    'rootcause'                     => $request->rootcause,
+                    'recovery'                      => $request->recovery,
+                    'assy_trial_check'              => $request->assy_trial_check,
+                    'judge_permanen'                => $request->judge_permanen,
+                    // Timestamps & durasi
+                    'on_process_at'                 => $requestRepair->on_process_at,
+                    'on_trial_at'                   => $requestRepair->on_trial_at,
+                    'closed_at'                     => $closedAt,
+                    'durasi_on_process_seconds'     => $durasiOnProcessSeconds,
+                    'durasi_on_trial_seconds'       => $durasiOnTrialSeconds,
+                    'durasi_total_seconds'          => $durasiTotalSeconds,
+                    'repair_count'                  => $repairCount,
+                ]);
+
+                // ── Hard delete dari request_repairs
+                $requestRepair->delete();
+
+                DB::commit();
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Status berhasil diubah ke Closed! Data dipindahkan ke History.',
+                ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('RequestRepair Close Error', ['error' => $e->getMessage()]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Terjadi kesalahan: ' . $e->getMessage(),
+                ], 500);
+            }
 
         } else {
             return response()->json(['success' => false, 'message' => 'Status tidak valid.'], 422);
