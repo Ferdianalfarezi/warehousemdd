@@ -67,13 +67,15 @@
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Part No</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kategori</th>
+                        <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock FG</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Diajukan Oleh</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                         <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200" id="rrTableBody">
                     <tr>
-                        <td colspan="9" class="px-6 py-16 text-center">
+                        <td colspan="10" class="px-6 py-16 text-center">
                             <svg class="animate-spin h-8 w-8 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -133,9 +135,11 @@ let _closedInfoId = null;
 // ════════════════════════════════════════════════════════
 // ICONS
 // ════════════════════════════════════════════════════════
-function makeBtn(onclick, title, bgClass, svgPath) {
+function makeBtn(onclick, title, bgColor, bgHoverColor, svgPath) {
     return '<button onclick="' + onclick + '" title="' + title + '"'
-         + ' class="' + bgClass + ' text-white w-8 h-8 rounded-lg transition flex items-center justify-center flex-shrink-0">'
+         + ' style="background-color:' + bgColor + ';width:32px;height:32px;border-radius:8px;transition:background-color .15s;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:none;cursor:pointer;"'
+         + ' onmouseover="this.style.backgroundColor=\'' + bgHoverColor + '\'"'
+         + ' onmouseout="this.style.backgroundColor=\'' + bgColor + '\'">'
          + '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">'
          + svgPath
          + '</svg></button>';
@@ -156,14 +160,15 @@ const JENIS_BADGE = {
     'Eksternal':     'bg-orange-100 text-orange-800',
 };
 const STATUS_CFG = {
-    'on_process': { cls: 'bg-blue-100 text-blue-800',     label: 'On Process' },
-    'on_trial':   { cls: 'bg-yellow-100 text-yellow-800', label: 'On Trial'   },
-    'closed':     { cls: 'bg-green-100 text-green-800',   label: 'Closed'     },
+    'open':       { bg: '#dcfce7', color: '#166534', label: 'Open'       }, // hijau
+    'on_process': { bg: '#dbeafe', color: '#1e40af', label: 'On Process' },
+    'on_trial':   { bg: '#fef9c3', color: '#854d0e', label: 'On Trial'   },
+    'closed':     { bg: '#dcfce7', color: '#166534', label: 'Closed'     },
 };
 
 function statusBadge(status) {
-    const s = STATUS_CFG[status] || { cls: 'bg-gray-100 text-gray-600', label: status };
-    return '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ' + s.cls + '">'
+    const s = STATUS_CFG[status] || { bg: '#f3f4f6', color: '#4b5563', label: status };
+    return '<span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:9999px;font-size:12px;font-weight:600;background-color:' + s.bg + ';color:' + s.color + ';">'
          + s.label + '</span>';
 }
 
@@ -193,6 +198,30 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('change', function (e) {
         if (e.target.id === 'createProcessNoSelect') syncProcessNoFromSelect('createProcessNoSelect');
         if (e.target.id === 'editProcessNoSelect')   syncProcessNoFromSelect('editProcessNoSelect');
+
+        // Preview gambar create
+        if (e.target.id === 'createGambar') {
+            const file = e.target.files[0];
+            const preview = document.getElementById('createGambarPreview');
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+        }
+
+        // Preview gambar edit
+        if (e.target.id === 'editGambar') {
+            const file = e.target.files[0];
+            const preview = document.getElementById('editGambarPreview');
+            if (file) {
+                preview.src = URL.createObjectURL(file);
+                preview.classList.remove('hidden');
+            } else {
+                preview.classList.add('hidden');
+            }
+        }
     });
 });
 
@@ -240,7 +269,7 @@ async function loadData() {
 function renderTable(items) {
     const tbody = document.getElementById('rrTableBody');
     if (!items || items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-16 text-center">'
+        tbody.innerHTML = '<tr><td colspan="10" class="px-6 py-16 text-center">'
             + '<p class="text-gray-600 font-semibold">Tidak ada data ditemukan</p>'
             + '<p class="text-gray-500 text-sm">' + (searchQuery ? 'Coba kata kunci lain' : 'Klik "Add Request" untuk memulai') + '</p>'
             + '</td></tr>';
@@ -248,25 +277,29 @@ function renderTable(items) {
     }
 
     tbody.innerHTML = items.map(function (r) {
-        var btns = '';
-        btns += makeBtn('openDetailModal(' + r.id + ')', 'Detail', 'bg-yellow-500 hover:bg-yellow-600',
-            '<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>');
-        if (r.can_edit) {
-            btns += makeBtn('openEditModal(' + r.id + ')', 'Edit', 'bg-orange-500 hover:bg-orange-600',
-                '<path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>');
-        }
-        if (r.can_to_on_trial) {
-            btns += makeBtn('confirmStatus(' + r.id + ', \'on_trial\')', 'Konfirmasi ke On Trial', 'bg-green-600 hover:bg-green-700',
-                '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>');
-        }
-        if (r.can_to_closed) {
-            btns += makeBtn('confirmStatus(' + r.id + ', \'closed\')', 'Konfirmasi ke Closed', 'bg-green-600 hover:bg-green-700',
-                '<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>');
-        }
-        if (r.can_delete) {
-            btns += makeBtn('deleteRR(' + r.id + ')', 'Hapus', 'bg-red-500 hover:bg-red-600',
-                '<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>');
-        }
+         var btns = '';
+            btns += makeBtn('openDetailModal(' + r.id + ')', 'Detail', '#eab308', '#ca8a04',
+                '<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>');
+            if (r.can_edit) {
+                btns += makeBtn('openEditModal(' + r.id + ')', 'Edit', '#f97316', '#ea580c',
+                    '<path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>');
+            }
+            if (r.can_to_process) {
+                btns += makeBtn('confirmStatus(' + r.id + ', \'on_process\')', 'Proses Request', '#0048e8', '#4f46e5',
+                    '<path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"/>');
+            }
+            if (r.can_to_on_trial) {
+                btns += makeBtn('confirmStatus(' + r.id + ', \'on_trial\')', 'Konfirmasi ke On Trial', '#16a34a', '#15803d',
+                    '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>');
+            }
+            if (r.can_to_closed) {
+                btns += makeBtn('confirmStatus(' + r.id + ', \'closed\')', 'Konfirmasi ke Closed', '#16a34a', '#15803d',
+                    '<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>');
+            }
+            if (r.can_delete) {
+                btns += makeBtn('deleteRR(' + r.id + ')', 'Hapus', '#ef4444', '#dc2626',
+                    '<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>');
+            }
         var katCls = KATEGORI_BADGE[r.kategori_problem] || 'bg-gray-100 text-gray-700';
         return '<tr class="hover:bg-gray-50 transition ' + (r.status === 'closed' ? 'opacity-70' : '') + '">'
              + '<td class="px-4 py-3 text-sm text-gray-500">' + r.row_number + '</td>'
@@ -276,6 +309,8 @@ function renderTable(items) {
              + '<td class="px-4 py-3 text-sm font-mono text-gray-900">' + esc(r.part_no) + '</td>'
              + '<td class="px-4 py-3 text-sm text-gray-800 max-w-xs truncate" title="' + esc(r.nama) + '">' + esc(r.nama) + '</td>'
              + '<td class="px-4 py-3"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + katCls + '">' + esc(r.kategori_problem) + '</span></td>'
+             + '<td class="px-4 py-3 text-sm text-gray-700 text-center font-medium">' + (r.kekuatan_stock_fg ?? '-') + ' Hari</td>' 
+             + '<td class="px-4 py-3 text-sm text-gray-600">' + esc(r.created_by_name || '-') + '</td>'
              + '<td class="px-4 py-3">' + statusBadge(r.status) + '</td>'
              + '<td class="px-4 py-3"><div class="flex items-center justify-center space-x-1">' + btns + '</div></td>'
              + '</tr>';
@@ -286,8 +321,47 @@ function renderTable(items) {
 // CONFIRM STATUS
 // ════════════════════════════════════════════════════════
 async function confirmStatus(id, newStatus) {
-    if (newStatus === 'on_trial') { await openAdditionalInfoModal(id); return; }
-    if (newStatus === 'closed')   { await openClosedInfoModal(id);     return; }
+    if (newStatus === 'on_process') { await confirmToProcess(id); return; }
+    if (newStatus === 'on_trial')   { await openAdditionalInfoModal(id); return; }
+    if (newStatus === 'closed')     { await openClosedInfoModal(id);     return; }
+}
+
+// ════════════════════════════════════════════════════════
+// CONFIRM TO ON PROCESS (Open → On Process)
+// ════════════════════════════════════════════════════════
+async function confirmToProcess(id) {
+    const result = await Swal.fire({
+        title: 'Proses request ini?',
+        text: 'Status akan berubah dari Open menjadi On Process.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#000',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Ya, Proses!',
+        cancelButtonText: 'Batal',
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+        const res = await fetch('/request-repairs/' + id + '/status', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ status: 'on_process' }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            await Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, showConfirmButton: false, timer: 1500 });
+            loadData();
+        } else {
+            Swal.fire('Gagal!', data.message || 'Terjadi kesalahan.', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error!', 'Terjadi kesalahan.', 'error');
+    }
 }
 
 // ════════════════════════════════════════════════════════
@@ -660,7 +734,7 @@ function openCreateModal() {
     document.getElementById('createProcessNoInput').classList.add('hidden');
     document.getElementById('createProcessNoSelect').classList.remove('hidden');
     document.getElementById('createProcessNoToggleBtn').textContent = 'Manual';
-    document.getElementById('createTanggal').value = new Date().toISOString().split('T')[0];
+    document.getElementById('createGambarPreview').classList.add('hidden');
     clearErrors();
     initBarangSelect2('createBarangId', 'createModal', function (d) {
         if (d) {
@@ -705,18 +779,33 @@ async function openEditModal(id) {
         document.getElementById('editGroup').value           = r.group;
         document.getElementById('editShift').value           = r.shift;
         document.getElementById('editStroke').value          = r.jumlah_stroke;
-        document.getElementById('editLineMesin').value       = r.line_mesin || '';
+        document.getElementById('editLineId').value = r.line_id || '';
         document.getElementById('editNamaDisplay').value     = r.nama       || '';
         document.getElementById('editCustomerDisplay').value = r.customer   || '';
         document.getElementById('editJenis').value           = r.jenis;
         document.getElementById('editKategori').value        = r.kategori_problem;
-        document.getElementById('editTargetSelesai').value   = r.target_selesai ? r.target_selesai.substring(0,10) : '';
+        document.getElementById('editKekuatanStockFg').value = r.kekuatan_stock_fg ?? '';
         document.getElementById('editDetailProyek').value    = r.detail_proyek || '';
         document.getElementById('editStatusBadge').innerHTML = statusBadge(r.status);
         document.getElementById('editProcessNoInput').classList.add('hidden');
         document.getElementById('editProcessNoSelect').classList.remove('hidden');
         document.getElementById('editProcessNoToggleBtn').textContent = 'Manual';
         document.getElementById('editProcessNoInput').value = r.process_no || '';
+
+        // Gambar existing
+        const editGambarCurrent  = document.getElementById('editGambarCurrent');
+        const editGambarEmptyTxt = document.getElementById('editGambarEmptyText');
+        if (r.gambar_url) {
+            editGambarCurrent.src = r.gambar_url;
+            editGambarCurrent.classList.remove('hidden');
+            editGambarEmptyTxt.classList.add('hidden');
+        } else {
+            editGambarCurrent.classList.add('hidden');
+            editGambarEmptyTxt.classList.remove('hidden');
+        }
+        document.getElementById('editGambarPreview').classList.add('hidden');
+        document.getElementById('editGambar').value = '';
+
         waitForJQuery(function () {
             try { $('#editBarangId').select2('destroy'); } catch(e) {}
             $('#editBarangId').empty().append(new Option(r.part_no + ' — ' + r.nama, r.barang_id, true, true));
@@ -773,11 +862,25 @@ async function openDetailModal(id) {
         document.getElementById('detailNama').textContent       = r.nama        || '-';
         document.getElementById('detailProcessNo').textContent  = r.process_no  || '-';
         document.getElementById('detailCustomer').textContent   = r.customer    || '-';
-        document.getElementById('detailTarget').textContent     = fmt(r.target_selesai);
+        document.getElementById('detailKekuatanStockFg').textContent = r.kekuatan_stock_fg ?? '-';
         document.getElementById('detailProyek').textContent     = r.detail_proyek || '-';
         document.getElementById('detailStatus').innerHTML       = statusBadge(r.status);
         document.getElementById('detailJenis').innerHTML        = '<span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + (JENIS_BADGE[r.jenis] || 'bg-gray-100 text-gray-700') + '">' + esc(r.jenis) + '</span>';
         document.getElementById('detailKategori').innerHTML     = '<span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + (KATEGORI_BADGE[r.kategori_problem] || 'bg-gray-100 text-gray-700') + '">' + esc(r.kategori_problem) + '</span>';
+        
+
+        // ── Dibuat Oleh & Gambar ──
+        document.getElementById('detailCreatedBy').textContent = r.created_by_name || '-';
+        const detailGambarEl    = document.getElementById('detailGambar');
+        const detailGambarEmpty = document.getElementById('detailGambarEmpty');
+        if (r.gambar_url) {
+            detailGambarEl.src = r.gambar_url;
+            detailGambarEl.classList.remove('hidden');
+            detailGambarEmpty.classList.add('hidden');
+        } else {
+            detailGambarEl.classList.add('hidden');
+            detailGambarEmpty.classList.remove('hidden');
+        }
 
         // ── On Trial sections ──
         const hasSection1 = r.analisa_penyebab || r.tindakan_perbaikan || r.catatan_penggantian_sparepart;
@@ -895,7 +998,7 @@ function updateShowingInfo(p) { document.getElementById('showingFrom').textConte
 // ════════════════════════════════════════════════════════
 function esc(str) { if (!str && str !== 0) return ''; const d = document.createElement('div'); d.textContent = String(str); return d.innerHTML; }
 function showLoading(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
-function showEmpty(msg) { document.getElementById('rrTableBody').innerHTML = '<tr><td colspan="9" class="px-6 py-12 text-center text-gray-500">' + msg + '</td></tr>'; }
+function showEmpty(msg) { document.getElementById('rrTableBody').innerHTML = '<tr><td colspan="10" class="px-6 py-12 text-center text-gray-500">' + msg + '</td></tr>'; }
 function modalShow(id) { const el = document.getElementById(id); el.style.display = 'flex'; requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add('modal-fade-in'); }); }); }
 function modalHide(id) { const el = document.getElementById(id); el.classList.remove('modal-fade-in'); setTimeout(function () { el.style.display = 'none'; }, 300); }
 function clearErrors() { document.querySelectorAll('.error-message').forEach(function (el) { el.textContent = ''; }); }

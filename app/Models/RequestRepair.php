@@ -23,9 +23,11 @@ class RequestRepair extends Model
         'process_no',
         'customer',
         'jenis',
-        'target_selesai',
+        'kekuatan_stock_fg',
         'kategori_problem',
         'detail_proyek',
+        'gambar',
+        'created_by',
         'status',
         // On Trial — Section 1: Tindakan Perbaikan
         'analisa_penyebab',
@@ -44,6 +46,8 @@ class RequestRepair extends Model
         'actual',
         'remark',
         'judge',
+        'line_id',    // ⬅️ baru
+        'line_mesin',
         // Status timestamps
         'on_process_at',
         'on_trial_at',
@@ -51,19 +55,21 @@ class RequestRepair extends Model
 
     protected $casts = [
         'tanggal_pengajuan' => 'date',
-        'target_selesai'    => 'date',
         'jumlah_stroke'     => 'integer',
+        'kekuatan_stock_fg'  => 'integer',
         'on_process_at'     => 'datetime',
         'on_trial_at'       => 'datetime',
     ];
 
     // ── Constants ───────────────────────────────────────────
+    const STATUS_OPEN       = 'open';       // ⬅️ baru
     const STATUS_ON_PROCESS = 'on_process';
     const STATUS_ON_TRIAL   = 'on_trial';
     const STATUS_CLOSED     = 'closed';
 
-    const ROLES_TO_ON_TRIAL = [1, 2, 3, 7];
-    const ROLES_TO_CLOSED   = [1, 4];
+    const ROLES_TO_ON_PROCESS = [1, 2, 3, 7]; // ⬅️ baru — open → on_process
+    const ROLES_TO_ON_TRIAL   = [1, 2, 3, 7];
+    const ROLES_TO_CLOSED     = [1, 4];
 
     // ── Relations ───────────────────────────────────────────
     public function barang()
@@ -71,10 +77,31 @@ class RequestRepair extends Model
         return $this->belongsTo(Barang::class);
     }
 
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function line() // ⬅️ baru
+    {
+        return $this->belongsTo(Line::class);
+    }
+
+    // ── Accessor gambar_url ─────────────────────────────────
+    public function getGambarUrlAttribute(): ?string
+    {
+        return $this->gambar ? asset('storage/' . $this->gambar) : null;
+    }
+
     // ── Helpers ─────────────────────────────────────────────
     public function isEditable(): bool
     {
-        return $this->status === self::STATUS_ON_PROCESS;
+        return $this->status === self::STATUS_OPEN; // ⬅️ diubah, dulu on_process
+    }
+
+    public function canConfirmToProcess(): bool // ⬅️ baru
+    {
+        return $this->status === self::STATUS_OPEN;
     }
 
     public function canConfirmToOnTrial(): bool
@@ -129,9 +156,8 @@ class RequestRepair extends Model
             ? (int) $start->diffInSeconds($this->on_trial_at)
             : null;
 
-        // request_repairs tidak punya closed_at, jadi on_trial & total tidak bisa dihitung di sini
         return [
-            'on_process_at'             => $start?->toISOString(),
+            'on_process_at'             => $this->on_process_at?->toISOString(), // ⬅️ diubah, jangan fallback ke created_at biar keliatan kapan mulai diproses beneran
             'on_trial_at'               => $this->on_trial_at?->toISOString(),
             'closed_at'                 => null,
             'durasi_on_process'         => $onProcessSec !== null ? self::formatDurasi($onProcessSec) : null,

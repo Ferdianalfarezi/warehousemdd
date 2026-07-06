@@ -19,6 +19,7 @@ use App\Http\Controllers\SubcontConfirmController;
 use App\Http\Controllers\AndonInhouseController;
 use App\Http\Controllers\AndonOuthouseController;
 use App\Http\Controllers\AndonGeneralCheckupController;
+use App\Http\Controllers\AndonRequestRepairController;
 use App\Http\Controllers\RequestPartController;
 use App\Http\Controllers\HistoryRequestPartController;
 use App\Http\Controllers\RequestRepairController;
@@ -47,6 +48,9 @@ Route::prefix('andon')->name('andon.')->group(function () {
 
     Route::get('general-checkup',       [AndonGeneralCheckupController::class, 'index'])->name('general-checkup.index');
     Route::get('general-checkup/{id}',  [AndonGeneralCheckupController::class, 'show'])->name('general-checkup.show');
+
+    Route::get('request-repair',        [AndonRequestRepairController::class,  'index'])->name('request-repair.index');
+    Route::get('request-repair/{id}',   [AndonRequestRepairController::class,  'show'])->name('request-repair.show');
 
 });
 

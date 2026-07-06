@@ -47,7 +47,6 @@
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
                             <option value="">Pilih Shift</option>
                             <option value="Pagi">Pagi</option>
-                            <option value="Siang">Siang</option>
                             <option value="Malam">Malam</option>
                         </select>
                         <p class="error-message text-xs text-red-500 mt-1" id="error-create-shift"></p>
@@ -67,10 +66,14 @@
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Line / Mesin</label>
-                        <input type="text" name="line_mesin" id="createLineMesin"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black"
-                            placeholder="Contoh: Line 1 / Press A">
-                        <p class="error-message text-xs text-red-500 mt-1" id="error-create-line_mesin"></p>
+                        <select name="line_id" id="createLineId"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                            <option value="">Pilih Line / Mesin</option>
+                            @foreach($lines as $line)
+                                <option value="{{ $line->id }}">{{ $line->nama_line }} — {{ $line->mesin }}</option>
+                            @endforeach
+                        </select>
+                        <p class="error-message text-xs text-red-500 mt-1" id="error-create-line_id"></p>
                     </div>
                 </div>
 
@@ -152,11 +155,13 @@
                     </div>
                 </div>
 
-                {{-- Target Selesai --}}
+                {{-- Kekuatan Stock FG --}}
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Target Selesai</label>
-                    <input type="date" name="target_selesai" id="createTargetSelesai"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Kekuatan Stock FG (Hari)</label>
+                    <input type="number" name="kekuatan_stock_fg" id="createKekuatanStockFg" min="0"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black"
+                        placeholder="0">
+                    <p class="error-message text-xs text-red-500 mt-1" id="error-create-kekuatan_stock_fg"></p>
                 </div>
 
                 {{-- Detail Proyek --}}
@@ -167,14 +172,24 @@
                         placeholder="Deskripsi detail masalah / proyek..."></textarea>
                 </div>
 
+                {{-- Gambar --}}
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Gambar</label>
+                    <input type="file" name="gambar" id="createGambar" accept="image/*"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:bg-gray-100 file:text-sm file:font-medium hover:file:bg-gray-200">
+                    <p class="text-xs text-gray-400 mt-1">Format JPG/PNG/WEBP, maks 2MB.</p>
+                    <img id="createGambarPreview" class="hidden mt-2 rounded-lg border border-gray-200 max-h-40 object-cover" />
+                    <p class="error-message text-xs text-red-500 mt-1" id="error-create-gambar"></p>
+                </div>
+
             </form>
         </div>
 
         {{-- Footer --}}
         <div class="border-t border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
-            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">
-                <span class="w-2 h-2 rounded-full bg-blue-500 mr-1.5"></span>
-                Status: On Process
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+                <span class="w-2 h-2 rounded-full bg-slate-500 mr-1.5"></span>
+                Status: Open
             </span>
             <div class="flex items-center space-x-3">
                 <button type="button" onclick="closeCreateModal()"

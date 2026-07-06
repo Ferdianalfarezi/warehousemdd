@@ -6,17 +6,26 @@ use App\Models\RequestRepair;
 use App\Models\RequestRepairHistory;
 use App\Models\Barang;
 use App\Models\DiesDetail;
+use App\Models\Line;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class RequestRepairController extends Controller
 {
     // ── Index ───────────────────────────────────────────────
     public function index()
     {
-        return view('request_repairs.index');
+        $lines = auth()->user()->lines()->orderBy('nama_line')->get();
+
+        if ($lines->isEmpty()) {
+            // fallback untuk user yang gak punya line ter-assign (misal admin)
+            $lines = Line::orderBy('nama_line')->get();
+        }
+
+        return view('request_repairs.index', compact('lines'));
     }
 
     // ── AJAX: table data ────────────────────────────────────
@@ -26,7 +35,7 @@ class RequestRepairController extends Controller
         $perPage = $request->get('per_page', 20);
         $page    = (int) $request->get('page', 1);
 
-        $query = RequestRepair::with(['barang:id,kode_barang,nama'])
+        $query = RequestRepair::with(['barang:id,kode_barang,nama', 'creator:id,nama'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($q2) use ($search) {
                     $q2->where('no',                'like', "%{$search}%")
@@ -65,18 +74,23 @@ class RequestRepairController extends Controller
                 'group'             => $rr->group,
                 'shift'             => $rr->shift,
                 'jumlah_stroke'     => $rr->jumlah_stroke,
+                'line_id'           => $rr->line_id,
                 'line_mesin'        => $rr->line_mesin,
                 'part_no'           => $rr->part_no,
                 'nama'              => $rr->nama,
                 'process_no'        => $rr->process_no,
                 'customer'          => $rr->customer,
                 'jenis'             => $rr->jenis,
-                'target_selesai'    => $rr->target_selesai?->format('d/m/Y'),
+                'kekuatan_stock_fg' => $rr->kekuatan_stock_fg,
                 'kategori_problem'  => $rr->kategori_problem,
                 'detail_proyek'     => $rr->detail_proyek,
+                'gambar_url'        => $rr->gambar_url,
+                'created_by_name'   => $rr->creator->nama ?? '-',
                 'status'            => $rr->status,
                 'can_edit'          => $rr->isEditable(),
                 'can_delete'        => $rr->isEditable(),
+                'can_to_process'    => $rr->canConfirmToProcess()
+                                        && in_array($userRoleId, RequestRepair::ROLES_TO_ON_PROCESS),
                 'can_to_on_trial'   => $rr->canConfirmToOnTrial()
                                         && in_array($userRoleId, RequestRepair::ROLES_TO_ON_TRIAL),
                 'can_to_closed'     => $rr->canConfirmToClosed()
@@ -159,15 +173,16 @@ class RequestRepairController extends Controller
         $validator = Validator::make($request->all(), [
             'tanggal_pengajuan' => 'required|date',
             'group'             => 'required|in:A,B',
-            'shift'             => 'required|in:Pagi,Siang,Malam',
+            'shift'             => 'required|in:Pagi,Malam',
             'jumlah_stroke'     => 'required|integer|min:0',
-            'line_mesin'        => 'nullable|string|max:100',
+            'line_id'           => 'nullable|exists:lines,id',
             'barang_id'         => 'required|exists:barangs,id',
             'process_no'        => 'nullable|string|max:100',
             'jenis'             => 'required|in:Milik Sendiri,Eksternal',
-            'target_selesai'    => 'nullable|date',
+            'kekuatan_stock_fg' => 'nullable|integer|min:0',
             'kategori_problem'  => 'required|in:Dies,Burry,Dimensi,Human Error,Accessories',
             'detail_proyek'     => 'nullable|string',
+            'gambar'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5000',
         ]);
 
         if ($validator->fails()) {
@@ -177,6 +192,12 @@ class RequestRepairController extends Controller
         DB::beginTransaction();
         try {
             $barang = Barang::findOrFail($request->barang_id);
+            $line   = $request->line_id ? Line::find($request->line_id) : null;
+
+            $gambarPath = null;
+            if ($request->hasFile('gambar')) {
+                $gambarPath = $request->file('gambar')->store('request_repairs', 'public');
+            }
 
             $rr = RequestRepair::create([
                 'no'                => RequestRepair::generateNo(),
@@ -184,18 +205,21 @@ class RequestRepairController extends Controller
                 'group'             => $request->group,
                 'shift'             => $request->shift,
                 'jumlah_stroke'     => $request->jumlah_stroke,
-                'line_mesin'        => $request->line_mesin,
+                'line_id'           => $line->id ?? null,
+                'line_mesin'        => $line ? ($line->nama_line . ' - ' . $line->mesin) : null,
                 'barang_id'         => $barang->id,
                 'part_no'           => $barang->kode_barang,
                 'nama'              => $barang->nama,
                 'process_no'        => $request->process_no,
                 'customer'          => $barang->cust,
                 'jenis'             => $request->jenis,
-                'target_selesai'    => $request->target_selesai,
+                'kekuatan_stock_fg' => $request->kekuatan_stock_fg,
                 'kategori_problem'  => $request->kategori_problem,
                 'detail_proyek'     => $request->detail_proyek,
-                'status'            => RequestRepair::STATUS_ON_PROCESS,
-                'on_process_at'     => now(),
+                'gambar'            => $gambarPath,
+                'created_by'        => auth()->id(),
+                'status'            => RequestRepair::STATUS_OPEN,
+                // on_process_at TIDAK diisi di sini — diisi saat dikonfirmasi ke On Process
             ]);
 
             DB::commit();
@@ -211,10 +235,12 @@ class RequestRepairController extends Controller
     // ── Show ────────────────────────────────────────────────
     public function show(RequestRepair $requestRepair)
     {
-        $requestRepair->load('barang:id,kode_barang,nama,cust');
+        $requestRepair->load(['barang:id,kode_barang,nama,cust', 'creator:id,nama']);
 
-        $data             = $requestRepair->toArray();
-        $data['timeline'] = $requestRepair->getTimelineData();
+        $data                    = $requestRepair->toArray();
+        $data['gambar_url']      = $requestRepair->gambar_url;
+        $data['created_by_name'] = $requestRepair->creator->nama ?? '-';
+        $data['timeline']        = $requestRepair->getTimelineData();
 
         return response()->json(['success' => true, 'data' => $data]);
     }
@@ -232,15 +258,16 @@ class RequestRepairController extends Controller
         $validator = Validator::make($request->all(), [
             'tanggal_pengajuan' => 'required|date',
             'group'             => 'required|in:A,B',
-            'shift'             => 'required|in:Pagi,Siang,Malam',
+            'shift'             => 'required|in:Pagi,Malam',
             'jumlah_stroke'     => 'required|integer|min:0',
-            'line_mesin'        => 'nullable|string|max:100',
+            'line_id'           => 'nullable|exists:lines,id',
             'barang_id'         => 'required|exists:barangs,id',
             'process_no'        => 'nullable|string|max:100',
             'jenis'             => 'required|in:Milik Sendiri,Eksternal',
-            'target_selesai'    => 'nullable|date',
+            'kekuatan_stock_fg' => 'nullable|integer|min:0',
             'kategori_problem'  => 'required|in:Dies,Burry,Dimensi,Human Error,Accessories',
             'detail_proyek'     => 'nullable|string',
+            'gambar'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5000',
         ]);
 
         if ($validator->fails()) {
@@ -250,23 +277,35 @@ class RequestRepairController extends Controller
         DB::beginTransaction();
         try {
             $barang = Barang::findOrFail($request->barang_id);
+            $line   = $request->line_id ? Line::find($request->line_id) : null;
 
-            $requestRepair->update([
+            $updateData = [
                 'tanggal_pengajuan' => $request->tanggal_pengajuan,
                 'group'             => $request->group,
                 'shift'             => $request->shift,
                 'jumlah_stroke'     => $request->jumlah_stroke,
-                'line_mesin'        => $request->line_mesin,
+                'line_id'           => $line->id ?? null,
+                'line_mesin'        => $line ? ($line->nama_line . ' - ' . $line->mesin) : null,
                 'barang_id'         => $barang->id,
                 'part_no'           => $barang->kode_barang,
                 'nama'              => $barang->nama,
                 'process_no'        => $request->process_no,
                 'customer'          => $barang->cust,
                 'jenis'             => $request->jenis,
-                'target_selesai'    => $request->target_selesai,
+                'kekuatan_stock_fg' => $request->kekuatan_stock_fg,
                 'kategori_problem'  => $request->kategori_problem,
                 'detail_proyek'     => $request->detail_proyek,
-            ]);
+                // created_by TIDAK diubah di sini
+            ];
+
+            if ($request->hasFile('gambar')) {
+                if ($requestRepair->gambar) {
+                    Storage::disk('public')->delete($requestRepair->gambar);
+                }
+                $updateData['gambar'] = $request->file('gambar')->store('request_repairs', 'public');
+            }
+
+            $requestRepair->update($updateData);
 
             DB::commit();
             return response()->json(['success' => true, 'message' => 'Request Repair berhasil diupdate!', 'data' => $requestRepair]);
@@ -284,9 +323,34 @@ class RequestRepairController extends Controller
         $newStatus  = $request->get('status');
 
         // ════════════════════════════════════════════════════
+        // ON PROCESS — Open → On Process
+        // ════════════════════════════════════════════════════
+        if ($newStatus === RequestRepair::STATUS_ON_PROCESS) {
+
+            if (!$requestRepair->canConfirmToProcess()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Status tidak bisa diubah ke On Process dari status saat ini.',
+                ], 422);
+            }
+            if (!in_array($userRoleId, RequestRepair::ROLES_TO_ON_PROCESS)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki akses untuk mengubah status ke On Process.',
+                ], 403);
+            }
+
+            $requestRepair->update([
+                'status'        => RequestRepair::STATUS_ON_PROCESS,
+                'on_process_at' => now(),
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Status berhasil diubah ke On Process!']);
+
+        // ════════════════════════════════════════════════════
         // ON TRIAL
         // ════════════════════════════════════════════════════
-        if ($newStatus === RequestRepair::STATUS_ON_TRIAL) {
+        } elseif ($newStatus === RequestRepair::STATUS_ON_TRIAL) {
 
             if (!$requestRepair->canConfirmToOnTrial()) {
                 return response()->json([
@@ -302,11 +366,9 @@ class RequestRepairController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
-                // Section 1 — Tindakan Perbaikan (required)
                 'analisa_penyebab'              => 'required|string|max:255',
                 'tindakan_perbaikan'            => 'required|string|max:255',
                 'catatan_penggantian_sparepart' => 'required|string|max:255',
-                // Section 2 — Penanganan Problem Burry (nullable)
                 'item'            => 'nullable|string|max:255',
                 'proses_grinding' => 'nullable|string|max:255',
                 'shim_up'         => 'nullable|string|max:255',
@@ -314,7 +376,6 @@ class RequestRepairController extends Controller
                 'standart_burry'  => 'nullable|in:OK,NG',
                 'group_leader'    => 'nullable|string|max:255',
                 'operator'        => 'nullable|string|max:255',
-                // Section 3 — Target Trial After Repair (nullable)
                 'plan'   => 'nullable|string|max:255',
                 'actual' => 'nullable|string|max:255',
                 'remark' => 'nullable|string|max:255',
@@ -331,11 +392,9 @@ class RequestRepairController extends Controller
 
             $requestRepair->update([
                 'status'                        => RequestRepair::STATUS_ON_TRIAL,
-                // Section 1
                 'analisa_penyebab'              => $request->analisa_penyebab,
                 'tindakan_perbaikan'            => $request->tindakan_perbaikan,
                 'catatan_penggantian_sparepart' => $request->catatan_penggantian_sparepart,
-                // Section 2
                 'item'                          => $request->item,
                 'proses_grinding'               => $request->proses_grinding,
                 'shim_up'                       => $request->shim_up,
@@ -343,7 +402,6 @@ class RequestRepairController extends Controller
                 'standart_burry'                => $request->standart_burry,
                 'group_leader'                  => $request->group_leader,
                 'operator'                      => $request->operator,
-                // Section 3
                 'plan'                          => $request->plan,
                 'actual'                        => $request->actual,
                 'remark'                        => $request->remark,
@@ -372,7 +430,6 @@ class RequestRepairController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
-                // Section 1 — Monitoring Dies Temporary (nullable)
                 'tanggal_cek'       => 'nullable|date',
                 'lot_prod'          => 'nullable|string|max:255',
                 'awal'              => 'nullable|in:OK,NG',
@@ -381,7 +438,6 @@ class RequestRepairController extends Controller
                 'qty'               => 'nullable|in:OK,NG',
                 'remark_monitoring' => 'nullable|string|max:255',
                 'judge_monitoring'  => 'nullable|in:OK,NG',
-                // Section 2 — Target Permanen Action (nullable)
                 'plan_permanen'     => 'nullable|string|max:255',
                 'actual_permanen'   => 'nullable|string|max:255',
                 'rootcause'         => 'nullable|string|max:255',
@@ -398,7 +454,6 @@ class RequestRepairController extends Controller
             try {
                 $closedAt = now();
 
-                // ── Hitung durasi tiap fase (detik)
                 $durasiOnProcessSeconds = null;
                 $durasiOnTrialSeconds   = null;
                 $durasiTotalSeconds     = null;
@@ -416,10 +471,8 @@ class RequestRepairController extends Controller
                         ->diffInSeconds($closedAt);
                 }
 
-                // ── repair_count: berapa kali part_no ini sudah di-history + 1
                 $repairCount = RequestRepairHistory::where('part_no', $requestRepair->part_no)->count() + 1;
 
-                // ── Salin ke tabel history
                 RequestRepairHistory::create([
                     'barang_id'                     => $requestRepair->barang_id,
                     'no'                            => $requestRepair->no,
@@ -433,14 +486,14 @@ class RequestRepairController extends Controller
                     'process_no'                    => $requestRepair->process_no,
                     'customer'                      => $requestRepair->customer,
                     'jenis'                         => $requestRepair->jenis,
-                    'target_selesai'                => $requestRepair->target_selesai,
+                    'kekuatan_stock_fg'             => $requestRepair->kekuatan_stock_fg,
                     'kategori_problem'              => $requestRepair->kategori_problem,
                     'detail_proyek'                 => $requestRepair->detail_proyek,
-                    // On Trial — Section 1
+                    'gambar'                        => $requestRepair->gambar,
+                    'created_by'                    => $requestRepair->created_by,
                     'analisa_penyebab'              => $requestRepair->analisa_penyebab,
                     'tindakan_perbaikan'            => $requestRepair->tindakan_perbaikan,
                     'catatan_penggantian_sparepart' => $requestRepair->catatan_penggantian_sparepart,
-                    // On Trial — Section 2
                     'item'                          => $requestRepair->item,
                     'proses_grinding'               => $requestRepair->proses_grinding,
                     'shim_up'                       => $requestRepair->shim_up,
@@ -448,12 +501,10 @@ class RequestRepairController extends Controller
                     'standart_burry'                => $requestRepair->standart_burry,
                     'group_leader'                  => $requestRepair->group_leader,
                     'operator'                      => $requestRepair->operator,
-                    // On Trial — Section 3
                     'plan'                          => $requestRepair->plan,
                     'actual'                        => $requestRepair->actual,
                     'remark'                        => $requestRepair->remark,
                     'judge'                         => $requestRepair->judge,
-                    // Closed — Section 1: Monitoring Dies Temporary
                     'tanggal_cek'                   => $request->tanggal_cek,
                     'lot_prod'                      => $request->lot_prod,
                     'awal'                          => $request->awal,
@@ -462,14 +513,12 @@ class RequestRepairController extends Controller
                     'qty'                           => $request->qty,
                     'remark_monitoring'             => $request->remark_monitoring,
                     'judge_monitoring'              => $request->judge_monitoring,
-                    // Closed — Section 2: Target Permanen Action
                     'plan_permanen'                 => $request->plan_permanen,
                     'actual_permanen'               => $request->actual_permanen,
                     'rootcause'                     => $request->rootcause,
                     'recovery'                      => $request->recovery,
                     'assy_trial_check'              => $request->assy_trial_check,
                     'judge_permanen'                => $request->judge_permanen,
-                    // Timestamps & durasi
                     'on_process_at'                 => $requestRepair->on_process_at,
                     'on_trial_at'                   => $requestRepair->on_trial_at,
                     'closed_at'                     => $closedAt,
@@ -479,7 +528,6 @@ class RequestRepairController extends Controller
                     'repair_count'                  => $repairCount,
                 ]);
 
-                // ── Hard delete dari request_repairs
                 $requestRepair->delete();
 
                 DB::commit();
@@ -513,6 +561,9 @@ class RequestRepairController extends Controller
         }
 
         try {
+            if ($requestRepair->gambar) {
+                Storage::disk('public')->delete($requestRepair->gambar);
+            }
             $requestRepair->delete();
             return response()->json(['success' => true, 'message' => 'Request Repair berhasil dihapus!']);
         } catch (\Exception $e) {

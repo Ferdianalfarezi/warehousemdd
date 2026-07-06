@@ -77,8 +77,8 @@
                     <p id="detailCustomer" class="text-[13.5px] text-zinc-900"></p>
                 </div>
                 <div>
-                    <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Target Selesai</p>
-                    <p id="detailTarget" class="text-[13.5px] text-zinc-900"></p>
+                    <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Kekuatan Stock FG</p>
+                    <p id="detailKekuatanStockFg" class="text-[13.5px] text-zinc-900"></p>
                 </div>
                 <div>
                     <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Detail Proyek</p>
@@ -98,6 +98,19 @@
                 </div>
             </div>
 
+            {{-- ── Dibuat Oleh & Gambar ── --}}
+            <div class="grid grid-cols-2 gap-x-8 gap-y-3">
+                <div>
+                    <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Dibuat Oleh</p>
+                    <p id="detailCreatedBy" class="text-[13.5px] text-zinc-900"></p>
+                </div>
+                <div>
+                    <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Gambar</p>
+                    <img id="detailGambar" class="hidden mt-1 rounded-lg border border-zinc-200 max-h-48 object-cover cursor-pointer" onclick="window.open(this.src, '_blank')" />
+                    <p id="detailGambarEmpty" class="text-[13.5px] text-zinc-400">-</p>
+                </div>
+            </div>
+
             {{-- ── Additional Info (On Trial) ── --}}
             <div id="detailAdditionalInfo" class="hidden">
                 <hr class="border-zinc-200 mb-5">
@@ -111,12 +124,60 @@
                     </p>
                     <div class="grid grid-cols-2 gap-x-8 gap-y-3">
                         <div>
-                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Penyebab (VC)</p>
-                            <p id="detailPenyebabVc" class="text-[13.5px] text-zinc-900 whitespace-pre-line"></p>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Analisa Penyebab</p>
+                            <p id="detailAnalisaPenyebab" class="text-[13.5px] text-zinc-900 whitespace-pre-line"></p>
                         </div>
                         <div>
-                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Tindakan</p>
-                            <p id="detailTindakanRepair" class="text-[13.5px] text-zinc-900"></p>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Tindakan Perbaikan</p>
+                            <p id="detailTindakanPerbaikan" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div class="col-span-2">
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Catatan Penggantian Sparepart</p>
+                            <p id="detailCatatanPenggantianSparepart" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Item</p>
+                            <p id="detailItem" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Proses Grinding</p>
+                            <p id="detailProsesGrinding" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Shim Up</p>
+                            <p id="detailShimUp" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Status Burry</p>
+                            <div id="detailStatusBurry" class="text-[13.5px] text-zinc-900"></div>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Standart Burry</p>
+                            <div id="detailStandartBurry" class="text-[13.5px] text-zinc-900"></div>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Group Leader</p>
+                            <p id="detailGroupLeader" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Operator</p>
+                            <p id="detailOperator" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Plan</p>
+                            <p id="detailPlan" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Actual</p>
+                            <p id="detailActual" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Remark</p>
+                            <p id="detailRemark" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Judge</p>
+                            <div id="detailJudge" class="text-[13.5px] text-zinc-900"></div>
                         </div>
                     </div>
                 </div>
@@ -134,16 +195,60 @@
                     </p>
                     <div class="grid grid-cols-2 gap-x-8 gap-y-3">
                         <div>
-                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Status After Trial</p>
-                            <p id="detailStatusAfterTrial" class="text-[13.5px] font-semibold text-zinc-900"></p>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Tanggal Cek</p>
+                            <p id="detailTanggalCek" class="text-[13.5px] text-zinc-900"></p>
                         </div>
                         <div>
-                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Approval Section Chief</p>
-                            <p id="detailApprovalSectionChief" class="text-[13.5px] text-zinc-900"></p>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Lot Prod</p>
+                            <p id="detailLotProd" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Awal</p>
+                            <div id="detailAwal" class="text-[13.5px] text-zinc-900"></div>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Tengah</p>
+                            <div id="detailTengah" class="text-[13.5px] text-zinc-900"></div>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Akhir</p>
+                            <div id="detailAkhir" class="text-[13.5px] text-zinc-900"></div>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Qty</p>
+                            <div id="detailQty" class="text-[13.5px] text-zinc-900"></div>
                         </div>
                         <div class="col-span-2">
-                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Point Verifikasi (Quality Part)</p>
-                            <p id="detailPointVerifikasi" class="text-[13.5px] text-zinc-900 whitespace-pre-line"></p>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Remark Monitoring</p>
+                            <p id="detailRemarkMonitoring" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Judge Monitoring</p>
+                            <div id="detailJudgeMonitoring" class="text-[13.5px] text-zinc-900"></div>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Plan Permanen</p>
+                            <p id="detailPlanPermanen" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Actual Permanen</p>
+                            <p id="detailActualPermanen" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Rootcause</p>
+                            <p id="detailRootcause" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Recovery</p>
+                            <p id="detailRecovery" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Assy Trial Check</p>
+                            <p id="detailAssyTrialCheck" class="text-[13.5px] text-zinc-900"></p>
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-0.5">Judge Permanen</p>
+                            <div id="detailJudgePermanen" class="text-[13.5px] text-zinc-900"></div>
                         </div>
                     </div>
                 </div>
