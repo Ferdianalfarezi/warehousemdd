@@ -28,15 +28,15 @@
 
             <!-- Login Card -->
             <div class="bg-white rounded-2xl shadow-2xl p-8">
-                <h2 class="text-2xl font-bold text-black mb-6">Sign In</h2>
+                <h2 class="text-2xl font-bold text-black mb-6">Masuk</h2>
 
-                <!-- Session Expired -->
-                @if (session('status'))
+                <!-- Info/Error dari redirect (misal sesi habis) -->
+                @if (session('error'))
                     <div class="mb-4 flex items-center gap-2 bg-yellow-50 border border-yellow-300 text-yellow-800 text-sm font-medium px-4 py-3 rounded-lg">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                         </svg>
-                        {{ session('status') }}
+                        {{ session('error') }}
                     </div>
                 @endif
 
@@ -54,38 +54,24 @@
                 <form method="POST" action="{{ route('login') }}">
                     @csrf
 
-                    <!-- Username -->
-                    <div class="mb-4">
-                        <label for="username" class="block text-sm font-medium text-gray-700 mb-2">Username</label>
+                    <!-- NIK -->
+                    <div class="mb-6">
+                        <label for="nik" class="block text-sm font-medium text-gray-700 mb-2">NIK</label>
                         <input
-                            id="username"
+                            id="nik"
                             type="text"
-                            name="username"
-                            value="{{ old('username') }}"
+                            name="nik"
+                            value="{{ old('nik') }}"
                             required
                             autofocus
-                            autocomplete="username"
-                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition duration-200 @error('username') border-red-500 @enderror"
-                            placeholder="Enter your username"
+                            maxlength="10"
+                            inputmode="numeric"
+                            pattern="[0-9]*"
+                            autocomplete="off"
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition duration-200 @error('nik') border-red-500 @enderror"
+                            placeholder="Masukkan NIK Anda"
                         >
-                        @error('username')
-                            <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <!-- Password -->
-                    <div class="mb-6">
-                        <label for="password" class="block text-sm font-medium text-gray-700 mb-2">Password</label>
-                        <input
-                            id="password"
-                            type="password"
-                            name="password"
-                            required
-                            autocomplete="current-password"
-                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition duration-200 @error('password') border-red-500 @enderror"
-                            placeholder="Enter your password"
-                        >
-                        @error('password')
+                        @error('nik')
                             <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
                         @enderror
                     </div>
@@ -95,7 +81,7 @@
                         type="submit"
                         class="w-full bg-black text-white py-3 rounded-lg font-semibold hover:bg-gray-800 transition duration-200 transform hover:scale-105"
                     >
-                        Sign In
+                        Masuk
                     </button>
                 </form>
             </div>

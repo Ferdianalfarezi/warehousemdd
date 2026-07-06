@@ -519,11 +519,11 @@
                                     <img src="{{ asset('storage/users/'.auth()->user()->avatar) }}" class="w-9 h-9 rounded-full object-cover ring-2 ring-gray-200">
                                 @else
                                     <div class="w-9 h-9 bg-gradient-to-br from-gray-800 to-black text-white rounded-full flex items-center justify-center font-bold ring-2 ring-gray-200">
-                                        {{ strtoupper(substr(auth()->user()->username, 0, 1)) }}
+                                        {{ strtoupper(substr(auth()->user()->nama, 0, 1)) }}
                                     </div>
                                 @endif
                                 <div class="text-left">
-                                    <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->username }}</p>
+                                    <p class="text-sm font-semibold text-gray-800">{{ auth()->user()->nama }}</p>
                                     <p class="text-xs text-gray-500">{{ auth()->user()->role->nama ?? 'User' }}</p>
                                 </div>
                                 <svg class="w-4 h-4 text-gray-500 transition-transform duration-200"

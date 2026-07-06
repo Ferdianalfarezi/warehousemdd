@@ -30,54 +30,23 @@
                 </div>
             </div>
 
-            <!-- Username -->
+            <!-- Nama -->
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">Username <span class="text-red-500">*</span></label>
-                <input type="text" id="createUsername" name="username" required
+                <label class="block text-sm font-semibold text-gray-700 mb-2">Nama <span class="text-red-500">*</span></label>
+                <input type="text" id="createNama" name="nama" required
                     class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition"
-                    placeholder="Enter username">
-                <span class="text-red-500 text-sm error-message" id="error-create-username"></span>
+                    placeholder="Enter nama lengkap">
+                <span class="text-red-500 text-sm error-message" id="error-create-nama"></span>
             </div>
 
-            <!-- Password -->
+            <!-- NIK -->
             <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Password <span class="text-red-500">*</span>
-                </label>
-
-                <div class="relative">
-                    <input type="password" id="createPassword" name="password" required
-                        class="w-full px-4 py-3 pr-12 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition"
-                        placeholder="Enter password">
-
-                    <button type="button"
-                            onclick="togglePassword('createPassword', 'createPasswordIcon')"
-                            class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
-                    </button>
-                </div>
-
-                <span class="text-red-500 text-sm error-message" id="error-create-password"></span>
-                <p class="text-xs text-gray-500 mt-1">Minimum 6 characters</p>
-            </div>
-
-            <!-- Confirm Password -->
-            <div>
-                <label class="block text-sm font-semibold text-gray-700 mb-2">
-                    Confirm Password <span class="text-red-500">*</span>
-                </label>
-
-                <div class="relative">
-                    <input type="password" id="createPasswordConfirmation" name="password_confirmation" required
-                        class="w-full px-4 py-3 pr-12 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition"
-                        placeholder="Confirm password">
-
-                    <button type="button"
-                            onclick="togglePassword('createPasswordConfirmation', 'createPasswordConfirmIcon')"
-                            class="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none">
-                    </button>
-                </div>
-
-                <span class="text-red-500 text-sm error-message" id="error-create-password_confirmation"></span>
+                <label class="block text-sm font-semibold text-gray-700 mb-2">NIK <span class="text-red-500">*</span></label>
+                <input type="text" id="createNik" name="nik" required maxlength="10" inputmode="numeric" pattern="[0-9]*"
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition"
+                    placeholder="Enter NIK (maks. 10 digit)">
+                <span class="text-red-500 text-sm error-message" id="error-create-nik"></span>
+                <p class="text-xs text-gray-500 mt-1">NIK dipakai untuk login, harus unik</p>
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

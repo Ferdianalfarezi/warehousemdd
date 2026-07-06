@@ -8,7 +8,7 @@
     <!-- Page Header -->
     <div>
         <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p class="text-gray-600 mt-1">Welcome back, {{ auth()->user()->username }}!</p>
+        <p class="text-gray-600 mt-1">Welcome back, {{ auth()->user()->nama }}!</p>
     </div>
 
     <!-- Statistics Cards -->

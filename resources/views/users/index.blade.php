@@ -36,7 +36,7 @@
                     type="text" 
                     id="searchInput"
                     class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                    placeholder="Search by username, role..."
+                    placeholder="Search by nama, NIK, role..."
                     onkeyup="searchTable()"
                 >
             </div>
@@ -67,7 +67,8 @@
                     <tr>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">No</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Avatar</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Username</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</th>
+                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">NIK</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Jabatan / Line</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
@@ -82,16 +83,19 @@
                             <td class="px-6 py-4">
                                 @if($user->avatar)
                                     <img src="{{ asset('storage/users/'.$user->avatar) }}" 
-                                        onclick="showImagePreview('{{ asset('storage/users/'.$user->avatar) }}', '{{ $user->username }}')"
+                                        onclick="showImagePreview('{{ asset('storage/users/'.$user->avatar) }}', '{{ $user->nama }}')"
                                         class="w-12 h-12 rounded-full object-cover border-2 border-gray-200 cursor-pointer hover:opacity-80 hover:scale-110 transition">
                                 @else
                                     <div class="w-12 h-12 bg-black rounded-full flex items-center justify-center">
-                                        <span class="text-white font-bold text-lg">{{ strtoupper(substr($user->username, 0, 1)) }}</span>
+                                        <span class="text-white font-bold text-lg">{{ strtoupper(substr($user->nama, 0, 1)) }}</span>
                                     </div>
                                 @endif
                             </td>
                             <td class="px-6 py-4">
-                                <p class="text-sm font-semibold text-gray-900">{{ $user->username }}</p>
+                                <p class="text-sm font-semibold text-gray-900">{{ $user->nama }}</p>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-600">
+                                {{ $user->nik }}
                             </td>
                             <td class="px-6 py-4">
                                 <span class="px-3 py-1 rounded-full text-xs font-medium
@@ -135,7 +139,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="px-6 py-16 text-center">
+                            <td colspan="9" class="px-6 py-16 text-center">
                                 <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                                 </svg>
@@ -524,7 +528,8 @@ async function openEditModal(id) {
             const user = data.data;
             
             document.getElementById('editUserId').value = user.id;
-            document.getElementById('editUsername').value = user.username;
+            document.getElementById('editNama').value = user.nama;
+            document.getElementById('editNik').value = user.nik;
             document.getElementById('editRoleId').value = user.role_id;
             document.getElementById('editStatus').value = user.status;
             
@@ -660,24 +665,6 @@ function previewEditImage(event) {
     }
 }
 
-function togglePassword(inputId, iconId) {
-    const input = document.getElementById(inputId);
-    const icon = document.getElementById(iconId);
-    
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.innerHTML = `
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"/>
-        `;
-    } else {
-        input.type = 'password';
-        icon.innerHTML = `
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
-        `;
-    }
-}
-
 function showImagePreview(src, title) {
     const modal = document.getElementById('imagePreviewModal');
     document.getElementById('previewImageSrc').src = src;
@@ -733,7 +720,7 @@ function updateTable() {
     if (total === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
+                <td colspan="9" class="px-6 py-12 text-center text-gray-500">
                     No results found
                 </td>
             </tr>

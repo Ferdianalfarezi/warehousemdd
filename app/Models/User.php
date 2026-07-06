@@ -17,8 +17,8 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'avatar',
-        'username',
-        'password',
+        'nama',
+        'nik',
         'role_id',
         'last_login',
         'status',
@@ -31,7 +31,6 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $hidden = [
-        'password',
         'remember_token',
     ];
 
@@ -44,7 +43,6 @@ class User extends Authenticatable
     {
         return [
             'last_login' => 'datetime',
-            'password' => 'hashed',
             'role_id' => 'integer',
         ];
     }

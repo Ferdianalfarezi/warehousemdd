@@ -6,7 +6,6 @@ use App\Models\User;
 use App\Models\Role;
 use App\Models\Line;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class UserController extends Controller
@@ -35,8 +34,7 @@ class UserController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $data = $request->except(['avatar', 'password', 'password_confirmation', 'lines']);
-        $data['password'] = Hash::make($request->password);
+        $data = $request->except(['avatar', 'lines']);
         $data = $this->applyOperatorRules($data, $request);
 
         if ($request->hasFile('avatar')) {
@@ -69,10 +67,7 @@ class UserController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $data = $request->except(['avatar', 'password', 'password_confirmation', 'lines']);
-        if ($request->filled('password')) {
-            $data['password'] = Hash::make($request->password);
-        }
+        $data = $request->except(['avatar', 'lines']);
         $data = $this->applyOperatorRules($data, $request);
 
         if ($request->hasFile('avatar')) {
@@ -115,15 +110,15 @@ class UserController extends Controller
 
     private function rules(Request $request, ?int $ignoreId = null): array
     {
-        $usernameUnique = $ignoreId
-            ? 'unique:users,username,' . $ignoreId
-            : 'unique:users,username';
+        $nikUnique = $ignoreId
+            ? 'unique:users,nik,' . $ignoreId
+            : 'unique:users,nik';
 
         $isOperator = (int) $request->role_id === self::OPERATOR_ROLE_ID;
 
         return [
-            'username'   => "required|string|max:255|{$usernameUnique}",
-            'password'   => $ignoreId ? 'nullable|string|min:6|confirmed' : 'required|string|min:6|confirmed',
+            'nama'       => 'required|string|max:255',
+            'nik'        => "required|string|max:10|{$nikUnique}",
             'role_id'    => 'required|exists:roles,id',
             'status'     => 'required|in:aktif,nonaktif',
             'avatar'     => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
