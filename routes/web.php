@@ -5,6 +5,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\PartController;
 use App\Http\Controllers\BarangController;
+use App\Http\Controllers\LineController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\CheckIndicatorController;
@@ -95,6 +96,11 @@ Route::middleware('auth')->group(function () {
     });
     Route::resource('barangs', BarangController::class);
     Route::get('/barangs/{barang}/details', [CheckIndicatorController::class, 'getBarangDetails']);
+
+    // ── Lines ──────────────────────────────────────────────────────────────
+    // Data master kecil & statis -> index render Blade langsung (bukan AJAX table)
+    // store/update/destroy tetap dipanggil via fetch() JSON dari modal di lines/index.blade.php
+    Route::resource('lines', LineController::class)->except(['create', 'edit', 'show']);
 
     // ── Schedules ──────────────────────────────────────────────────────────
     Route::get('/barangs-for-schedule', [ScheduleController::class, 'getBarangsForSchedule'])->name('barangs.for-schedule');

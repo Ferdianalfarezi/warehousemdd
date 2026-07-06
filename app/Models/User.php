@@ -22,6 +22,7 @@ class User extends Authenticatable
         'role_id',
         'last_login',
         'status',
+        'jabatan', // 'Leader' | 'Asst Leader', hanya relevan untuk operator (role_id 4)
     ];
 
     /**
@@ -57,6 +58,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Lines yang dipegang user ini (khusus operator - Leader max 3, Asst Leader max 1).
+     */
+    public function lines()
+    {
+        return $this->belongsToMany(Line::class, 'line_user');
+    }
+
+    /**
      * Check if user is active
      */
     public function isActive()
@@ -78,5 +87,25 @@ class User extends Authenticatable
     public function isAdmin()
     {
         return $this->role && in_array($this->role->nama, ['superadmin', 'admin']);
+    }
+
+    /**
+     * Check if user is operator (role_id 4) - hanya operator yang punya Jabatan & Line
+     */
+    public function isOperator()
+    {
+        return (int) $this->role_id === 4;
+    }
+
+    /**
+     * Maksimal jumlah Line yang boleh dipegang berdasarkan Jabatan
+     */
+    public static function maxLinesForJabatan(?string $jabatan): ?int
+    {
+        return match ($jabatan) {
+            'Leader'      => 3,
+            'Asst Leader' => 1,
+            default       => null,
+        };
     }
 }

@@ -18,7 +18,7 @@ class Barang extends Model
         'max_stock',
         'satuan',
         'address',
-        'line',
+        'line_id', 
         'supplier_id',
         'cust',
         'model',
@@ -29,6 +29,11 @@ class Barang extends Model
         return $this->belongsToMany(Part::class, 'detail_barangs')
                     ->withPivot('quantity')
                     ->withTimestamps();
+    }
+
+        public function line()
+    {
+        return $this->belongsTo(Line::class);
     }
 
     public function detailBarangs()

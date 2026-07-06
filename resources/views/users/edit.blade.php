@@ -18,12 +18,12 @@
             @csrf
             @method('PUT')
             <input type="hidden" id="editUserId" name="id">
-            
+
             <!-- Current Avatar Preview -->
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Current Avatar</label>
                 <div class="flex items-center space-x-4">
-                    <img id="editPreview" src="" alt="Current Avatar" 
+                    <img id="editPreview" src="" alt="Current Avatar"
                         class="w-20 h-20 rounded-full object-cover border-2 border-gray-300">
                     <span id="noImageText" class="text-gray-500 text-sm">No avatar uploaded</span>
                 </div>
@@ -111,6 +111,58 @@
                         <option value="nonaktif">Non-Aktif</option>
                     </select>
                     <span class="text-red-500 text-sm error-message" id="error-edit-status"></span>
+                </div>
+            </div>
+
+            <!-- Jabatan & Line - hanya muncul kalau Role = Operator -->
+            <div id="editOperatorFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 pt-4">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">Jabatan <span class="text-red-500">*</span></label>
+                    <select id="editJabatan" name="jabatan"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition">
+                        <option value="">Select Jabatan</option>
+                        <option value="Leader">Leader</option>
+                        <option value="Asst Leader">Asst Leader</option>
+                    </select>
+                    <span class="text-red-500 text-sm error-message" id="error-edit-jabatan"></span>
+                </div>
+
+                <!-- Line: custom checkbox-dropdown (gak pakai select2) -->
+                <div class="relative" id="editLinesWrapper">
+                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                        Line <span class="text-red-500">*</span>
+                        <span class="text-xs font-normal text-gray-400" id="editLineHint"></span>
+                    </label>
+                    <button type="button" onclick="toggleLineDropdown('edit')"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 text-left flex items-center justify-between focus:border-black focus:ring-2 focus:ring-black transition bg-white">
+                        <span id="editLinesLabel" class="text-gray-400 truncate">Select Line</span>
+                        <svg class="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                        </svg>
+                    </button>
+                    <div id="editLinesDropdown"
+                        class="hidden absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg">
+                        <div class="p-2 border-b border-gray-100 sticky top-0 bg-white">
+                            <input type="text" oninput="filterLineOptions('edit', this.value)"
+                                onclick="event.stopPropagation()"
+                                placeholder="Cari line..."
+                                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-black focus:border-black">
+                        </div>
+                        <div id="editLinesOptionsList" class="max-h-48 overflow-y-auto">
+                            @forelse($lines as $line)
+                                <label class="edit-line-option flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm"
+                                    data-search="{{ strtolower($line->nama_line . ' ' . $line->mesin) }}">
+                                    <input type="checkbox" name="lines[]" value="{{ $line->id }}"
+                                        class="edit-line-checkbox mr-2" onchange="handleLineCheckboxChange('edit', this)">
+                                    <span>{{ $line->nama_line }}{{ $line->mesin ? ' — ' . $line->mesin : '' }}</span>
+                                </label>
+                            @empty
+                                <p class="px-4 py-3 text-sm text-gray-400">Belum ada data Line</p>
+                            @endforelse
+                            <p id="editLinesNoMatch" class="hidden px-4 py-3 text-sm text-gray-400">Tidak ditemukan</p>
+                        </div>
+                    </div>
+                    <span class="text-red-500 text-sm error-message" id="error-edit-lines"></span>
                 </div>
             </div>
 

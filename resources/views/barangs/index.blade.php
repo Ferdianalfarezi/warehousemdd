@@ -40,7 +40,7 @@
                 </div>
                 <input type="text" id="searchInput"
                     class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                    placeholder="Search kode, nama, supplier, cust...">
+                    placeholder="Search kode, nama, supplier, cust, line, mesin...">
             </div>
             <div class="flex-shrink-0">
                 <select id="perPageSelect"
@@ -76,12 +76,13 @@
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Cust</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Model</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Dies</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Line</th>
                         <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200" id="barangsTableBody">
                     <tr>
-                        <td colspan="10" class="px-6 py-16 text-center">
+                        <td colspan="9" class="px-6 py-16 text-center">
                             <svg class="animate-spin h-8 w-8 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -134,7 +135,7 @@
                 <p>• <strong>PROSES NO</strong> → process_no</p>
             </div>
             <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-800">
-                ⚠️ Kode yang sudah ada akan di-update details-nya. Kode baru akan dibuat otomatis (supplier perlu diisi manual).
+                ⚠️ Kode yang sudah ada akan di-update details-nya. Kode baru akan dibuat otomatis (supplier & line perlu diisi manual).
             </div>
             <div>
                 <label class="block text-sm font-semibold text-gray-700 mb-2">Pilih File Excel (.xlsx, .xls)</label>
@@ -217,16 +218,24 @@
 
 @push('scripts')
 <script>
+// ============================================
+// SHARED CONSTANTS (icons & repeated class strings)
+// ============================================
+const ICON = {
+    trash: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`,
+};
+const BTN_PAGE          = 'px-3 py-1.5 rounded-lg border text-xs transition';
+const BTN_PAGE_ACTIVE   = 'bg-black text-white border-black font-semibold';
+const BTN_PAGE_NORMAL   = 'border-gray-300 text-gray-700 hover:bg-gray-50';
+const BTN_PAGE_DISABLED = 'border-gray-200 text-gray-400 cursor-not-allowed';
+const INPUT_XS = 'w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black';
+
 function waitForJQuery(callback, maxWait = 5000) {
     const start = Date.now();
     const check = () => {
-        if (typeof $ !== 'undefined' && $.fn && $.fn.select2) {
-            callback();
-        } else if (Date.now() - start < maxWait) {
-            setTimeout(check, 50);
-        } else {
-            callback();
-        }
+        if (typeof $ !== 'undefined' && $.fn && $.fn.select2) callback();
+        else if (Date.now() - start < maxWait) setTimeout(check, 50);
+        else callback();
     };
     check();
 }
@@ -312,52 +321,51 @@ async function loadBarangs() {
 function renderTable(barangs) {
     const tbody = document.getElementById('barangsTableBody');
     if (!barangs || barangs.length === 0) {
-        tbody.innerHTML = `
-            <tr><td colspan="10" class="px-6 py-16 text-center">
-                <p class="mt-4 text-gray-600 font-semibold">Tidak ada barang ditemukan</p>
-                <p class="text-gray-500 text-sm">${searchQuery ? 'Coba kata kunci lain' : 'Klik "Add Barang" atau Import Excel untuk memulai'}</p>
-            </td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="px-6 py-16 text-center">
+            <p class="mt-4 text-gray-600 font-semibold">Tidak ada barang ditemukan</p>
+            <p class="text-gray-500 text-sm">${searchQuery ? 'Coba kata kunci lain' : 'Klik "Add Barang" atau Import Excel untuk memulai'}</p>
+        </td></tr>`;
         return;
     }
     tbody.innerHTML = barangs.map(b => `
         <tr class="hover:bg-gray-50 transition">
             <td class="px-4 py-4 text-sm text-gray-900">${b.row_number}</td>
-            <td class="px-4 py-4">
-                ${b.gambar_url
-                    ? `<img src="${b.gambar_url}" onclick="showImagePreview('${b.gambar_url}','${esc(b.nama)}')"
-                        class="w-12 h-12 rounded-lg object-cover border border-gray-200 cursor-pointer hover:opacity-80 hover:scale-110 transition">`
-                    : `<div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg></div>`
-                }
-            </td>
+            <td class="px-4 py-4">${imageCell(b)}</td>
             <td class="px-4 py-4 text-sm font-semibold text-gray-900 font-mono">${esc(b.kode_barang)}</td>
-            <td class="px-4 py-4">
-                <p class="text-sm font-semibold text-gray-900">${esc(b.nama)}</p>
-                ${b.line ? `<p class="text-xs text-gray-500">${esc(b.line)}</p>` : ''}
-            </td>
+            <td class="px-4 py-4"><p class="text-sm font-semibold text-gray-900">${esc(b.nama)}</p></td>
             <td class="px-4 py-4 text-sm text-gray-600">${esc(b.cust) || '-'}</td>
             <td class="px-4 py-4 text-sm text-gray-600">${esc(b.model) || '-'}</td>
-            <td class="px-4 py-4">
-                ${b.dies_count > 0
-                    ? `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">${b.dies_count} proses</span>`
-                    : '<span class="text-xs text-gray-400">-</span>'
-                }
-            </td>
-            <td class="px-4 py-4">
-                <div class="flex items-center justify-center space-x-2">
-                    <button onclick="openDetailModal(${b.id})"
-                        class="bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-orange-600 transition">Detail</button>
-                    <button onclick="openEditModal(${b.id})"
-                        class="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-yellow-600 transition">Edit</button>
-                    <button onclick="deleteBarang(${b.id})"
-                        class="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition">Delete</button>
-                </div>
-            </td>
+            <td class="px-4 py-4">${diesBadge(b.dies_count)}</td>
+            <td class="px-4 py-4 text-sm text-gray-600">${esc(b.line) || '-'}</td>
+            <td class="px-4 py-4">${actionButtons(b.id)}</td>
         </tr>
     `).join('');
+}
+
+function imageCell(b) {
+    if (!b.gambar_url) {
+        return `<div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg></div>`;
+    }
+    return `<img src="${b.gambar_url}" onclick="showImagePreview('${b.gambar_url}','${esc(b.nama)}')"
+        class="w-12 h-12 rounded-lg object-cover border border-gray-200 cursor-pointer hover:opacity-80 hover:scale-110 transition">`;
+}
+
+function diesBadge(count) {
+    return count > 0
+        ? `<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">${count} proses</span>`
+        : '<span class="text-xs text-gray-400">-</span>';
+}
+
+function actionButtons(id) {
+    return `<div class="flex items-center justify-center space-x-2">
+        <button onclick="openDetailModal(${id})" class="bg-yellow-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-orange-600 transition">Detail</button>
+        <button onclick="openEditModal(${id})" class="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-yellow-600 transition">Edit</button>
+        <button onclick="deleteBarang(${id})" class="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition">Delete</button>
+    </div>`;
 }
 
 // ============================================
@@ -368,32 +376,34 @@ function renderPagination(pagination) {
     totalPages = pagination.total_pages;
     if (totalPages <= 1) { container.innerHTML = ''; return; }
 
-    const b  = 'px-3 py-1.5 rounded-lg border text-xs transition';
-    const bA = 'bg-black text-white border-black font-semibold';
-    const bN = 'border-gray-300 text-gray-700 hover:bg-gray-50';
-    const bD = 'border-gray-200 text-gray-400 cursor-not-allowed';
-
-    let html = `<button onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''} class="${b} ${currentPage === 1 ? bD : bN}">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg></button>`;
+    const pageBtn = (label, page, extraClass, disabled = false) =>
+        `<button onclick="goToPage(${page})" ${disabled ? 'disabled' : ''} class="${BTN_PAGE} ${extraClass}">${label}</button>`;
 
     const max = 5;
     let start = Math.max(1, currentPage - Math.floor(max / 2));
     let end   = Math.min(totalPages, start + max - 1);
     if (end - start < max - 1) start = Math.max(1, end - max + 1);
 
+    let html = pageBtn(
+        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>',
+        currentPage - 1, currentPage === 1 ? BTN_PAGE_DISABLED : BTN_PAGE_NORMAL, currentPage === 1
+    );
+
     if (start > 1) {
-        html += `<button onclick="goToPage(1)" class="${b} ${bN}">1</button>`;
+        html += pageBtn(1, 1, BTN_PAGE_NORMAL);
         if (start > 2) html += `<span class="px-1 text-gray-500 text-xs">...</span>`;
     }
     for (let i = start; i <= end; i++) {
-        html += `<button onclick="goToPage(${i})" class="${b} ${i === currentPage ? bA : bN}">${i}</button>`;
+        html += pageBtn(i, i, i === currentPage ? BTN_PAGE_ACTIVE : BTN_PAGE_NORMAL);
     }
     if (end < totalPages) {
         if (end < totalPages - 1) html += `<span class="px-1 text-gray-500 text-xs">...</span>`;
-        html += `<button onclick="goToPage(${totalPages})" class="${b} ${bN}">${totalPages}</button>`;
+        html += pageBtn(totalPages, totalPages, BTN_PAGE_NORMAL);
     }
-    html += `<button onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''} class="${b} ${currentPage === totalPages ? bD : bN}">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></button>`;
+    html += pageBtn(
+        '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>',
+        currentPage + 1, currentPage === totalPages ? BTN_PAGE_DISABLED : BTN_PAGE_NORMAL, currentPage === totalPages
+    );
 
     container.innerHTML = html;
 }
@@ -421,60 +431,48 @@ function esc(str) {
 }
 function showLoading(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
 function showEmpty(msg) {
-    document.getElementById('barangsTableBody').innerHTML =
-        `<tr><td colspan="10" class="px-6 py-12 text-center text-gray-500">${msg}</td></tr>`;
+    document.getElementById('barangsTableBody').innerHTML = `<tr><td colspan="9" class="px-6 py-12 text-center text-gray-500">${msg}</td></tr>`;
 }
 function modalShow(id) {
     const el = document.getElementById(id);
     el.style.display = 'flex';
-    // pakai requestAnimationFrame biar transition jalan
-    requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-            el.classList.add('modal-fade-in');
-        });
-    });
+    requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('modal-fade-in')));
 }
-
 function modalHide(id) {
     const el = document.getElementById(id);
     el.classList.remove('modal-fade-in');
-    // tunggu transition selesai baru hide
-    setTimeout(() => {
-        el.style.display = 'none';
-    }, 300);
+    setTimeout(() => { el.style.display = 'none'; }, 300);
 }
 
 // ============================================
 // IMAGE PREVIEW
 // ============================================
 function showImagePreview(src, title) {
-    document.getElementById('previewImageSrc').src          = src;
+    document.getElementById('previewImageSrc').src           = src;
     document.getElementById('previewImageTitle').textContent = title;
     document.getElementById('downloadImageLink').href        = src;
     modalShow('imagePreviewModal');
 }
 function closeImagePreview() { modalHide('imagePreviewModal'); }
 
-function previewImage(e, id) {
-    const file = e.target.files[0];
+function readAsImage(file, onLoaded) {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
-        document.getElementById(id).src = ev.target.result;
-        document.getElementById(id + 'Container').classList.remove('hidden');
-    };
+    reader.onload = ev => onLoaded(ev.target.result);
     reader.readAsDataURL(file);
 }
+function previewImage(e, id) {
+    readAsImage(e.target.files[0], src => {
+        document.getElementById(id).src = src;
+        document.getElementById(id + 'Container').classList.remove('hidden');
+    });
+}
 function previewEditImage(e) {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-        document.getElementById('editPreview').src          = ev.target.result;
+    readAsImage(e.target.files[0], src => {
+        document.getElementById('editPreview').src           = src;
         document.getElementById('editPreview').style.display = 'block';
         document.getElementById('noImageText').style.display = 'none';
-    };
-    reader.readAsDataURL(file);
+    });
 }
 
 // ============================================
@@ -485,14 +483,14 @@ function closeImportModal() { modalHide('importModal'); clearFileSelection(); }
 
 function handleFileSelect(e) { if (e.target.files[0]) showSelectedFile(e.target.files[0]); }
 function handleFileDrop(file) {
-    if (!file.name.match(/\.(xlsx|xls)$/i)) { Swal.fire('Format Salah','Hanya file .xlsx atau .xls','error'); return; }
+    if (!file.name.match(/\.(xlsx|xls)$/i)) { Swal.fire('Format Salah', 'Hanya file .xlsx atau .xls', 'error'); return; }
     const dt = new DataTransfer();
     dt.items.add(file);
     document.getElementById('excelFileInput').files = dt.files;
     showSelectedFile(file);
 }
 function showSelectedFile(file) {
-    document.getElementById('selectedFileName').textContent = `${file.name} (${(file.size/1024).toFixed(1)} KB)`;
+    document.getElementById('selectedFileName').textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
     document.getElementById('selectedFileInfo').classList.remove('hidden');
     document.getElementById('dropZoneText').textContent = 'File dipilih';
 }
@@ -503,7 +501,7 @@ function clearFileSelection() {
 }
 async function submitImport() {
     const fi = document.getElementById('excelFileInput');
-    if (!fi.files.length) { Swal.fire('Pilih File','Silakan pilih file Excel terlebih dahulu','warning'); return; }
+    if (!fi.files.length) { Swal.fire('Pilih File', 'Silakan pilih file Excel terlebih dahulu', 'warning'); return; }
     const btn  = document.getElementById('importSubmitBtn');
     const prog = document.getElementById('importProgress');
     btn.disabled = true;
@@ -530,49 +528,31 @@ async function submitImport() {
     finally { btn.disabled = false; prog.classList.add('hidden'); }
 }
 
+// ============================================
+// DIES DETAIL ROWS
+// ============================================
+const DIES_FIELDS = ['child_part_code', 'part_name', 'cust', 'model', 'process_name', 'process_no'];
+const DIES_PLACEHOLDERS = { child_part_code: 'Child Code', part_name: 'Part Name', cust: 'Cust', model: 'Model', process_name: 'Proses Name', process_no: 'No' };
+const DIES_COLSPAN = { child_part_code: 2, part_name: 3, cust: 1, model: 2, process_name: 2, process_no: 1 };
+
 function addDiesDetailRow(containerId, data = {}) {
     const container = document.getElementById(containerId);
     if (!container) return;
     const row = document.createElement('div');
     row.className = 'dies-detail-row grid grid-cols-12 gap-1.5 items-center p-1.5 border border-gray-200 rounded-lg bg-gray-50';
-    row.innerHTML = `
-        <div class="col-span-2">
-            <input type="text" data-field="child_part_code" value="${esc(data.child_part_code||'')}"
-                placeholder="Child Code" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
-        </div>
-        <div class="col-span-3">
-            <input type="text" data-field="part_name" value="${esc(data.part_name||'')}"
-                placeholder="Part Name" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
-        </div>
-        <div class="col-span-1">
-            <input type="text" data-field="cust" value="${esc(data.cust||'')}"
-                placeholder="Cust" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
-        </div>
-        <div class="col-span-2">
-            <input type="text" data-field="model" value="${esc(data.model||'')}"
-                placeholder="Model" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
-        </div>
-        <div class="col-span-2">
-            <input type="text" data-field="process_name" value="${esc(data.process_name||'')}"
-                placeholder="Proses Name" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
-        </div>
-        <div class="col-span-1">
-            <input type="text" data-field="process_no" value="${esc(data.process_no||'')}"
-                placeholder="No" class="w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black">
-        </div>
+    row.innerHTML = DIES_FIELDS.map(f => `
+        <div class="col-span-${DIES_COLSPAN[f]}">
+            <input type="text" data-field="${f}" value="${esc(data[f] || '')}" placeholder="${DIES_PLACEHOLDERS[f]}" class="${INPUT_XS}">
+        </div>`).join('') + `
         <div class="col-span-1 flex justify-center">
-            <button type="button" onclick="this.closest('.dies-detail-row').remove()"
-                class="bg-red-500 text-white p-1 rounded hover:bg-red-600">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            </button>
+            <button type="button" onclick="this.closest('.dies-detail-row').remove()" class="bg-red-500 text-white p-1 rounded hover:bg-red-600">${ICON.trash}</button>
         </div>`;
     container.appendChild(row);
 }
 
 function appendDiesDetailsToFormData(formData, containerId) {
     document.querySelectorAll(`#${containerId} .dies-detail-row`).forEach((row, idx) => {
-        ['child_part_code','part_name','cust','model','process_name','process_no'].forEach(f => {
+        DIES_FIELDS.forEach(f => {
             const inp = row.querySelector(`[data-field="${f}"]`);
             if (inp) formData.append(`dies_details[${idx}][${f}]`, inp.value);
         });
@@ -583,26 +563,19 @@ function appendDiesDetailsToFormData(formData, containerId) {
 // PART ROWS
 // ============================================
 function buildPartRow(idx, partId, qty, selectClass, modalId) {
-    let opts = '<option value="">Select Part</option>';
-    partsData.forEach(p => {
-        opts += `<option value="${p.id}" ${partId == p.id ? 'selected' : ''}>${p.nama} (${p.kode})</option>`;
-    });
+    const opts = ['<option value="">Select Part</option>']
+        .concat(partsData.map(p => `<option value="${p.id}" ${partId == p.id ? 'selected' : ''}>${p.nama} (${p.kode})</option>`))
+        .join('');
     const row = document.createElement('div');
     row.className = 'part-row flex items-center space-x-3 p-3 border border-gray-200 rounded-lg';
     row.innerHTML = `
         <div class="flex-1">
-            <select name="parts[${idx}][part_id]" required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black ${selectClass}">${opts}</select>
+            <select name="parts[${idx}][part_id]" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black ${selectClass}">${opts}</select>
         </div>
         <div class="w-32">
-            <input type="number" name="parts[${idx}][quantity]" value="${qty}" min="1" required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+            <input type="number" name="parts[${idx}][quantity]" value="${qty}" min="1" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
         </div>
-        <button type="button" onclick="removePartRowFrom(this,'${modalId}')"
-            class="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>`;
+        <button type="button" onclick="removePartRowFrom(this,'${modalId}')" class="bg-red-500 text-white p-2 rounded-lg hover:bg-red-600">${ICON.trash}</button>`;
     return row;
 }
 
@@ -613,36 +586,25 @@ function appendPartRow(containerId, selectClass, modalId, partId = '', qty = 1) 
     const row = buildPartRow(idx, partId, qty, selectClass, modalId);
     container.appendChild(row);
     waitForJQuery(() => {
-        $(row.querySelector('.' + selectClass)).select2({
-            placeholder: "Select Part", allowClear: false, width: '100%',
-            dropdownParent: $(`#${modalId}`),
-        });
+        $(row.querySelector('.' + selectClass)).select2({ placeholder: "Select Part", allowClear: false, width: '100%', dropdownParent: $(`#${modalId}`) });
     });
 }
 
 function removePartRowFrom(btn, modalId) {
-    const row       = btn.closest('.part-row');
-    const container = row.parentElement;
-    if (container.querySelectorAll('.part-row').length > 1) {
-        waitForJQuery(() => { try { $(row.querySelector('select')).select2('destroy'); } catch(e){} });
-        row.remove();
-    } else {
-        Swal.fire('Warning!', 'Minimal 1 part harus ada!', 'warning');
-    }
+    const row = btn.closest('.part-row');
+    waitForJQuery(() => { try { $(row.querySelector('select')).select2('destroy'); } catch (e) {} });
+    row.remove();
 }
 
-// shorthand helpers (dipanggil dari tombol di HTML)
 function addPartRow()     { appendPartRow('partsContainer',     'part-select-create', 'createModal'); }
 function addEditPartRow() { appendPartRow('editPartsContainer', 'part-select-edit',   'editModal'); }
 
 // ============================================
-// CREATE MODAL  — sama persis polanya kayak detail
+// CREATE MODAL
 // ============================================
 function openCreateModal() {
-    // 1. tampilkan modal dulu (style langsung, bypass Tailwind)
     modalShow('createModal');
 
-    // 2. reset form
     document.getElementById('createForm').reset();
     document.getElementById('createPreviewContainer').classList.add('hidden');
     document.getElementById('partsContainer').innerHTML       = '';
@@ -650,17 +612,13 @@ function openCreateModal() {
     partCounter = 0;
     clearErrors();
 
-    // 3. init select2 & tambah row awal — setelah modal visible
     waitForJQuery(() => {
-        try { $('#createSupplierId').select2('destroy'); } catch(e) {}
-        $('#createSupplierId').select2({
-            placeholder: "Select Supplier", allowClear: false, width: '100%',
-            dropdownParent: $('#createModal'),
-        });
-        appendPartRow('partsContainer', 'part-select-create', 'createModal');
+        try { $('#createSupplierId').select2('destroy'); } catch (e) {}
+        try { $('#createLineId').select2('destroy'); } catch (e) {}
+        $('#createSupplierId').select2({ placeholder: "Select Supplier", allowClear: false, width: '100%', dropdownParent: $('#createModal') });
+        $('#createLineId').select2({ placeholder: "Select Line", allowClear: true, width: '100%', dropdownParent: $('#createModal') });
     });
 
-    // 4. bind submit
     document.getElementById('createForm').onsubmit = async function (e) {
         e.preventDefault();
         clearErrors();
@@ -674,12 +632,13 @@ function openCreateModal() {
             });
             const data = await res.json();
             if (data.success) {
-                await Swal.fire({ icon:'success', title:'Berhasil!', text: data.message, showConfirmButton:false, timer:1500 });
+                await Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, showConfirmButton: false, timer: 1500 });
                 closeCreateModal();
                 loadBarangs();
+            } else if (data.errors) {
+                displayErrors(data.errors, 'create');
             } else {
-                if (data.errors) displayErrors(data.errors, 'create');
-                else Swal.fire('Error!', data.message || 'Unknown error', 'error');
+                Swal.fire('Error!', data.message || 'Unknown error', 'error');
             }
         } catch (err) { Swal.fire('Error!', 'Terjadi kesalahan', 'error'); }
     };
@@ -687,38 +646,32 @@ function openCreateModal() {
 
 function closeCreateModal() {
     waitForJQuery(() => {
-        try { $('#createSupplierId').select2('destroy'); } catch(e) {}
-        document.querySelectorAll('#createModal .part-select-create').forEach(s => {
-            try { $(s).select2('destroy'); } catch(e) {}
-        });
+        try { $('#createSupplierId').select2('destroy'); } catch (e) {}
+        try { $('#createLineId').select2('destroy'); } catch (e) {}
+        document.querySelectorAll('#createModal .part-select-create').forEach(s => { try { $(s).select2('destroy'); } catch (e) {} });
     });
     modalHide('createModal');
 }
 
 // ============================================
-// EDIT MODAL  — sama persis polanya kayak detail
+// EDIT MODAL
 // ============================================
 async function openEditModal(id) {
-    // 1. tampilkan modal dulu
     modalShow('editModal');
 
     try {
-        // 2. fetch data
         const res    = await fetch(`/barangs/${id}`);
         const result = await res.json();
         if (!result.success) throw new Error('Gagal fetch');
         const b = result.data;
 
-        // 3. isi field
         document.getElementById('editBarangId').value   = b.id;
         document.getElementById('editKodeBarang').value = b.kode_barang;
         document.getElementById('editNama').value       = b.nama;
         document.getElementById('editAddress').value    = b.address || '';
-        document.getElementById('editLine').value       = b.line    || '';
         document.getElementById('editCust').value       = b.cust    || '';
         document.getElementById('editModel').value      = b.model   || '';
 
-        // 4. gambar
         const prev     = document.getElementById('editPreview');
         const noImgTxt = document.getElementById('noImageText');
         if (b.gambar) {
@@ -728,33 +681,24 @@ async function openEditModal(id) {
             prev.style.display = 'none'; noImgTxt.style.display = 'block';
         }
 
-        // 5. parts
         document.getElementById('editPartsContainer').innerHTML = '';
         partCounter = 0;
-        if (b.parts && b.parts.length) {
-            b.parts.forEach(p => appendPartRow('editPartsContainer', 'part-select-edit', 'editModal', p.id, p.pivot.quantity));
-        } else {
-            appendPartRow('editPartsContainer', 'part-select-edit', 'editModal');
-        }
+        b.parts?.forEach(p => appendPartRow('editPartsContainer', 'part-select-edit', 'editModal', p.id, p.pivot.quantity));
 
-        // 6. dies details
         document.getElementById('editDiesDetailsContainer').innerHTML = '';
-        if (b.dies_details && b.dies_details.length) {
-            b.dies_details.forEach(d => addDiesDetailRow('editDiesDetailsContainer', d));
-        }
+        b.dies_details?.forEach(d => addDiesDetailRow('editDiesDetailsContainer', d));
 
-        // 7. supplier select2
         waitForJQuery(() => {
-            try { $('#editSupplierId').select2('destroy'); } catch(e) {}
-            $('#editSupplierId').select2({
-                placeholder: "Select Supplier", allowClear: false, width: '100%',
-                dropdownParent: $('#editModal'),
-            }).val(b.supplier_id).trigger('change');
+            try { $('#editSupplierId').select2('destroy'); } catch (e) {}
+            try { $('#editLineId').select2('destroy'); } catch (e) {}
+            $('#editSupplierId').select2({ placeholder: "Select Supplier", allowClear: false, width: '100%', dropdownParent: $('#editModal') })
+                .val(b.supplier_id).trigger('change');
+            $('#editLineId').select2({ placeholder: "Select Line", allowClear: true, width: '100%', dropdownParent: $('#editModal') })
+                .val(b.line_id).trigger('change');
         });
 
         clearErrors();
 
-        // 8. bind submit
         document.getElementById('editForm').onsubmit = async function (e) {
             e.preventDefault();
             clearErrors();
@@ -769,15 +713,14 @@ async function openEditModal(id) {
                 });
                 const data = await res.json();
                 if (data.success) {
-                    await Swal.fire({ icon:'success', title:'Berhasil!', text: data.message, showConfirmButton:false, timer:1500 });
+                    await Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, showConfirmButton: false, timer: 1500 });
                     closeEditModal();
                     loadBarangs();
-                } else {
-                    if (data.errors) displayErrors(data.errors, 'edit');
+                } else if (data.errors) {
+                    displayErrors(data.errors, 'edit');
                 }
             } catch (err) { Swal.fire('Error!', 'Terjadi kesalahan!', 'error'); }
         };
-
     } catch (e) {
         modalHide('editModal');
         Swal.fire('Error!', 'Gagal memuat data', 'error');
@@ -786,10 +729,9 @@ async function openEditModal(id) {
 
 function closeEditModal() {
     waitForJQuery(() => {
-        try { $('#editSupplierId').select2('destroy'); } catch(e) {}
-        document.querySelectorAll('#editModal .part-select-edit').forEach(s => {
-            try { $(s).select2('destroy'); } catch(e) {}
-        });
+        try { $('#editSupplierId').select2('destroy'); } catch (e) {}
+        try { $('#editLineId').select2('destroy'); } catch (e) {}
+        document.querySelectorAll('#editModal .part-select-edit').forEach(s => { try { $(s).select2('destroy'); } catch (e) {} });
     });
     modalHide('editModal');
 }
@@ -801,19 +743,16 @@ async function openDetailModal(id) {
     const modal   = document.getElementById('detailModal');
     const content = document.getElementById('detailModalContent');
 
-    // 1. tampilkan modal dulu
     modal.style.display = 'flex';
     content.classList.remove('scale-100', 'opacity-100');
     content.classList.add('scale-95', 'opacity-0');
 
     try {
-        // 2. fetch data
         const res    = await fetch(`/barangs/${id}`);
         const result = await res.json();
         if (!result.success) throw new Error();
         const b = result.data;
 
-        // 3. isi field
         document.getElementById('detailKodeBarang').textContent = b.kode_barang;
         document.getElementById('detailNama').textContent       = b.nama;
         document.getElementById('detailAddress').textContent    = b.address ?? '-';
@@ -821,7 +760,6 @@ async function openDetailModal(id) {
         document.getElementById('detailModel').textContent      = b.model   ?? '-';
         document.getElementById('detailSupplier').textContent   = b.supplier?.nama ?? '-';
 
-        // 4. parts table
         const partsTbody = document.getElementById('detailPartsTableBody');
         partsTbody.innerHTML = b.parts?.length
             ? b.parts.map((p, i) => `
@@ -835,7 +773,6 @@ async function openDetailModal(id) {
                 </tr>`).join('')
             : `<tr><td colspan="4" class="px-4 py-8 text-center text-gray-500">No parts found</td></tr>`;
 
-        // 5. dies table
         const diesTbody = document.getElementById('detailDiesTableBody');
         diesTbody.innerHTML = b.dies_details?.length
             ? b.dies_details.map((d, i) => `
@@ -852,12 +789,10 @@ async function openDetailModal(id) {
                 </tr>`).join('')
             : `<tr><td colspan="7" class="px-4 py-6 text-center text-gray-400 text-sm">Tidak ada data dies detail</td></tr>`;
 
-        // 6. animasi masuk
         requestAnimationFrame(() => requestAnimationFrame(() => {
             content.classList.remove('scale-95', 'opacity-0');
             content.classList.add('scale-100', 'opacity-100');
         }));
-
     } catch (e) {
         modal.style.display = 'none';
         Swal.fire('Error!', 'Gagal memuat detail', 'error');
@@ -881,19 +816,20 @@ async function deleteBarang(id) {
         showCancelButton: true, confirmButtonColor: '#000', cancelButtonColor: '#d33',
         confirmButtonText: 'Ya, Hapus!', cancelButtonText: 'Batal'
     });
-    if (result.isConfirmed) {
-        try {
-            const res  = await fetch(`/barangs/${id}`, {
-                method: 'DELETE',
-                headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
-            });
-            const data = await res.json();
-            if (data.success) {
-                await Swal.fire({ icon:'success', title:'Terhapus!', text: data.message, showConfirmButton:false, timer:1500 });
-                loadBarangs();
-            } else Swal.fire('Error!', data.message, 'error');
-        } catch (e) { Swal.fire('Error!', 'Gagal menghapus!', 'error'); }
-    }
+    if (!result.isConfirmed) return;
+    try {
+        const res  = await fetch(`/barangs/${id}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+        });
+        const data = await res.json();
+        if (data.success) {
+            await Swal.fire({ icon: 'success', title: 'Terhapus!', text: data.message, showConfirmButton: false, timer: 1500 });
+            loadBarangs();
+        } else {
+            Swal.fire('Error!', data.message, 'error');
+        }
+    } catch (e) { Swal.fire('Error!', 'Gagal menghapus!', 'error'); }
 }
 
 // ============================================

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Barang;
 use App\Models\Supplier;
 use App\Models\Part;
+use App\Models\Line;
 use App\Models\DetailBarang;
 use App\Models\DiesDetail;
 use Illuminate\Http\Request;
@@ -17,93 +18,80 @@ class BarangController extends Controller
 {
     public function index()
     {
-        $suppliers = Supplier::all();
-        $parts     = Part::all();
-        return view('barangs.index', compact('suppliers', 'parts'));
+        return view('barangs.index', [
+            'suppliers' => Supplier::all(),
+            'parts'     => Part::all(),
+            'lines'     => Line::orderBy('nama_line')->get(),
+        ]);
     }
 
     // ==================== AJAX DATA ====================
     public function getData(Request $request)
-{
-    $search  = $request->get('search', '');
-    $perPage = $request->get('per_page', 20);
-    $page    = (int) $request->get('page', 1);
- 
-    $query = Barang::with(['supplier:id,nama'])  // select minimal kolom supplier
-        ->withCount('diesDetails')               // GANTI: count saja, tidak load seluruh collection
-        ->when($search, function ($q) use ($search) {
-            $q->where(function ($q2) use ($search) {
+    {
+        $search  = $request->get('search', '');
+        $perPage = $request->get('per_page', 20);
+        $page    = (int) $request->get('page', 1);
+
+        $query = Barang::with(['supplier:id,nama', 'line:id,nama_line,mesin'])
+            ->withCount('diesDetails')
+            ->when($search, fn ($q) => $q->where(function ($q2) use ($search) {
                 $q2->where('kode_barang', 'like', "%{$search}%")
                    ->orWhere('nama', 'like', "%{$search}%")
                    ->orWhere('cust', 'like', "%{$search}%")
                    ->orWhere('model', 'like', "%{$search}%")
                    ->orWhere('address', 'like', "%{$search}%")
-                   ->orWhereHas('supplier', fn ($sq) => $sq->where('nama', 'like', "%{$search}%"));
-            });
-        });
- 
-    $total = $query->count();
- 
-    if ($perPage === 'all') {
-        $barangs    = $query->latest()->get();
-        $perPageInt = $total ?: 1;
-    } else {
-        $perPageInt = (int) $perPage;
-        $barangs    = $query->latest()->skip(($page - 1) * $perPageInt)->take($perPageInt)->get();
+                   ->orWhereHas('supplier', fn ($sq) => $sq->where('nama', 'like', "%{$search}%"))
+                   ->orWhereHas('line', fn ($lq) => $lq->where('nama_line', 'like', "%{$search}%")
+                                                        ->orWhere('mesin', 'like', "%{$search}%"));
+            }));
+
+        $total = $query->count();
+
+        if ($perPage === 'all') {
+            $barangs    = $query->latest()->get();
+            $perPageInt = $total ?: 1;
+        } else {
+            $perPageInt = (int) $perPage;
+            $barangs    = $query->latest()->skip(($page - 1) * $perPageInt)->take($perPageInt)->get();
+        }
+
+        $totalPages = $perPage === 'all' ? 1 : (int) ceil($total / max($perPageInt, 1));
+
+        $data = $barangs->values()->map(fn ($b, $i) => [
+            'id'          => $b->id,
+            'row_number'  => (($page - 1) * $perPageInt) + $i + 1,
+            'kode_barang' => $b->kode_barang,
+            'nama'        => $b->nama,
+            'cust'        => $b->cust,
+            'model'       => $b->model,
+            'line_id'     => $b->line_id,
+            'line'        => $b->line?->nama_line,
+            'line_mesin'  => $b->line?->mesin,
+            'address'     => $b->address,
+            'gambar'      => $b->gambar,
+            'gambar_url'  => $b->gambar ? asset('storage/barangs/' . $b->gambar) : null,
+            'supplier'    => $b->supplier?->nama ?? '-',
+            'dies_count'  => $b->dies_details_count,
+        ]);
+
+        return response()->json([
+            'success'    => true,
+            'data'       => $data,
+            'pagination' => [
+                'total'        => $total,
+                'per_page'     => $perPageInt,
+                'current_page' => $page,
+                'total_pages'  => $totalPages,
+                'from'         => $total > 0 ? (($page - 1) * $perPageInt) + 1 : 0,
+                'to'           => min($page * $perPageInt, $total),
+            ],
+        ]);
     }
- 
-    $totalPages = $perPage === 'all' ? 1 : (int) ceil($total / max($perPageInt, 1));
-    $from       = $total > 0 ? (($page - 1) * $perPageInt) + 1 : 0;
-    $to         = min($page * $perPageInt, $total);
- 
-    $data = $barangs->map(function ($barang, $idx) use ($page, $perPageInt) {
-        return [
-            'id'          => $barang->id,
-            'row_number'  => (($page - 1) * $perPageInt) + $idx + 1,
-            'kode_barang' => $barang->kode_barang,
-            'nama'        => $barang->nama,
-            'cust'        => $barang->cust,
-            'model'       => $barang->model,
-            'address'     => $barang->address,
-            'line'        => $barang->line,
-            'gambar'      => $barang->gambar,
-            'gambar_url'  => $barang->gambar ? asset('storage/barangs/' . $barang->gambar) : null,
-            'supplier'    => $barang->supplier?->nama ?? '-',
-            'dies_count'  => $barang->dies_details_count,  // pakai hasil withCount langsung
-        ];
-    });
- 
-    return response()->json([
-        'success' => true,
-        'data'    => $data,
-        'pagination' => [
-            'total'        => $total,
-            'per_page'     => $perPageInt,
-            'current_page' => $page,
-            'total_pages'  => $totalPages,
-            'from'         => $from,
-            'to'           => $to,
-        ],
-    ]);
-}
 
     // ==================== STORE ====================
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'kode_barang'      => 'required|string|unique:barangs,kode_barang|max:255',
-            'nama'             => 'required|string|max:255',
-            'supplier_id'      => 'required|exists:suppliers,id',
-            'address'          => 'nullable|string|max:255',
-            'line'             => 'nullable|string|max:255',
-            'cust'             => 'nullable|string|max:255',
-            'model'            => 'nullable|string|max:255',
-            'gambar'           => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'parts'            => 'required|array|min:1',
-            'parts.*.part_id'  => 'required|exists:parts,id',
-            'parts.*.quantity' => 'required|integer|min:1',
-        ]);
-
+        $validator = Validator::make($request->all(), $this->rules());
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
@@ -111,35 +99,17 @@ class BarangController extends Controller
         DB::beginTransaction();
         try {
             $data = $request->except(['gambar', 'parts', 'dies_details']);
-
             if ($request->hasFile('gambar')) {
-                $image   = $request->file('gambar');
-                $imgName = time() . '_' . $image->getClientOriginalName();
-                $path    = public_path('storage/barangs');
-                if (!file_exists($path)) mkdir($path, 0777, true);
-                $image->move($path, $imgName);
-                $data['gambar'] = $imgName;
+                $data['gambar'] = $this->storeImage($request->file('gambar'));
             }
 
             $barang = Barang::create($data);
-
-            foreach ($request->parts as $partData) {
-                DetailBarang::create([
-                    'barang_id' => $barang->id,
-                    'part_id'   => $partData['part_id'],
-                    'quantity'  => $partData['quantity'],
-                ]);
-            }
-
-            if ($request->has('dies_details')) {
-                $this->saveDiesDetails($barang->id, $request->dies_details);
-            }
+            $this->savePartsAndDies($barang, $request);
 
             DB::commit();
-            $barang->load(['supplier', 'parts', 'diesDetails']);
+            $barang->load(['supplier', 'line', 'parts', 'diesDetails']);
 
             return response()->json(['success' => true, 'message' => 'Barang berhasil ditambahkan!', 'data' => $barang]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Barang Store Error', ['error' => $e->getMessage()]);
@@ -150,27 +120,14 @@ class BarangController extends Controller
     // ==================== SHOW ====================
     public function show(Barang $barang)
     {
-        $barang->load(['supplier', 'parts', 'diesDetails']);
+        $barang->load(['supplier', 'line', 'parts', 'diesDetails']);
         return response()->json(['success' => true, 'data' => $barang]);
     }
 
     // ==================== UPDATE ====================
     public function update(Request $request, Barang $barang)
     {
-        $validator = Validator::make($request->all(), [
-            'kode_barang'      => 'required|string|max:255|unique:barangs,kode_barang,' . $barang->id,
-            'nama'             => 'required|string|max:255',
-            'supplier_id'      => 'required|exists:suppliers,id',
-            'address'          => 'nullable|string|max:255',
-            'line'             => 'nullable|string|max:255',
-            'cust'             => 'nullable|string|max:255',
-            'model'            => 'nullable|string|max:255',
-            'gambar'           => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'parts'            => 'required|array|min:1',
-            'parts.*.part_id'  => 'required|exists:parts,id',
-            'parts.*.quantity' => 'required|integer|min:1',
-        ]);
-
+        $validator = Validator::make($request->all(), $this->rules($barang->id));
         if ($validator->fails()) {
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
@@ -178,41 +135,20 @@ class BarangController extends Controller
         DB::beginTransaction();
         try {
             $data = $request->except(['gambar', 'parts', 'dies_details']);
-
             if ($request->hasFile('gambar')) {
-                if ($barang->gambar) {
-                    $old = public_path('storage/barangs/' . $barang->gambar);
-                    if (file_exists($old)) unlink($old);
-                }
-                $image   = $request->file('gambar');
-                $imgName = time() . '_' . $image->getClientOriginalName();
-                $path    = public_path('storage/barangs');
-                if (!file_exists($path)) mkdir($path, 0777, true);
-                $image->move($path, $imgName);
-                $data['gambar'] = $imgName;
+                $this->deleteImage($barang->gambar);
+                $data['gambar'] = $this->storeImage($request->file('gambar'));
             }
 
             $barang->update($data);
-
             DetailBarang::where('barang_id', $barang->id)->delete();
-            foreach ($request->parts as $partData) {
-                DetailBarang::create([
-                    'barang_id' => $barang->id,
-                    'part_id'   => $partData['part_id'],
-                    'quantity'  => $partData['quantity'],
-                ]);
-            }
-
             DiesDetail::where('barang_id', $barang->id)->delete();
-            if ($request->has('dies_details')) {
-                $this->saveDiesDetails($barang->id, $request->dies_details);
-            }
+            $this->savePartsAndDies($barang, $request);
 
             DB::commit();
-            $barang->load(['supplier', 'parts', 'diesDetails']);
+            $barang->load(['supplier', 'line', 'parts', 'diesDetails']);
 
             return response()->json(['success' => true, 'message' => 'Barang berhasil diupdate!', 'data' => $barang]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json(['success' => false, 'message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
@@ -224,11 +160,7 @@ class BarangController extends Controller
     {
         DB::beginTransaction();
         try {
-            if ($barang->gambar) {
-                $img = public_path('storage/barangs/' . $barang->gambar);
-                if (file_exists($img)) unlink($img);
-            }
-
+            $this->deleteImage($barang->gambar);
             DiesDetail::where('barang_id', $barang->id)->delete();
             DetailBarang::where('barang_id', $barang->id)->delete();
             $barang->delete();
@@ -247,78 +179,20 @@ class BarangController extends Controller
         $request->validate(['excel_file' => 'required|file|mimes:xlsx,xls|max:10240']);
 
         try {
-            $file        = $request->file('excel_file');
-            $spreadsheet = IOFactory::load($file->getRealPath());
-            $sheet       = $spreadsheet->getActiveSheet();
-            $rows        = $sheet->toArray(null, true, true, false);
+            $sheet = IOFactory::load($request->file('excel_file')->getRealPath())->getActiveSheet();
+            $rows  = $sheet->toArray(null, true, true, false);
 
-            $headerRow = null;
-            $headerIdx = null;
-            foreach ($rows as $idx => $row) {
-                foreach ($row as $cell) {
-                    if ($cell && str_contains(strtoupper((string)$cell), 'DELIVERY PART CODE')) {
-                        $headerRow = $row;
-                        $headerIdx = $idx;
-                        break 2;
-                    }
-                }
-            }
-
+            [$headerRow, $headerIdx] = $this->findHeaderRow($rows);
             if (!$headerRow) {
                 return response()->json(['success' => false, 'message' => 'Header row tidak ditemukan!'], 422);
             }
 
-            $colMap = [];
-            foreach ($headerRow as $colIdx => $colName) {
-                if (!$colName) continue;
-                $clean = strtoupper(trim(str_replace(["\n", "\r"], ' ', (string)$colName)));
-                if (str_contains($clean, 'DELIVERY PART'))  $colMap['delivery_part_code'] = $colIdx;
-                if (str_contains($clean, 'CHILD PART'))     $colMap['child_part_code']    = $colIdx;
-                if (str_contains($clean, 'PART NAME'))      $colMap['part_name']           = $colIdx;
-                if (str_contains($clean, 'CUSTOMER'))       $colMap['cust']                = $colIdx;
-                if (str_contains($clean, 'MODEL'))          $colMap['model']               = $colIdx;
-                if (str_contains($clean, 'PROSES NAME'))    $colMap['process_name']        = $colIdx;
-                if (str_contains($clean, 'PROSES NO'))      $colMap['process_no']          = $colIdx;
-            }
-
+            $colMap = $this->mapColumns($headerRow);
             if (!isset($colMap['delivery_part_code'])) {
                 return response()->json(['success' => false, 'message' => 'Kolom DELIVERY PART CODE tidak ditemukan!'], 422);
             }
 
-            $grouped = [];
-            for ($i = $headerIdx + 1; $i < count($rows); $i++) {
-                $row          = $rows[$i];
-                $deliveryCode = trim((string)($row[$colMap['delivery_part_code']] ?? ''));
-                if (empty($deliveryCode)) continue;
-
-                if (!isset($grouped[$deliveryCode])) {
-                    $grouped[$deliveryCode] = [
-                        'part_name' => '',
-                        'cust'      => isset($colMap['cust'])  ? trim((string)($row[$colMap['cust']]  ?? '')) : '',
-                        'model'     => isset($colMap['model']) ? trim((string)($row[$colMap['model']] ?? '')) : '',
-                        'details'   => [],
-                    ];
-                }
-
-                // Ambil part_name dari baris manapun yang non-empty dalam group (first-wins)
-                if (empty($grouped[$deliveryCode]['part_name']) && isset($colMap['part_name'])) {
-                    $pn = trim((string)($row[$colMap['part_name']] ?? ''));
-                    if ($pn !== '') {
-                        $grouped[$deliveryCode]['part_name'] = $pn;
-                    }
-                }
-
-                $grouped[$deliveryCode]['details'][] = [
-                    'child_part_code' => isset($colMap['child_part_code']) ? trim((string)($row[$colMap['child_part_code']] ?? '')) : '',
-                    'part_name'       => isset($colMap['part_name'])       ? trim((string)($row[$colMap['part_name']] ?? ''))       : '',
-                    'cust'            => isset($colMap['cust'])             ? trim((string)($row[$colMap['cust']] ?? ''))             : '',
-                    'model'           => isset($colMap['model'])            ? trim((string)($row[$colMap['model']] ?? ''))            : '',
-                    'process_name'    => isset($colMap['process_name'])    ? trim((string)($row[$colMap['process_name']] ?? ''))    : '',
-                    'process_no'      => isset($colMap['process_no'])      ? trim((string)($row[$colMap['process_no']] ?? ''))      : '',
-                    'sort_order'      => count($grouped[$deliveryCode]['details']),
-                ];
-            }
-
+            $grouped  = $this->groupRows($rows, $headerIdx, $colMap);
             $imported = 0;
             $updated  = 0;
 
@@ -345,16 +219,7 @@ class BarangController extends Controller
 
                 DiesDetail::where('barang_id', $barang->id)->delete();
                 foreach ($data['details'] as $detail) {
-                    DiesDetail::create([
-                        'barang_id'       => $barang->id,
-                        'child_part_code' => $detail['child_part_code'],
-                        'part_name'       => $detail['part_name'],
-                        'cust'            => $detail['cust'],
-                        'model'           => $detail['model'],
-                        'process_name'    => $detail['process_name'],
-                        'process_no'      => $detail['process_no'],
-                        'sort_order'      => $detail['sort_order'],
-                    ]);
+                    DiesDetail::create(['barang_id' => $barang->id] + $detail);
                 }
             }
             DB::commit();
@@ -364,7 +229,6 @@ class BarangController extends Controller
                 'message' => "Import selesai! {$imported} barang baru, {$updated} barang diupdate.",
                 'stats'   => ['imported' => $imported, 'updated' => $updated, 'total' => count($grouped)],
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Import Excel Error', ['error' => $e->getMessage()]);
@@ -373,12 +237,56 @@ class BarangController extends Controller
     }
 
     // ==================== HELPERS ====================
-    private function saveDiesDetails(int $barangId, array $details): void
+    private function rules(?int $ignoreId = null): array
     {
-        foreach ($details as $idx => $d) {
+        $unique = $ignoreId ? "unique:barangs,kode_barang,{$ignoreId}" : 'unique:barangs,kode_barang';
+
+        return [
+            'kode_barang'      => "required|string|max:255|{$unique}",
+            'nama'             => 'required|string|max:255',
+            'supplier_id'      => 'required|exists:suppliers,id',
+            'address'          => 'nullable|string|max:255',
+            'line_id'          => 'nullable|exists:lines,id',
+            'cust'             => 'nullable|string|max:255',
+            'model'            => 'nullable|string|max:255',
+            'gambar'           => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'parts'            => 'nullable|array',
+            'parts.*.part_id'  => 'nullable|exists:parts,id',
+            'parts.*.quantity' => 'nullable|integer|min:1',
+        ];
+    }
+
+    private function storeImage($image): string
+    {
+        $imgName = time() . '_' . $image->getClientOriginalName();
+        $path    = public_path('storage/barangs');
+        if (!file_exists($path)) mkdir($path, 0777, true);
+        $image->move($path, $imgName);
+        return $imgName;
+    }
+
+    private function deleteImage(?string $filename): void
+    {
+        if (!$filename) return;
+        $full = public_path('storage/barangs/' . $filename);
+        if (file_exists($full)) unlink($full);
+    }
+
+    private function savePartsAndDies(Barang $barang, Request $request): void
+    {
+        foreach ($request->parts ?? [] as $partData) {
+            if (empty($partData['part_id'])) continue;
+            DetailBarang::create([
+                'barang_id' => $barang->id,
+                'part_id'   => $partData['part_id'],
+                'quantity'  => $partData['quantity'] ?? 1,
+            ]);
+        }
+
+        foreach ($request->dies_details ?? [] as $idx => $d) {
             if (empty($d['child_part_code']) && empty($d['part_name'])) continue;
             DiesDetail::create([
-                'barang_id'       => $barangId,
+                'barang_id'       => $barang->id,
                 'child_part_code' => $d['child_part_code'] ?? null,
                 'part_name'       => $d['part_name']       ?? null,
                 'cust'            => $d['cust']             ?? null,
@@ -388,5 +296,77 @@ class BarangController extends Controller
                 'sort_order'      => $idx,
             ]);
         }
+    }
+
+    private function findHeaderRow(array $rows): array
+    {
+        foreach ($rows as $idx => $row) {
+            foreach ($row as $cell) {
+                if ($cell && str_contains(strtoupper((string) $cell), 'DELIVERY PART CODE')) {
+                    return [$row, $idx];
+                }
+            }
+        }
+        return [null, null];
+    }
+
+    private function mapColumns(array $headerRow): array
+    {
+        $needles = [
+            'delivery_part_code' => 'DELIVERY PART',
+            'child_part_code'    => 'CHILD PART',
+            'part_name'          => 'PART NAME',
+            'cust'               => 'CUSTOMER',
+            'model'              => 'MODEL',
+            'process_name'       => 'PROSES NAME',
+            'process_no'         => 'PROSES NO',
+        ];
+
+        $colMap = [];
+        foreach ($headerRow as $colIdx => $colName) {
+            if (!$colName) continue;
+            $clean = strtoupper(trim(str_replace(["\n", "\r"], ' ', (string) $colName)));
+            foreach ($needles as $key => $needle) {
+                if (str_contains($clean, $needle)) $colMap[$key] = $colIdx;
+            }
+        }
+        return $colMap;
+    }
+
+    private function groupRows(array $rows, int $headerIdx, array $colMap): array
+    {
+        $get = fn ($row, $key) => isset($colMap[$key]) ? trim((string) ($row[$colMap[$key]] ?? '')) : '';
+
+        $grouped = [];
+        for ($i = $headerIdx + 1; $i < count($rows); $i++) {
+            $row          = $rows[$i];
+            $deliveryCode = $get($row, 'delivery_part_code');
+            if (empty($deliveryCode)) continue;
+
+            if (!isset($grouped[$deliveryCode])) {
+                $grouped[$deliveryCode] = [
+                    'part_name' => '',
+                    'cust'      => $get($row, 'cust'),
+                    'model'     => $get($row, 'model'),
+                    'details'   => [],
+                ];
+            }
+
+            if (empty($grouped[$deliveryCode]['part_name'])) {
+                $pn = $get($row, 'part_name');
+                if ($pn !== '') $grouped[$deliveryCode]['part_name'] = $pn;
+            }
+
+            $grouped[$deliveryCode]['details'][] = [
+                'child_part_code' => $get($row, 'child_part_code'),
+                'part_name'       => $get($row, 'part_name'),
+                'cust'            => $get($row, 'cust'),
+                'model'           => $get($row, 'model'),
+                'process_name'    => $get($row, 'process_name'),
+                'process_no'      => $get($row, 'process_no'),
+                'sort_order'      => count($grouped[$deliveryCode]['details']),
+            ];
+        }
+        return $grouped;
     }
 }

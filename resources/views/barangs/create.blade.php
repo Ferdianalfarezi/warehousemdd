@@ -2,7 +2,6 @@
 <div id="createModal" class="fixed inset-0 hidden items-center justify-center z-50 p-4">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
 
-        <!-- Header -->
         <div class="sticky top-0 bg-white border-b border-gray-200 px-5 py-3 rounded-t-2xl z-10 flex items-center justify-between">
             <h2 class="text-lg font-bold text-gray-900">Add New Barang</h2>
             <button onclick="closeCreateModal()" class="text-gray-400 hover:text-gray-600 transition">
@@ -14,7 +13,6 @@
 
         <form id="createForm" class="p-5 space-y-3">
 
-            <!-- Row 1: Kode + Nama + Supplier -->
             <div class="grid grid-cols-3 gap-3">
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">Kode Barang</label>
@@ -41,7 +39,6 @@
                 </div>
             </div>
 
-            <!-- Row 2: Cust + Model + Line -->
             <div class="grid grid-cols-3 gap-3">
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">Customer</label>
@@ -57,13 +54,17 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1">Line</label>
-                    <input type="text" id="createLine" name="line"
+                    <select id="createLineId" name="line_id"
                         class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition">
-                    <span class="text-red-500 text-xs error-message" id="error-create-line"></span>
+                        <option value="">Select Line</option>
+                        @foreach($lines as $line)
+                            <option value="{{ $line->id }}">{{ $line->nama_line }}{{ $line->mesin ? ' — ' . $line->mesin : '' }}</option>
+                        @endforeach
+                    </select>
+                    <span class="text-red-500 text-xs error-message" id="error-create-line_id"></span>
                 </div>
             </div>
 
-            <!-- Row 3: Address + Image -->
             <div class="grid grid-cols-3 gap-3">
                 <div class="col-span-2">
                     <label class="block text-xs font-semibold text-gray-600 mb-1">Address / Location</label>
@@ -82,7 +83,6 @@
                 </div>
             </div>
 
-            <!-- Parts Section -->
             <div class="border-t border-gray-200 pt-3">
                 <div class="flex items-center justify-between mb-2">
                     <h3 class="text-sm font-bold text-gray-900">Parts Required</h3>
@@ -98,7 +98,6 @@
                 <span class="text-red-500 text-xs error-message" id="error-create-parts"></span>
             </div>
 
-            <!-- Dies Details Section -->
             <div class="border-t border-gray-200 pt-3">
                 <div class="flex items-center justify-between mb-2">
                     <h3 class="text-sm font-bold text-gray-900">Dies Details (Child Parts)</h3>
@@ -110,12 +109,9 @@
                         <span>Add Row</span>
                     </button>
                 </div>
-                <!-- Column Headers — ganti yang lama dengan ini -->
-
                 <div id="diesDetailsContainer" class="space-y-1.5"></div>
             </div>
 
-            <!-- Footer -->
             <div class="flex items-center justify-end space-x-2 pt-3 border-t border-gray-200">
                 <button type="button" onclick="closeCreateModal()"
                     class="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 font-semibold hover:bg-gray-50 transition">
