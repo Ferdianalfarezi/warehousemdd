@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\RequestRepairHistory;
+use App\Models\RequestRepairAttempt;
 use Illuminate\Http\Request;
 
 class HistoryRepairController extends Controller
@@ -94,6 +95,7 @@ class HistoryRepairController extends Controller
                 'judge_monitoring'  => $h->judge_monitoring,
                 'judge_permanen'    => $h->judge_permanen,
                 'repair_count'      => $h->repair_count,
+                'ng_attempt_count'  => $h->ng_attempt_count, // ⬅️ baru — berapa kali NG sebelum akhirnya closed OK
                 'durasi_total'      => RequestRepairHistory::formatDurasi($h->durasi_total_seconds),
             ];
         });
@@ -131,71 +133,108 @@ class HistoryRepairController extends Controller
 
         $summary = RequestRepairHistory::getSummaryByPartNo($partNo);
 
-        $records = RequestRepairHistory::where('part_no', $partNo)
+        $historyRecords = RequestRepairHistory::where('part_no', $partNo)
             ->orderBy('closed_at', 'desc')
+            ->get();
+
+        // ── Ambil semua riwayat percobaan NG (attempts) untuk kumpulan 'no' yang relevan ──
+        // ⬅️ baru — 1x query untuk semua record, di-group per 'no' biar efisien
+        $noList = $historyRecords->pluck('no')->unique()->values();
+
+        $attemptsByNo = RequestRepairAttempt::whereIn('no', $noList)
+            ->with('judgedBy:id,nama')
+            ->orderBy('attempt_number')
             ->get()
-            ->map(function ($h) {
+            ->groupBy('no');
+
+        $records = $historyRecords->map(function ($h) use ($attemptsByNo) {
+
+            // Snapshot riwayat percobaan NG untuk 'no' repair ini (⬅️ baru)
+            $ngAttempts = ($attemptsByNo->get($h->no) ?? collect())->map(function ($a) {
                 return [
-                    'id'                  => $h->id,
-                    'no'                  => $h->no,
-                    'repair_count'        => $h->repair_count,
-                    'tanggal_pengajuan'   => $h->tanggal_pengajuan?->format('d/m/Y'),
-                    'closed_at_formatted' => $h->closed_at?->format('d M Y, H:i'),
-                    'group'               => $h->group,
-                    'shift'               => $h->shift,
-                    'jumlah_stroke'       => $h->jumlah_stroke,
-                    'line_mesin'          => $h->line_mesin,
-                    'process_no'          => $h->process_no,
-                    'customer'            => $h->customer,
-                    'nama'                => $h->nama,
-                    'jenis'               => $h->jenis,
-                    'target_selesai'      => $h->target_selesai?->format('d/m/Y'),
-                    'kategori_problem'    => $h->kategori_problem,
-                    'detail_proyek'       => $h->detail_proyek,
-
-                    // ── On Trial: Section 1 — Tindakan Perbaikan
-                    'analisa_penyebab'              => $h->analisa_penyebab,
-                    'tindakan_perbaikan'            => $h->tindakan_perbaikan,
-                    'catatan_penggantian_sparepart' => $h->catatan_penggantian_sparepart,
-
-                    // ── On Trial: Section 2 — Penanganan Problem Burry
-                    'item'           => $h->item,
-                    'proses_grinding'=> $h->proses_grinding,
-                    'shim_up'        => $h->shim_up,
-                    'status_burry'   => $h->status_burry,
-                    'standart_burry' => $h->standart_burry,
-                    'group_leader'   => $h->group_leader,
-                    'operator'       => $h->operator,
-
-                    // ── On Trial: Section 3 — Target Trial After Repair
-                    'plan'   => $h->plan,
-                    'actual' => $h->actual,
-                    'remark' => $h->remark,
-                    'judge'  => $h->judge,
-
-                    // ── Closed: Section 1 — Monitoring Dies Temporary
-                    'tanggal_cek'       => $h->tanggal_cek,
-                    'lot_prod'          => $h->lot_prod,
-                    'awal'              => $h->awal,
-                    'tengah'            => $h->tengah,
-                    'akhir'             => $h->akhir,
-                    'qty'               => $h->qty,
-                    'remark_monitoring' => $h->remark_monitoring,
-                    'judge_monitoring'  => $h->judge_monitoring,
-
-                    // ── Closed: Section 2 — Target Permanen Action
-                    'plan_permanen'    => $h->plan_permanen,
-                    'actual_permanen'  => $h->actual_permanen,
-                    'rootcause'        => $h->rootcause,
-                    'recovery'         => $h->recovery,
-                    'assy_trial_check' => $h->assy_trial_check,
-                    'judge_permanen'   => $h->judge_permanen,
-
-                    // ── Durasi & timeline
-                    'durasi_total' => RequestRepairHistory::formatDurasi($h->durasi_total_seconds),
-                    'timeline'     => $h->getTimelineData(),
+                    'attempt_number'                 => $a->attempt_number,
+                    'pic_names'                       => $a->pic_names, // ⬅️ siapa yang nanganin percobaan ini
+                    'analisa_penyebab'               => $a->analisa_penyebab,
+                    'tindakan_perbaikan'             => $a->tindakan_perbaikan,
+                    'catatan_penggantian_sparepart'  => $a->catatan_penggantian_sparepart,
+                    'judge'                          => $a->judge,
+                    'judge_monitoring'               => $a->judge_monitoring,
+                    'judge_permanen'                 => $a->judge_permanen,
+                    'rootcause'                       => $a->rootcause,
+                    'recovery'                        => $a->recovery,
+                    'ng_judged_at'                    => $a->ng_judged_at?->format('d M Y, H:i'),
+                    'judged_by_name'                  => $a->judgedBy->nama ?? '-', // ⬅️ siapa yang mutusin NG
+                    'durasi_on_process'               => RequestRepairHistory::formatDurasi($a->durasi_on_process_seconds),
+                    'durasi_on_trial'                 => RequestRepairHistory::formatDurasi($a->durasi_on_trial_seconds),
                 ];
-            });
+            })->values();
+
+            return [
+                'id'                  => $h->id,
+                'no'                  => $h->no,
+                'repair_count'        => $h->repair_count,
+                'tanggal_pengajuan'   => $h->tanggal_pengajuan?->format('d/m/Y'),
+                'closed_at_formatted' => $h->closed_at?->format('d M Y, H:i'),
+                'group'               => $h->group,
+                'shift'               => $h->shift,
+                'jumlah_stroke'       => $h->jumlah_stroke,
+                'line_mesin'          => $h->line_mesin,
+                'process_no'          => $h->process_no,
+                'customer'            => $h->customer,
+                'nama'                => $h->nama,
+                'jenis'               => $h->jenis,
+                'target_selesai'      => $h->target_selesai?->format('d/m/Y'),
+                'kategori_problem'    => $h->kategori_problem,
+                'detail_proyek'       => $h->detail_proyek,
+
+                // ── On Trial: Section 1 — Tindakan Perbaikan
+                'analisa_penyebab'              => $h->analisa_penyebab,
+                'tindakan_perbaikan'            => $h->tindakan_perbaikan,
+                'catatan_penggantian_sparepart' => $h->catatan_penggantian_sparepart,
+
+                // ── On Trial: Section 2 — Penanganan Problem Burry
+                'item'           => $h->item,
+                'proses_grinding'=> $h->proses_grinding,
+                'shim_up'        => $h->shim_up,
+                'status_burry'   => $h->status_burry,
+                'standart_burry' => $h->standart_burry,
+                'group_leader'   => $h->group_leader,
+                'operator'       => $h->operator,
+
+                // ── On Trial: Section 3 — Target Trial After Repair
+                'plan'   => $h->plan,
+                'actual' => $h->actual,
+                'remark' => $h->remark,
+                'judge'  => $h->judge,
+
+                // ── Closed: Section 1 — Monitoring Dies Temporary
+                'tanggal_cek'       => $h->tanggal_cek,
+                'lot_prod'          => $h->lot_prod,
+                'awal'              => $h->awal,
+                'tengah'            => $h->tengah,
+                'akhir'             => $h->akhir,
+                'qty'               => $h->qty,
+                'remark_monitoring' => $h->remark_monitoring,
+                'judge_monitoring'  => $h->judge_monitoring,
+
+                // ── Closed: Section 2 — Target Permanen Action
+                'plan_permanen'    => $h->plan_permanen,
+                'actual_permanen'  => $h->actual_permanen,
+                'rootcause'        => $h->rootcause,
+                'recovery'         => $h->recovery,
+                'assy_trial_check' => $h->assy_trial_check,
+                'judge_permanen'   => $h->judge_permanen,
+
+                // ── Durasi & timeline
+                'durasi_total' => RequestRepairHistory::formatDurasi($h->durasi_total_seconds),
+                'timeline'     => $h->getTimelineData(),
+
+                // ── Riwayat percobaan NG sebelum akhirnya OK (⬅️ baru)
+                'pic_names'        => $h->pic_names,        // PIC yang berhasil nanganin sampai closed OK
+                'ng_attempt_count' => $h->ng_attempt_count, // total percobaan gagal untuk repair (no) ini
+                'ng_attempts'      => $ngAttempts,          // detail tiap percobaan NG-nya
+            ];
+        });
 
         return response()->json([
             'success' => true,

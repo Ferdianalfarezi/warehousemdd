@@ -659,6 +659,12 @@ function handleAdditionalInfoBackdrop(e) {
 async function openClosedInfoModal(id) {
     _closedInfoId = id;
 
+    // Reset Hasil Akhir (⬅️ baru)
+    document.querySelectorAll('input[name="closedHasilAkhir"]').forEach(r => r.checked = false);
+    const errHasilAkhir = document.getElementById('errorClosedHasilAkhir');
+    errHasilAkhir.textContent = ''; errHasilAkhir.classList.add('hidden');
+    document.getElementById('hasilAkhirNgWarning').classList.add('hidden');
+
     // Reset section 1 — Monitoring Dies Temporary
     document.getElementById('closedTanggalCek').value    = '';
     document.getElementById('closedLotProd').value       = '';
@@ -701,7 +707,16 @@ async function openClosedInfoModal(id) {
 // CLOSED INFO MODAL — submit
 // ════════════════════════════════════════════════════════
 async function submitClosedInfo() {
-    // Section 1 — Monitoring Dies Temporary
+    const errHasilAkhir = document.getElementById('errorClosedHasilAkhir');
+    errHasilAkhir.textContent = ''; errHasilAkhir.classList.add('hidden');
+
+    const hasilAkhir = document.querySelector('input[name="closedHasilAkhir"]:checked')?.value || '';
+    if (!hasilAkhir) {
+        errHasilAkhir.textContent = 'Pilih Hasil Akhir (OK / NG) terlebih dahulu.';
+        errHasilAkhir.classList.remove('hidden');
+        return;
+    }
+
     const tanggalCek       = document.getElementById('closedTanggalCek').value;
     const lotProd          = document.getElementById('closedLotProd').value.trim();
     const awal             = document.querySelector('input[name="closedAwal"]:checked')?.value || '';
@@ -729,6 +744,7 @@ async function submitClosedInfo() {
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
             body: JSON.stringify({
                 status: 'closed',
+                hasil_akhir: hasilAkhir, 
                 // Section 1
                 tanggal_cek:       tanggalCek      || null,
                 lot_prod:          lotProd         || null,

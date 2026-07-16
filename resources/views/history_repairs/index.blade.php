@@ -125,15 +125,12 @@
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kategori</th>
                         <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Repair ke-</th>
-                        <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Judge Monitoring</th>
-                        <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Judge Permanen</th>
-                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Durasi</th>
                         <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200" id="historyTableBody">
                     <tr>
-                        <td colspan="12" class="px-6 py-16 text-center">
+                        <td colspan="9" class="px-6 py-16 text-center">
                             <svg class="animate-spin h-8 w-8 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -304,7 +301,7 @@ async function loadData() {
 function renderTable(items) {
     const tbody = document.getElementById('historyTableBody');
     if (!items || items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="12" class="px-6 py-16 text-center">'
+        tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-16 text-center">'
             + '<p class="text-gray-600 font-semibold">Tidak ada data history</p>'
             + '<p class="text-gray-500 text-sm">' + (searchQuery ? 'Coba kata kunci lain' : 'Belum ada repair yang closed') + '</p>'
             + '</td></tr>';
@@ -329,9 +326,6 @@ function renderTable(items) {
              + '<td class="px-4 py-3 text-sm text-gray-800 max-w-xs truncate" title="' + esc(r.nama) + '">' + esc(r.nama) + '</td>'
              + '<td class="px-4 py-3"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + katCls + '">' + esc(r.kategori_problem) + '</span></td>'
              + '<td class="px-4 py-3 text-center">' + repairBadge + '</td>'
-             + '<td class="px-4 py-3 text-center">' + okngBadge(r.judge_monitoring) + '</td>'
-             + '<td class="px-4 py-3 text-center">' + okngBadge(r.judge_permanen) + '</td>'
-             + '<td class="px-4 py-3 text-sm text-gray-600">' + esc(r.durasi_total) + '</td>'
              + '<td class="px-4 py-3"><div class="flex items-center justify-center">'
              +   '<button onclick="openDetailModal(\'' + esc(r.part_no) + '\', ' + r.id + ')" title="Lihat History Part No"'
              +     ' class="bg-yellow-500 hover:bg-yellow-600 text-white w-8 h-8 rounded-lg transition flex items-center justify-center">'
@@ -390,7 +384,7 @@ function esc(str) {
 }
 function showLoading(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
 function showEmpty(msg) {
-    document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="12" class="px-6 py-12 text-center text-gray-500">' + msg + '</td></tr>';
+    document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="9" class="px-6 py-12 text-center text-gray-500">' + msg + '</td></tr>';
 }
 
 document.addEventListener('keydown', function (e) {

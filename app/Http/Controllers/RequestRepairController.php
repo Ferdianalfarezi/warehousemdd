@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RequestRepair;
 use App\Models\RequestRepairHistory;
+use App\Models\RequestRepairAttempt;
 use App\Models\Barang;
 use App\Models\DiesDetail;
 use App\Models\Line;
@@ -90,6 +91,7 @@ class RequestRepairController extends Controller
                 'created_by_name'   => $rr->creator->nama ?? '-',
                 'pic_names'         => $rr->picNamesString(),
                 'status'            => $rr->status,
+                'ng_attempt_count'  => $rr->ng_attempt_count, // ⬅️ baru
                 'can_edit'          => $rr->isEditable(),
                 'can_delete'        => $rr->isEditable(),
                 'can_to_process'    => $rr->canConfirmToProcess()
@@ -468,8 +470,10 @@ class RequestRepairController extends Controller
             return response()->json(['success' => true, 'message' => 'Status berhasil diubah ke On Trial!']);
 
         // ════════════════════════════════════════════════════
-        // CLOSED → pindah ke history, hard delete dari request_repairs
+        // CLOSED → tergantung Hasil Akhir (OK / NG)
         // Bebas role (1, 8, 4), TIDAK terikat PIC — ini approval/verifikasi
+        //   - OK  → pindah ke history, hard delete dari request_repairs (flow lama)
+        //   - NG  → snapshot ke request_repair_attempts, reset & balik ke Open (⬅️ baru)
         // ════════════════════════════════════════════════════
         } elseif ($newStatus === RequestRepair::STATUS_CLOSED) {
 
@@ -487,6 +491,7 @@ class RequestRepairController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
+                'hasil_akhir'       => 'required|in:OK,NG', // ⬅️ baru — trigger keputusan flow OK/NG
                 'tanggal_cek'       => 'nullable|date',
                 'lot_prod'          => 'nullable|string|max:255',
                 'awal'              => 'nullable|in:OK,NG',
@@ -501,15 +506,126 @@ class RequestRepairController extends Controller
                 'recovery'          => 'nullable|string|max:255',
                 'assy_trial_check'  => 'nullable|string|max:255',
                 'judge_permanen'    => 'nullable|in:OK,NG',
+            ], [
+                'hasil_akhir.required' => 'Pilih Hasil Akhir (OK / NG) terlebih dahulu.',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
             }
 
+            // Snapshot nama PIC sebelum kemungkinan di-detach / record dihapus
+            $requestRepair->loadMissing('pics:id,nama');
+            $picNamesSnapshot = $requestRepair->picNamesString();
+            $now = now();
+
+            // ────────────────────────────────────────────
+            // HASIL AKHIR = NG → simpan attempt log, reset, balik ke Open
+            // ────────────────────────────────────────────
+            if ($request->hasil_akhir === 'NG') {
+
+                DB::beginTransaction();
+                try {
+                    $durasiOnProcessSeconds = null;
+                    $durasiOnTrialSeconds   = null;
+
+                    if ($requestRepair->on_process_at && $requestRepair->on_trial_at) {
+                        $durasiOnProcessSeconds = (int) $requestRepair->on_process_at
+                            ->diffInSeconds($requestRepair->on_trial_at);
+                    }
+                    if ($requestRepair->on_trial_at) {
+                        $durasiOnTrialSeconds = (int) $requestRepair->on_trial_at
+                            ->diffInSeconds($now);
+                    }
+
+                    RequestRepairAttempt::create([
+                        'request_repair_id'             => $requestRepair->id,
+                        'no'                             => $requestRepair->no,
+                        'attempt_number'                 => $requestRepair->ng_attempt_count + 1,
+                        'part_no'                        => $requestRepair->part_no,
+                        'nama'                           => $requestRepair->nama,
+                        'pic_names'                      => $picNamesSnapshot,
+                        'analisa_penyebab'               => $requestRepair->analisa_penyebab,
+                        'tindakan_perbaikan'             => $requestRepair->tindakan_perbaikan,
+                        'catatan_penggantian_sparepart'  => $requestRepair->catatan_penggantian_sparepart,
+                        'item'                           => $requestRepair->item,
+                        'proses_grinding'                => $requestRepair->proses_grinding,
+                        'shim_up'                        => $requestRepair->shim_up,
+                        'status_burry'                   => $requestRepair->status_burry,
+                        'standart_burry'                 => $requestRepair->standart_burry,
+                        'group_leader'                   => $requestRepair->group_leader,
+                        'operator'                       => $requestRepair->operator,
+                        'plan'                           => $requestRepair->plan,
+                        'actual'                         => $requestRepair->actual,
+                        'remark'                         => $requestRepair->remark,
+                        'judge'                          => $requestRepair->judge,
+                        'tanggal_cek'                    => $request->tanggal_cek,
+                        'lot_prod'                       => $request->lot_prod,
+                        'awal'                           => $request->awal,
+                        'tengah'                         => $request->tengah,
+                        'akhir'                          => $request->akhir,
+                        'qty'                            => $request->qty,
+                        'remark_monitoring'              => $request->remark_monitoring,
+                        'judge_monitoring'               => $request->judge_monitoring,
+                        'plan_permanen'                  => $request->plan_permanen,
+                        'actual_permanen'                => $request->actual_permanen,
+                        'rootcause'                      => $request->rootcause,
+                        'recovery'                       => $request->recovery,
+                        'assy_trial_check'                => $request->assy_trial_check,
+                        'judge_permanen'                 => $request->judge_permanen,
+                        'on_process_at'                  => $requestRepair->on_process_at,
+                        'on_trial_at'                    => $requestRepair->on_trial_at,
+                        'ng_judged_at'                    => $now,
+                        'durasi_on_process_seconds'      => $durasiOnProcessSeconds,
+                        'durasi_on_trial_seconds'        => $durasiOnTrialSeconds,
+                        'judged_by'                      => $authUser->id,
+                    ]);
+
+                    // Reset request_repair ke kondisi awal biar bisa dikerjakan ulang dari Open
+                    $requestRepair->update([
+                        'status'                        => RequestRepair::STATUS_OPEN,
+                        'ng_attempt_count'               => $requestRepair->ng_attempt_count + 1,
+                        'on_process_at'                  => null,
+                        'on_trial_at'                    => null,
+                        'analisa_penyebab'               => null,
+                        'tindakan_perbaikan'             => null,
+                        'catatan_penggantian_sparepart'  => null,
+                        'item'                           => null,
+                        'proses_grinding'                => null,
+                        'shim_up'                        => null,
+                        'status_burry'                   => null,
+                        'standart_burry'                 => null,
+                        'group_leader'                   => null,
+                        'operator'                       => null,
+                        'plan'                           => null,
+                        'actual'                         => null,
+                        'remark'                         => null,
+                        'judge'                          => null,
+                    ]);
+
+                    // PIC lama sudah kesimpen di snapshot attempt (pic_names),
+                    // di-detach biar mekanik lain bisa ambil dari awal via Select PIC modal
+                    $requestRepair->pics()->detach();
+
+                    DB::commit();
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Hasil dinyatakan NG. Data dikembalikan ke status Open untuk ditindaklanjuti ulang.',
+                    ]);
+
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    Log::error('RequestRepair NG Error', ['error' => $e->getMessage()]);
+                    return response()->json(['success' => false, 'message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
+                }
+            }
+
+            // ────────────────────────────────────────────
+            // HASIL AKHIR = OK → flow lama, pindah ke history, hard delete
+            // ────────────────────────────────────────────
             DB::beginTransaction();
             try {
-                $closedAt = now();
+                $closedAt = $now;
 
                 $durasiOnProcessSeconds = null;
                 $durasiOnTrialSeconds   = null;
@@ -529,10 +645,6 @@ class RequestRepairController extends Controller
                 }
 
                 $repairCount = RequestRepairHistory::where('part_no', $requestRepair->part_no)->count() + 1;
-
-                // Snapshot nama PIC sebelum record dihapus dari request_repairs
-                $requestRepair->loadMissing('pics:id,nama');
-                $picNamesSnapshot = $requestRepair->picNamesString();
 
                 RequestRepairHistory::create([
                     'barang_id'                     => $requestRepair->barang_id,
@@ -562,7 +674,7 @@ class RequestRepairController extends Controller
                     'standart_burry'                => $requestRepair->standart_burry,
                     'group_leader'                  => $requestRepair->group_leader,
                     'operator'                      => $requestRepair->operator,
-                    'pic_names'                     => $picNamesSnapshot, // ⬅️ baru — butuh migration tambahan
+                    'pic_names'                     => $picNamesSnapshot,
                     'plan'                          => $requestRepair->plan,
                     'actual'                        => $requestRepair->actual,
                     'remark'                        => $requestRepair->remark,
@@ -588,6 +700,7 @@ class RequestRepairController extends Controller
                     'durasi_on_trial_seconds'       => $durasiOnTrialSeconds,
                     'durasi_total_seconds'          => $durasiTotalSeconds,
                     'repair_count'                  => $repairCount,
+                    'ng_attempt_count'               => $requestRepair->ng_attempt_count, // ⬅️ baru — bawa histori jumlah NG sebelum akhirnya OK
                 ]);
 
                 $requestRepair->delete(); // pivot pics ikut kehapus otomatis lewat cascadeOnDelete di migration

@@ -290,6 +290,41 @@ async function openDetailModal(partNo, triggerId) {
             var sec4='<div class="mt-4 pt-4 border-t border-zinc-100"><p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-2">Monitoring Dies Temporary</p><div class="bg-green-50 border border-green-200 rounded-xl px-4 py-3"><div class="grid grid-cols-2 gap-x-6 gap-y-3">'+sRow('Tanggal Cek',r.tanggal_cek?r.tanggal_cek.substring(0,10).split('-').reverse().join('/'):'-')+sRow('Lot Prod',r.lot_prod)+sRowOkng('Awal',r.awal)+sRowOkng('Tengah',r.tengah)+sRowOkng('Akhir',r.akhir)+sRowOkng('Qty',r.qty)+sRow('Remark',r.remark_monitoring)+sRowOkng('Judge',r.judge_monitoring)+'</div></div></div>';
             var sec5='<div class="mt-4 pt-4 border-t border-zinc-100"><p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-2">Target Permanen Action</p><div class="bg-purple-50 border border-purple-200 rounded-xl px-4 py-3"><div class="grid grid-cols-2 gap-x-6 gap-y-3">'+sRow('Plan',r.plan_permanen)+sRow('Actual',r.actual_permanen)+sRowFull('Rootcause',r.rootcause)+sRowFull('Recovery',r.recovery)+sRow('Assy Trial Check',r.assy_trial_check)+sRowOkng('Judge',r.judge_permanen)+'</div></div></div>';
 
+            // ══════════════════════════════════════════════
+            // SECTION 6 — Riwayat Percobaan NG (⬅️ baru)
+            // Nampilin siapa aja yang pernah nanganin & gagal sebelum akhirnya closed OK
+            // ══════════════════════════════════════════════
+            var sec6 = '';
+            if (r.ng_attempts && r.ng_attempts.length > 0) {
+                var ngCards = r.ng_attempts.map(function (a) {
+                    return '<div class="bg-red-50 border border-red-200 rounded-xl px-4 py-3">'
+                        + '<div class="flex items-center justify-between mb-2">'
+                        +   '<div class="flex items-center gap-2">'
+                        +     '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-600 text-white text-[10px] font-bold">'+a.attempt_number+'</span>'
+                        +     '<span class="text-[12px] font-semibold text-red-800">Percobaan ke-'+a.attempt_number+' — NG</span>'
+                        +   '</div>'
+                        +   '<span class="text-[10.5px] text-red-500 font-mono">'+escHtml(a.ng_judged_at||'-')+'</span>'
+                        + '</div>'
+                        + '<div class="grid grid-cols-2 gap-x-6 gap-y-2.5">'
+                        +   sRow('PIC yang Menangani', a.pic_names)
+                        +   sRow('Di-judge NG oleh', a.judged_by_name)
+                        +   sRowFull('Analisa Penyebab (saat itu)', a.analisa_penyebab)
+                        +   sRowFull('Tindakan yang Sudah Dicoba', a.tindakan_perbaikan)
+                        +   (a.rootcause ? sRowFull('Rootcause (saat itu)', a.rootcause) : '')
+                        +   sRow('Durasi On Process', a.durasi_on_process)
+                        +   sRow('Durasi On Trial', a.durasi_on_trial)
+                        + '</div>'
+                        + '</div>';
+                }).join('<div class="h-2"></div>');
+
+                sec6 = '<div class="mt-4 pt-4 border-t border-zinc-100">'
+                     +   '<div class="flex items-center gap-2 mb-2">'
+                     +     '<p class="text-[10px] font-medium text-red-500 uppercase tracking-widest">Riwayat Percobaan NG ('+r.ng_attempts.length+'x gagal sebelum akhirnya OK)</p>'
+                     +   '</div>'
+                     +   '<div class="flex flex-col gap-2">'+ngCards+'</div>'
+                     + '</div>';
+            }
+
             var tlHtml='';
             if (tl.on_process_at||tl.on_trial_at||tl.closed_at) {
                 var tlItems='<div class="flex gap-3 pb-4 relative"><div class="relative z-10 flex-shrink-0 w-8 h-8 rounded-full bg-zinc-900 flex items-center justify-center"><svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg></div><div class="flex-1 min-w-0 pt-1"><p class="text-[12px] font-medium text-zinc-900">On Process</p><p class="text-[11px] font-mono text-zinc-400 mt-0.5">'+(tl.on_process_at?fmtDatetime(tl.on_process_at):'-')+'</p>'+(tl.durasi_on_process?'<span class="inline-flex mt-1.5 items-center gap-1 bg-zinc-100 border border-zinc-200 rounded px-2 py-0.5 text-[10px] text-zinc-600">Durasi: '+escHtml(tl.durasi_on_process)+'</span>':'')+'</div></div>';
@@ -299,6 +334,11 @@ async function openDetailModal(partNo, triggerId) {
                 tlHtml='<div class="mt-4 pt-4 border-t border-zinc-100"><p class="text-[10px] font-medium text-zinc-400 uppercase tracking-widest mb-3">Timeline Durasi</p><div class="relative flex flex-col"><div class="absolute left-[15px] top-5 bottom-5 w-px bg-zinc-200"></div>'+tlItems+'</div>'+totalBar+'</div>';
             }
 
+            // Badge jumlah NG di header card (⬅️ baru)
+            var ngHeaderBadge = (r.ng_attempt_count && r.ng_attempt_count > 0)
+                ? '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border bg-red-100 text-red-800 border-red-200">'+r.ng_attempt_count+'x NG</span>'
+                : '';
+
             list.insertAdjacentHTML('beforeend',
                 '<div class="repair-card border border-zinc-200 rounded-[14px] overflow-hidden">'
                 +'<div class="repair-card-header flex items-center justify-between px-4 py-3.5 bg-zinc-50 cursor-pointer hover:bg-zinc-100 transition select-none" onclick="toggleRepairCard(this)">'
@@ -307,6 +347,7 @@ async function openDetailModal(partNo, triggerId) {
                 +    '<div><p class="text-[13px] font-semibold text-zinc-900 font-mono leading-none">'+escHtml(r.no)+'</p><p class="text-[11px] text-zinc-400 mt-0.5">'+escHtml(r.closed_at_formatted||'-')+' &nbsp;·&nbsp; Grp '+escHtml(r.group)+' / '+escHtml(r.shift)+'</p></div>'
                 +  '</div>'
                 +  '<div class="flex items-center gap-2">'
+                +    ngHeaderBadge
                 +    '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border '+hasilCls+'">'+escHtml(hasilVal)+'</span>'
                 +    '<span class="inline-flex px-2.5 py-1 rounded-full text-[11px] font-medium '+katCls+'">'+escHtml(r.kategori_problem)+'</span>'
                 +    '<button onclick="printRepair('+r.id+'); event.stopPropagation();" title="Print Preview" class="w-7 h-7 rounded-lg bg-zinc-800 hover:bg-black flex items-center justify-center flex-shrink-0 transition">'
@@ -321,9 +362,10 @@ async function openDetailModal(partNo, triggerId) {
                 +    sRow('Jumlah Stroke',r.jumlah_stroke?Number(r.jumlah_stroke).toLocaleString('id-ID'):'-')+sRow('Line Mesin',r.line_mesin||'-')
                 +    sRow('Process No',r.process_no||'-',true)+sRow('Jenis',r.jenis||'-')
                 +    sRow('Target Selesai',r.target_selesai||'-')+sRow('Kategori',r.kategori_problem||'-')
+                +    sRow('PIC yang Berhasil (Closed OK)', r.pic_names||'-')
                 +    (r.detail_proyek?sRowFull('Detail Proyek',r.detail_proyek):'')
                 +  '</div>'
-                +sec1+sec2+sec3+sec4+sec5+tlHtml
+                +sec1+sec2+sec3+sec4+sec5+sec6+tlHtml
                 +'</div></div>'
             );
         });

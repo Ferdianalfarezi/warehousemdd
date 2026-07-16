@@ -41,6 +41,7 @@ class RequestRepair extends Model
         'standart_burry',
         'group_leader',
         'operator',
+        'ng_attempt_count',
         // On Trial — Section 3: Target Trial After Repair
         'plan',
         'actual',
@@ -59,6 +60,7 @@ class RequestRepair extends Model
         'kekuatan_stock_fg'  => 'integer',
         'on_process_at'     => 'datetime',
         'on_trial_at'       => 'datetime',
+        'ng_attempt_count' => 'integer',
     ];
 
     // ── Constants ───────────────────────────────────────────
@@ -77,6 +79,11 @@ class RequestRepair extends Model
     public function barang()
     {
         return $this->belongsTo(Barang::class);
+    }
+
+    public function attempts()
+    {
+        return $this->hasMany(RequestRepairAttempt::class);
     }
 
     public function creator()

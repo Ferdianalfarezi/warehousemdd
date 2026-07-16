@@ -38,6 +38,33 @@
             </div>
         </div>
 
+        {{-- ══════════════════════════════════════════════
+            SECTION 0: Hasil Akhir (trigger flow OK/NG) — ⬅️ baru
+        ══════════════════════════════════════════════ --}}
+        <div class="px-6 pt-5 flex-shrink-0">
+            <label class="mb-2 block text-sm font-bold text-gray-800">Hasil Akhir</label>
+            <div class="flex gap-3">
+                <label class="okng-option flex-1 cursor-pointer">
+                    <input type="radio" name="closedHasilAkhir" value="OK" class="okng-radio-hidden">
+                    <div class="okng-card hasil-akhir-card flex items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-3 transition-all duration-200 hover:border-zinc-400">
+                        <div class="okng-dot h-2.5 w-2.5 rounded-full bg-zinc-300 transition"></div>
+                        <span class="text-sm font-semibold text-gray-700">OK — Close Permanen</span>
+                    </div>
+                </label>
+                <label class="okng-option flex-1 cursor-pointer">
+                    <input type="radio" name="closedHasilAkhir" value="NG" class="okng-radio-hidden">
+                    <div class="okng-card hasil-akhir-card hasil-akhir-ng flex items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-3 transition-all duration-200 hover:border-zinc-400">
+                        <div class="okng-dot h-2.5 w-2.5 rounded-full bg-zinc-300 transition"></div>
+                        <span class="text-sm font-semibold text-gray-700">NG — Kembali ke Open</span>
+                    </div>
+                </label>
+            </div>
+            <p id="errorClosedHasilAkhir" class="mt-1.5 text-xs font-medium text-red-600 hidden"></p>
+            <p id="hasilAkhirNgWarning" class="mt-2 text-xs font-medium text-red-600 hidden">
+                ⚠️ Data ini akan dikembalikan ke status <span class="font-bold">Open</span> dan bisa diambil ulang oleh mekanik lain. Data On Trial &amp; Closed saat ini akan disimpan sebagai riwayat percobaan.
+            </p>
+        </div>
+
         {{-- Body (scrollable) --}}
         <div class="overflow-y-auto flex-1 px-6 py-6 space-y-6">
 
@@ -301,4 +328,29 @@
 .okng-option input:checked ~ .okng-card .okng-dot {
     background: #18181b;
 }
+
+/* ── Hasil Akhir: warna beda saat NG dipilih (merah warning) ── */
+.hasil-akhir-ng input:checked ~ .hasil-akhir-card {
+    border-color: #dc2626;
+    background: #fef2f2;
+}
+.hasil-akhir-ng input:checked ~ .hasil-akhir-card .okng-dot {
+    background: #dc2626;
+}
 </style>
+
+<script>
+// ════════════════════════════════════════════════════════
+// Toggle warning NG di modal Closed — tampil hanya saat NG dipilih
+// ════════════════════════════════════════════════════════
+document.addEventListener('change', function (e) {
+    if (e.target.name === 'closedHasilAkhir') {
+        const warning = document.getElementById('hasilAkhirNgWarning');
+        if (e.target.value === 'NG') {
+            warning.classList.remove('hidden');
+        } else {
+            warning.classList.add('hidden');
+        }
+    }
+});
+</script>
