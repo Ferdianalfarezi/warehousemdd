@@ -7,6 +7,7 @@ use App\Models\RequestRepairHistory;
 use App\Models\Barang;
 use App\Models\DiesDetail;
 use App\Models\Line;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class RequestRepairController extends Controller
         $perPage = $request->get('per_page', 20);
         $page    = (int) $request->get('page', 1);
 
-        $query = RequestRepair::with(['barang:id,kode_barang,nama', 'creator:id,nama'])
+        $query = RequestRepair::with(['barang:id,kode_barang,nama', 'creator:id,nama', 'pics:id,nama'])
             ->when($search, function ($q) use ($search) {
                 $q->where(function ($q2) use ($search) {
                     $q2->where('no',                'like', "%{$search}%")
@@ -63,9 +64,10 @@ class RequestRepairController extends Controller
         $from       = $total > 0 ? (($page - 1) * $perPageInt) + 1 : 0;
         $to         = min($page * $perPageInt, $total);
 
-        $userRoleId = auth()->user()->role_id ?? null;
+        $authUser   = auth()->user();
+        $userRoleId = $authUser->role_id ?? null;
 
-        $data = $items->map(function ($rr, $idx) use ($page, $perPageInt, $userRoleId) {
+        $data = $items->map(function ($rr, $idx) use ($page, $perPageInt, $userRoleId, $authUser) {
             return [
                 'id'                => $rr->id,
                 'row_number'        => (($page - 1) * $perPageInt) + $idx + 1,
@@ -86,13 +88,14 @@ class RequestRepairController extends Controller
                 'detail_proyek'     => $rr->detail_proyek,
                 'gambar_url'        => $rr->gambar_url,
                 'created_by_name'   => $rr->creator->nama ?? '-',
+                'pic_names'         => $rr->picNamesString(),
                 'status'            => $rr->status,
                 'can_edit'          => $rr->isEditable(),
                 'can_delete'        => $rr->isEditable(),
                 'can_to_process'    => $rr->canConfirmToProcess()
                                         && in_array($userRoleId, RequestRepair::ROLES_TO_ON_PROCESS),
-                'can_to_on_trial'   => $rr->canConfirmToOnTrial()
-                                        && in_array($userRoleId, RequestRepair::ROLES_TO_ON_TRIAL),
+                // ⬅️ diubah: bukan lagi cuma cek role, tapi cek PIC / admin override
+                'can_to_on_trial'   => $rr->canUserConfirmToOnTrial($authUser),
                 'can_to_closed'     => $rr->canConfirmToClosed()
                                         && in_array($userRoleId, RequestRepair::ROLES_TO_CLOSED),
             ];
@@ -167,6 +170,24 @@ class RequestRepairController extends Controller
         ]);
     }
 
+    // ── AJAX: kandidat PIC (role_id 1 & 7) ───────────────────
+    // PENTING: route ini HARUS didaftarkan di atas route resource
+    // request-repairs/{request_repair}, kalau tidak "pic-candidates"
+    // akan tertangkap sebagai parameter {request_repair}.
+    public function picCandidates()
+    {
+        $users = User::whereIn('role_id', RequestRepair::ROLES_TO_ON_PROCESS)
+            ->orderBy('nama')
+            ->get(['id', 'nama', 'nik']);
+
+        $results = $users->map(fn($u) => [
+            'id'   => $u->id,
+            'text' => $u->nama . ($u->nik ? " ({$u->nik})" : ''),
+        ]);
+
+        return response()->json(['results' => $results]);
+    }
+
     // ── Store ───────────────────────────────────────────────
     public function store(Request $request)
     {
@@ -235,11 +256,13 @@ class RequestRepairController extends Controller
     // ── Show ────────────────────────────────────────────────
     public function show(RequestRepair $requestRepair)
     {
-        $requestRepair->load(['barang:id,kode_barang,nama,cust', 'creator:id,nama']);
+        $requestRepair->load(['barang:id,kode_barang,nama,cust', 'creator:id,nama', 'pics:id,nama,nik']);
 
         $data                    = $requestRepair->toArray();
         $data['gambar_url']      = $requestRepair->gambar_url;
         $data['created_by_name'] = $requestRepair->creator->nama ?? '-';
+        $data['pic_names']       = $requestRepair->picNamesString();
+        $data['pics']            = $requestRepair->pics->map(fn($u) => ['id' => $u->id, 'nama' => $u->nama]);
         $data['timeline']        = $requestRepair->getTimelineData();
 
         return response()->json(['success' => true, 'data' => $data]);
@@ -319,7 +342,8 @@ class RequestRepairController extends Controller
     // ── Update Status ───────────────────────────────────────
     public function updateStatus(Request $request, RequestRepair $requestRepair)
     {
-        $userRoleId = auth()->user()->role_id ?? null;
+        $authUser   = auth()->user();
+        $userRoleId = $authUser->role_id ?? null;
         $newStatus  = $request->get('status');
 
         // ════════════════════════════════════════════════════
@@ -340,15 +364,44 @@ class RequestRepairController extends Controller
                 ], 403);
             }
 
-            $requestRepair->update([
-                'status'        => RequestRepair::STATUS_ON_PROCESS,
-                'on_process_at' => now(),
+            $validator = Validator::make($request->all(), [
+                'pic_user_ids'   => 'required|array|min:1',
+                'pic_user_ids.*' => 'integer|exists:users,id',
+            ], [
+                'pic_user_ids.required' => 'Pilih minimal 1 PIC (diri sendiri atau tim).',
             ]);
 
-            return response()->json(['success' => true, 'message' => 'Status berhasil diubah ke On Process!']);
+            if ($validator->fails()) {
+                return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+            }
+
+            // Pastikan hanya user dengan role yang berwenang yang bisa jadi PIC
+            $validPicIds = User::whereIn('id', $request->pic_user_ids)
+                ->whereIn('role_id', RequestRepair::ROLES_TO_ON_PROCESS)
+                ->pluck('id')
+                ->toArray();
+
+            // Diri sendiri selalu ikut tercatat sebagai PIC, meski cuma pilih "Sendiri"
+            $picIds = array_values(array_unique(array_merge([$authUser->id], $validPicIds)));
+
+            DB::beginTransaction();
+            try {
+                $requestRepair->update([
+                    'status'        => RequestRepair::STATUS_ON_PROCESS,
+                    'on_process_at' => now(),
+                ]);
+                $requestRepair->pics()->sync($picIds);
+
+                DB::commit();
+                return response()->json(['success' => true, 'message' => 'Status berhasil diubah ke On Process!']);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('RequestRepair On Process Error', ['error' => $e->getMessage()]);
+                return response()->json(['success' => false, 'message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
+            }
 
         // ════════════════════════════════════════════════════
-        // ON TRIAL
+        // ON TRIAL — hanya PIC yang tercatat, ATAU admin override (role 1)
         // ════════════════════════════════════════════════════
         } elseif ($newStatus === RequestRepair::STATUS_ON_TRIAL) {
 
@@ -358,10 +411,13 @@ class RequestRepairController extends Controller
                     'message' => 'Status tidak bisa diubah ke On Trial dari status saat ini.',
                 ], 422);
             }
-            if (!in_array($userRoleId, RequestRepair::ROLES_TO_ON_TRIAL)) {
+
+            $requestRepair->loadMissing('pics:id,nama');
+
+            if (!$requestRepair->canUserConfirmToOnTrial($authUser)) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Anda tidak memiliki akses untuk mengubah status ke On Trial.',
+                    'message' => 'Hanya PIC (' . $requestRepair->picNamesString() . ') atau Admin yang bisa mengonfirmasi ke On Trial.',
                 ], 403);
             }
 
@@ -413,6 +469,7 @@ class RequestRepairController extends Controller
 
         // ════════════════════════════════════════════════════
         // CLOSED → pindah ke history, hard delete dari request_repairs
+        // Bebas role (1, 8, 4), TIDAK terikat PIC — ini approval/verifikasi
         // ════════════════════════════════════════════════════
         } elseif ($newStatus === RequestRepair::STATUS_CLOSED) {
 
@@ -473,6 +530,10 @@ class RequestRepairController extends Controller
 
                 $repairCount = RequestRepairHistory::where('part_no', $requestRepair->part_no)->count() + 1;
 
+                // Snapshot nama PIC sebelum record dihapus dari request_repairs
+                $requestRepair->loadMissing('pics:id,nama');
+                $picNamesSnapshot = $requestRepair->picNamesString();
+
                 RequestRepairHistory::create([
                     'barang_id'                     => $requestRepair->barang_id,
                     'no'                            => $requestRepair->no,
@@ -501,6 +562,7 @@ class RequestRepairController extends Controller
                     'standart_burry'                => $requestRepair->standart_burry,
                     'group_leader'                  => $requestRepair->group_leader,
                     'operator'                      => $requestRepair->operator,
+                    'pic_names'                     => $picNamesSnapshot, // ⬅️ baru — butuh migration tambahan
                     'plan'                          => $requestRepair->plan,
                     'actual'                        => $requestRepair->actual,
                     'remark'                        => $requestRepair->remark,
@@ -528,7 +590,7 @@ class RequestRepairController extends Controller
                     'repair_count'                  => $repairCount,
                 ]);
 
-                $requestRepair->delete();
+                $requestRepair->delete(); // pivot pics ikut kehapus otomatis lewat cascadeOnDelete di migration
 
                 DB::commit();
                 return response()->json([

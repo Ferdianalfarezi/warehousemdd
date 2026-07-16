@@ -67,9 +67,11 @@ class RequestRepair extends Model
     const STATUS_ON_TRIAL   = 'on_trial';
     const STATUS_CLOSED     = 'closed';
 
-    const ROLES_TO_ON_PROCESS = [1, 2, 3, 7]; // ⬅️ baru — open → on_process
-    const ROLES_TO_ON_TRIAL   = [1, 2, 3, 7];
-    const ROLES_TO_CLOSED     = [1, 4];
+    const ROLES_TO_ON_PROCESS = [1, 7];       // ⬅️ diubah dari [1, 2, 3, 7]
+    const ROLES_TO_ON_TRIAL   = [1, 2, 3, 7]; // ⬅️ sudah tidak dipakai untuk gate on_trial (digantikan PIC + admin override), dibiarkan untuk referensi
+    const ROLES_TO_CLOSED     = [1, 8, 4];    // ⬅️ diubah dari [1, 4]
+
+    const ROLE_ADMIN_OVERRIDE = 1; // ⬅️ baru — role yang bisa override PIC di transisi on_process -> on_trial
 
     // ── Relations ───────────────────────────────────────────
     public function barang()
@@ -85,6 +87,13 @@ class RequestRepair extends Model
     public function line() // ⬅️ baru
     {
         return $this->belongsTo(Line::class);
+    }
+
+    // ⬅️ baru — daftar user yang jadi PIC (ditentukan saat Open -> On Process)
+    public function pics()
+    {
+        return $this->belongsToMany(User::class, 'request_repair_pics', 'request_repair_id', 'user_id')
+            ->withTimestamps();
     }
 
     // ── Accessor gambar_url ─────────────────────────────────
@@ -114,6 +123,40 @@ class RequestRepair extends Model
         return $this->status === self::STATUS_ON_TRIAL;
     }
 
+    /**
+     * Cek apakah user tertentu tercatat sebagai salah satu PIC request repair ini.
+     * Pakai collection yang sudah di-eager-load kalau ada (hindari N+1 query di list).
+     */
+    public function isPic(int $userId): bool // ⬅️ baru
+    {
+        if ($this->relationLoaded('pics')) {
+            return $this->pics->contains('id', $userId);
+        }
+        return $this->pics()->where('users.id', $userId)->exists();
+    }
+
+    /**
+     * Aturan konfirmasi On Process -> On Trial:
+     * harus salah satu PIC yang dipilih waktu On Process, ATAU role admin override (role_id 1).
+     */
+    public function canUserConfirmToOnTrial(User $user): bool // ⬅️ baru
+    {
+        return $this->canConfirmToOnTrial()
+            && ($user->role_id === self::ROLE_ADMIN_OVERRIDE || $this->isPic($user->id));
+    }
+
+    /**
+     * Nama-nama PIC, digabung koma. Dipakai untuk badge tabel & pesan error.
+     */
+    public function picNamesString(): string // ⬅️ baru
+    {
+        $names = $this->relationLoaded('pics')
+            ? $this->pics->pluck('nama')
+            : $this->pics()->pluck('nama');
+
+        return $names->filter()->implode(', ') ?: '-';
+    }
+
     // ── Durasi helpers ──────────────────────────────────────
     public function getDurasiOnProcessSeconds(): ?int
     {
@@ -139,13 +182,17 @@ class RequestRepair extends Model
         $days    = intdiv($seconds, 86400);
         $hours   = intdiv($seconds % 86400, 3600);
         $minutes = intdiv($seconds % 3600, 60);
+        $secs    = $seconds % 60;
 
-        $parts = [];
-        if ($days)    $parts[] = "{$days} hari";
-        if ($hours)   $parts[] = "{$hours} jam";
-        if ($minutes) $parts[] = "{$minutes} menit";
+        $hoursStr   = str_pad($hours, 2, '0', STR_PAD_LEFT);
+        $minutesStr = str_pad($minutes, 2, '0', STR_PAD_LEFT);
+        $secsStr    = str_pad($secs, 2, '0', STR_PAD_LEFT);
 
-        return $parts ? implode(' ', $parts) : '< 1 menit';
+        if ($days > 0) {
+            return "{$days}H.{$hoursStr}.{$minutesStr}.{$secsStr}";
+        }
+
+        return "{$hoursStr}.{$minutesStr}.{$secsStr}";
     }
 
     public function getTimelineData(): array

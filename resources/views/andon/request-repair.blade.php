@@ -5,7 +5,9 @@
 @section('content')
 <style>
 .status-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     padding: 0.5rem 1rem;
     border-radius: 0.375rem;
     font-weight: 700;
@@ -13,122 +15,207 @@
     text-transform: uppercase;
     letter-spacing: 0.025em;
     min-width: 120px;
+    height: 38px;
+    line-height: 1;
+    white-space: nowrap;
     text-align: center;
+    color: white;
 }
 
 .status-open {
-    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(107, 114, 128, 0.3);
+    background: #16a34a;
 }
 
 .status-on_process {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+    background: #2563eb;
 }
 
 .status-on_trial {
-    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-    color: white;
-    box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.3);
+    background: #ea8202;
 }
 
-.status-badge {
-    animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-/* Row highlight untuk on_process & on_trial */
+/* Row highlight untuk on_process & on_trial (default, dioverride oleh stock level kalau ada) */
 tr[data-status="on_process"] {
     background: rgba(59, 130, 246, 0.05);
 }
 
 tr[data-status="on_trial"] {
-    background: rgba(245, 158, 11, 0.05);
+    background: rgba(234, 179, 8, 0.05);
 }
 
-/* Kategori badge */
-.kategori-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-weight: 600;
-    font-size: 0.8rem;
+/* Row highlight berdasarkan sisa Stock FG (dihitung dari tanggal_pengajuan) */
+tr[data-stock-level="critical"] {
+    background: rgba(220, 38, 38, 0.25) !important;
 }
 
-.kategori-dies { background: #dbeafe; color: #1e40af; }
-.kategori-burry { background: #fef9c3; color: #854d0e; }
-.kategori-dimensi { background: #ede9fe; color: #5b21b6; }
-.kategori-human_error { background: #fee2e2; color: #991b1b; }
-.kategori-accessories { background: #dcfce7; color: #166534; }
-
-/* Image styling */
-.repair-image {
-    width: 64px;
-    height: 64px;
-    border-radius: 0.5rem;
-    object-fit: cover;
-    border: 2px solid #e5e7eb;
+tr[data-stock-level="warning"] {
+    background: rgba(234, 179, 8, 0.20) !important;
 }
 
-.no-image-placeholder {
-    width: 64px;
-    height: 64px;
-    background: #f3f4f6;
-    border-radius: 0.5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 2px solid #e5e7eb;
-    margin: 0 auto;
+/* Kategori — teks bold aja, tanpa badge */
+.kategori-text {
+    font-weight: 700;
 }
 
 /* Durasi live */
-.durasi-live {
-    font-family: 'Courier New', monospace;
+.durasi-live,
+.durasi-trial-live {
     font-weight: 700;
-    color: #2563eb;
+    color: #ffffff;
+}
+
+/* Summary cards */
+.summary-cards {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.summary-card {
+    border-radius: 0.6rem;
+    padding: 0.4rem 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: white;
+}
+
+.summary-card .summary-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.summary-card .summary-icon svg {
+    width: 15px;
+    height: 15px;
+}
+
+.summary-card .summary-text {
+    line-height: 1.1;
+}
+
+.summary-card .summary-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    opacity: 0.9;
+}
+
+.summary-card .summary-value {
+    font-size: 1.15rem;
+    font-weight: 800;
+}
+
+.summary-open {
+    background: #16a34a;
+}
+
+.summary-on_process {
+    background: #2563eb;
+}
+
+.summary-on_trial {
+    background: #ea8202;
 }
 </style>
+
+@php
+    $openCount = $requestRepairs->where('status', 'open')->count();
+    $onProcessCount = $requestRepairs->where('status', 'on_process')->count();
+    $onTrialCount = $requestRepairs->where('status', 'on_trial')->count();
+@endphp
+
+<div class="summary-cards mt-2 mb-2 mr-2">
+    <div class="summary-card summary-open">
+        <div class="summary-icon">
+            <svg fill="none" stroke="white" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+        <div class="summary-text ">
+            <div class="summary-label">Open</div>
+            <div class="summary-value">{{ $openCount }}</div>
+        </div>
+    </div>
+    <div class="summary-card summary-on_process">
+        <div class="summary-icon">
+            <svg fill="none" stroke="white" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6l4 2"/>
+                <circle cx="12" cy="12" r="9"/>
+            </svg>
+        </div>
+        <div class="summary-text">
+            <div class="summary-label">On Process</div>
+            <div class="summary-value">{{ $onProcessCount }}</div>
+        </div>
+    </div>
+    <div class="summary-card summary-on_trial">
+        <div class="summary-icon">
+            <svg fill="none" stroke="white" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+        </div>
+        <div class="summary-text">
+            <div class="summary-label">On Trial</div>
+            <div class="summary-value">{{ $onTrialCount }}</div>
+        </div>
+    </div>
+</div>
 
 <div style="overflow-x: auto; margin-top:10px;">
     <table class="table-bordered theme-table table-dark-custom" style="width: 100%">
         <thead>
             <tr class="text-center" style="font-size: 1.15rem;">
-                <th style="width: 140px;">No. Request</th>
-                <th style="width: 110px;">Tgl Pengajuan</th>
-                <th style="width: 100px;">Line / Mesin</th>
-                <th style="width: 130px;">Part No</th>
-                <th style="width: 220px;">Nama</th>
-                <th style="width: 130px;">Kategori</th>
-                <th style="width: 90px;">Grp / Shift</th>
-                <th style="width: 90px;">Gambar</th>
-                <th style="width: 150px;">Mulai Proses</th>
-                <th style="width: 130px;">Durasi</th>
-                <th style="width: 140px;">Status</th>
+                <th style="width: 140px; padding: 10px 8px;" rowspan="2">No. Request</th>
+                <th style="width: 150px; padding: 10px 8px;" rowspan="2">Tgl Pengajuan</th>
+                <th style="width: 100px; padding: 10px 8px;" rowspan="2">Line</th>
+                <th style="width: 130px; padding: 10px 8px;" rowspan="2">Part No</th>
+                <th style="width: 130px; padding: 10px 8px;" rowspan="2">No Proses</th>
+                <th style="width: 100px; padding: 10px 8px;" rowspan="2">Kategori</th>
+                <th style="width: 90px; padding: 10px 8px;" rowspan="2">Shift</th>
+                <th style="width: 90px; padding: 10px 8px;" rowspan="2">Stock FG</th>
+                <th style="padding: 1px 1px; font-size: 0.9rem;" colspan="2">Durasi</th>
+                <th style="width: 130px; padding: 10px 8px;" rowspan="2">PIC</th>
+                <th style="width: 140px; padding: 10px 8px;" rowspan="2">Status</th>
+            </tr>
+            <tr class="text-center">
+                <th style="width: 90px; padding: 1px 1px; font-size: 1rem;">Repair</th>
+                <th style="width: 90px; padding: 1px 1px; font-size: 1rem;">On Trial</th>
             </tr>
         </thead>
         <tbody class="table-dark-custom text-center" id="tableBody" style="font-size: 1.15rem;">
             @forelse($requestRepairs as $rr)
+                @php
+                    // Sisa stock FG dihitung mundur dari tanggal_pengajuan
+                    $stockLevel = null;
+                    if ($rr->tanggal_pengajuan && !is_null($rr->kekuatan_stock_fg)) {
+                        $daysElapsed = (int) $rr->tanggal_pengajuan->startOfDay()->diffInDays(now()->startOfDay());
+                        $sisaStockFg = $rr->kekuatan_stock_fg - $daysElapsed;
+
+                        if ($sisaStockFg <= 1) {
+                            $stockLevel = 'critical';
+                        } elseif ($sisaStockFg <= 2) {
+                            $stockLevel = 'warning';
+                        }
+                    }
+                @endphp
                 <tr data-status="{{ $rr->status }}"
+                    @if($stockLevel) data-stock-level="{{ $stockLevel }}" @endif
                     @if($rr->status === 'on_process') data-on-process-at="{{ $rr->on_process_at?->toISOString() }}" @endif
                 >
                     <td style="font-weight: bold;">{{ $rr->no }}</td>
                     <td>{{ $rr->tanggal_pengajuan ? $rr->tanggal_pengajuan->format('d/m/Y') : '-' }}</td>
-                    <td>{{ $rr->line_mesin ?? '-' }}</td>
+                    <td>{{ $rr->line_mesin ? substr($rr->line_mesin, 0, 7) : '-' }}</td>
                     <td style="font-weight: bold;">{{ $rr->part_no }}</td>
-                    <td style="text-align: left;">{{ $rr->nama }}</td>
+                    <td style="font-weight: bold;">{{ $rr->process_no }}</td>
                     <td>
                         @php
                             $kategoriClasses = [
@@ -140,23 +227,11 @@ tr[data-status="on_trial"] {
                             ];
                             $kategoriClass = $kategoriClasses[$rr->kategori_problem] ?? 'kategori-dies';
                         @endphp
-                        <span class="kategori-badge {{ $kategoriClass }}">{{ $rr->kategori_problem }}</span>
+                        <span class="kategori-text {{ $kategoriClass }}">{{ $rr->kategori_problem }}</span>
                     </td>
                     <td>{{ $rr->group }} / {{ $rr->shift }}</td>
-                    <td>
-                        @if($rr->gambar_url)
-                            <img src="{{ $rr->gambar_url }}" alt="Gambar" class="repair-image" style="margin: 0 auto;">
-                        @else
-                            <div class="no-image-placeholder">
-                                <svg fill="none" stroke="#9ca3af" viewBox="0 0 24 24" style="width: 28px; height: 28px;">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                </svg>
-                            </div>
-                        @endif
-                    </td>
-                    <td>
-                        {{ $rr->on_process_at ? $rr->on_process_at->format('d/m/Y H:i') : '-' }}
-                    </td>
+                    <td style="font-weight: bold;">{{ $rr->kekuatan_stock_fg }} Hari</td>
+
                     <td>
                         @if($rr->status === 'on_process' && $rr->on_process_at)
                             <span class="durasi-live" data-durasi-start="{{ $rr->on_process_at->timestamp }}">-</span>
@@ -166,6 +241,14 @@ tr[data-status="on_trial"] {
                             -
                         @endif
                     </td>
+                    <td>
+                        @if($rr->status === 'on_trial' && $rr->on_trial_at)
+                            <span class="durasi-trial-live" data-durasi-trial-start="{{ $rr->on_trial_at->timestamp }}">-</span>
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td>{{ $rr->picNamesString() }}</td>
                     <td class="status py-1">
                         @php
                             $statusClasses = [
@@ -211,19 +294,24 @@ setInterval(function() {
     location.reload();
 }, 30000);
 
-// Live durasi counter untuk row yang status on_process
+// Format durasi: HH.MM.SS, kalau lebih dari 1 hari jadi XH.HH.MM.SS
 function formatDurasiJS(seconds) {
     const days  = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const mins  = Math.floor((seconds % 3600) / 60);
     const secs  = seconds % 60;
-    const parts = [];
-    if (days)  parts.push(days  + 'h ');
-    if (hours) parts.push(hours + 'j ');
-    parts.push(String(mins).padStart(2, '0') + 'm ' + String(secs).padStart(2, '0') + 'd');
-    return parts.join('');
+
+    const hoursStr = String(hours).padStart(2, '0');
+    const minsStr  = String(mins).padStart(2, '0');
+    const secsStr  = String(secs).padStart(2, '0');
+
+    if (days > 0) {
+        return days + 'H.' + hoursStr + '.' + minsStr + '.' + secsStr;
+    }
+    return hoursStr + '.' + minsStr + '.' + secsStr;
 }
 
+// Live durasi counter untuk row status on_process
 function updateDurasiLive() {
     document.querySelectorAll('.durasi-live[data-durasi-start]').forEach(function (el) {
         const start   = parseInt(el.getAttribute('data-durasi-start'), 10);
@@ -233,8 +321,22 @@ function updateDurasiLive() {
     });
 }
 
+// Live durasi counter untuk row status on_trial (mulai dari on_trial_at)
+function updateDurasiTrialLive() {
+    document.querySelectorAll('.durasi-trial-live[data-durasi-trial-start]').forEach(function (el) {
+        const start   = parseInt(el.getAttribute('data-durasi-trial-start'), 10);
+        const now     = Math.floor(Date.now() / 1000);
+        const elapsed = now - start;
+        el.textContent = formatDurasiJS(elapsed);
+    });
+}
+
 updateDurasiLive();
-setInterval(updateDurasiLive, 1000);
+updateDurasiTrialLive();
+setInterval(function () {
+    updateDurasiLive();
+    updateDurasiTrialLive();
+}, 1000);
 
 // Debug: Log current request repairs count
 console.log('Total request repairs displayed: {{ $requestRepairs->count() }}');

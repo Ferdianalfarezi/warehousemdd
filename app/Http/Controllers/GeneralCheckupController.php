@@ -38,8 +38,12 @@ class GeneralCheckupController extends Controller
             'today' => $checkups->where('tanggal_terjadwal', Carbon::today())->count(),
         ];
 
-        // Get unique lines for filter
-        $lines = Barang::distinct()->pluck('line')->filter()->sort()->values();
+        $lines = GeneralCheckup::whereIn('status', ['pending', 'on_process'])
+        ->whereNotNull('line')
+        ->distinct()
+        ->pluck('line')
+        ->sort()
+        ->values();
 
         return view('general-checkups.index', compact('checkups', 'stats', 'lines'));
     }
@@ -154,7 +158,7 @@ class GeneralCheckupController extends Controller
                         'kode_barang' => $schedule->kode_barang,
                         'gambar' => $schedule->gambar,
                         'nama' => $schedule->nama,
-                        'line' => $schedule->barang->line ?? null,
+                        'line' => $schedule->barang->line->nama_line ?? null,
                         'tanggal_terjadwal' => $schedule->service_berikutnya,
                         'status' => 'pending',
                     ]);

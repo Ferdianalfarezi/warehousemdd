@@ -461,6 +461,39 @@
                 font-size: 12px;
             }
         }
+
+        .running-text-wrapper {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            background-color: #000000;
+            overflow: hidden;
+            white-space: nowrap;
+            padding: 10px 0;
+            width: 100%;
+            z-index: 999;
+        }
+
+        .running-text {
+            display: inline-block;
+            padding-left: 100%;
+            color: #fbbf24;
+            font-style: italic;
+            font-weight: 700;
+            font-size: 15px;
+            animation: marquee 25s linear infinite;
+        }
+
+        @keyframes marquee {
+            0%   { transform: translateX(0); }
+            100% { transform: translateX(-100%); }
+        }
+
+        @media (max-width: 767px) {
+            .running-text {
+                font-size: 16px;
+            }
+        }
     </style>
 </head>
 
@@ -472,7 +505,7 @@
                 <!-- Logo -->
                 <div class="table-cell logo-cell">
                     {{-- <a href="{{ route('dashboard') }}"> --}}
-                        <img src="{{ asset('images/logostep.png') }}" alt="Logo" class="logo">
+                        <img src="{{ asset('images/logomdd.png') }}" alt="Logo" class="logo">
                     {{-- </a> --}}
                 </div>
                 <!-- Title -->
@@ -497,11 +530,18 @@
         @yield('content')
     </main>
 
+    <!-- Running Text -->
+    <div class="running-text-wrapper">
+        <span class="running-text">
+             UTAMAKAN SHOLAT DAN KESELAMATAN KERJA  &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; UTAMAKAN SHOLAT DAN KESELAMATAN KERJA &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        </span>
+    </div>
+
     <!-- Auto Refresh Indicator -->
-    <div class="refresh-indicator" id="refreshIndicator">
+    {{-- <div class="refresh-indicator" id="refreshIndicator">
         <div class="refresh-dot"></div>
         <span>Auto Refresh: <span id="refreshCountdown">30</span>s</span>
-    </div>
+    </div> --}}
 
     <!-- Scripts -->
     <script>
@@ -524,11 +564,11 @@
         }
 
         // Auto Refresh
-        let refreshCountdown = 30;
+        let refreshCountdown = 10;
         let countdownInterval;
 
         function startRefreshCountdown() {
-            refreshCountdown = 30;
+            refreshCountdown = 10;
             
             if (countdownInterval) {
                 clearInterval(countdownInterval);
@@ -552,7 +592,7 @@
             updateDateTime();
             setInterval(updateDateTime, 1000);
             
-            // Auto refresh every 30 seconds
+            // Auto refresh every 10 seconds
             startRefreshCountdown();
         });
 
@@ -564,6 +604,39 @@
         document.addEventListener('keydown', function() {
             startRefreshCountdown();
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            // Auto refresh every 10 seconds
+            startRefreshCountdown();
+
+            // Sinkronisasi running text biar ga reset tiap auto refresh
+            syncMarqueeAnimation();
+        });
+
+        function syncMarqueeAnimation() {
+            const marqueeDuration = 25; // harus sama dengan animation duration di CSS (detik)
+            const marqueeEl = document.querySelector('.running-text');
+
+            if (!marqueeEl) return;
+
+            let startTime = sessionStorage.getItem('marqueeStartTime');
+
+            if (!startTime) {
+                // Pertama kali load, catat waktu mulai
+                startTime = Date.now();
+                sessionStorage.setItem('marqueeStartTime', startTime);
+            } else {
+                startTime = parseInt(startTime, 10);
+            }
+
+            const elapsedSeconds = ((Date.now() - startTime) / 1000) % marqueeDuration;
+
+            // Set delay negatif = animasi dianggap udah jalan sejauh elapsedSeconds
+            marqueeEl.style.animationDelay = `-${elapsedSeconds}s`;
+        }
     </script>
 
     @stack('scripts')

@@ -167,12 +167,12 @@ Route::middleware('auth')->group(function () {
         Route::get('{historyRequestPart}', [HistoryRequestPartController::class, 'show'])->name('show');
     });
 
-    // ── Request Repair ─────────────────────────────────────────────────────
     Route::prefix('request-repairs')->name('request-repairs.')->group(function () {
         Route::get('/',                          [RequestRepairController::class, 'index'])->name('index');
         Route::get('data',                       [RequestRepairController::class, 'getData'])->name('data');           // ⚠️ sebelum {requestRepair}
         Route::get('search-barang',              [RequestRepairController::class, 'searchBarang'])->name('search-barang');
         Route::get('process-nos',                [RequestRepairController::class, 'getProcessNos'])->name('process-nos');
+        Route::get('pic-candidates',             [RequestRepairController::class, 'picCandidates'])->name('pic-candidates'); // ⬅️ BARU — sebelum {requestRepair}
         Route::post('/',                         [RequestRepairController::class, 'store'])->name('store');
         Route::get('{requestRepair}/durasi',     [RequestRepairController::class, 'getDurasi'])->name('durasi');      // ⚠️ sebelum {requestRepair} show
         Route::get('{requestRepair}',            [RequestRepairController::class, 'show'])->name('show');

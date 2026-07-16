@@ -65,17 +65,18 @@
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tanggal</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Grp / Shift</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Part No</th>
-                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Process No</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kategori</th>
                         <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Stock FG</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Diajukan Oleh</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">PIC</th>
                         <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                         <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200" id="rrTableBody">
                     <tr>
-                        <td colspan="10" class="px-6 py-16 text-center">
+                        <td colspan="11" class="px-6 py-16 text-center">
                             <svg class="animate-spin h-8 w-8 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -102,6 +103,7 @@
 @include('request_repairs.create')
 @include('request_repairs.edit')
 @include('request_repairs.detail')
+@include('request_repairs.select-pic')
 @include('request_repairs.additional-info')
 @include('request_repairs.closed-info')
 
@@ -109,6 +111,11 @@
 
 @push('scripts')
 <script>
+// ════════════════════════════════════════════════════════
+// AUTH CONTEXT
+// ════════════════════════════════════════════════════════
+const AUTH_USER_ID = {{ auth()->id() }};
+
 // ════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════
@@ -118,6 +125,11 @@ let searchQuery   = '';
 let totalPages    = 1;
 let isLoading     = false;
 let searchTimeout = null;
+
+// ════════════════════════════════════════════════════════
+// SELECT PIC MODAL STATE
+// ════════════════════════════════════════════════════════
+let _selectPicId = null;
 
 // ════════════════════════════════════════════════════════
 // ADDITIONAL INFO MODAL STATE
@@ -199,6 +211,17 @@ document.addEventListener('DOMContentLoaded', function () {
         if (e.target.id === 'createProcessNoSelect') syncProcessNoFromSelect('createProcessNoSelect');
         if (e.target.id === 'editProcessNoSelect')   syncProcessNoFromSelect('editProcessNoSelect');
 
+        // Toggle mode PIC: Sendiri / Bersama Tim
+        if (e.target.name === 'picMode') {
+            const wrapper = document.getElementById('selectPicTeamWrapper');
+            if (e.target.value === 'tim') {
+                wrapper.classList.remove('hidden');
+                initPicSelect2();
+            } else {
+                wrapper.classList.add('hidden');
+            }
+        }
+
         // Preview gambar create
         if (e.target.id === 'createGambar') {
             const file = e.target.files[0];
@@ -269,7 +292,7 @@ async function loadData() {
 function renderTable(items) {
     const tbody = document.getElementById('rrTableBody');
     if (!items || items.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="px-6 py-16 text-center">'
+        tbody.innerHTML = '<tr><td colspan="11" class="px-6 py-16 text-center">'
             + '<p class="text-gray-600 font-semibold">Tidak ada data ditemukan</p>'
             + '<p class="text-gray-500 text-sm">' + (searchQuery ? 'Coba kata kunci lain' : 'Klik "Add Request" untuk memulai') + '</p>'
             + '</td></tr>';
@@ -307,10 +330,11 @@ function renderTable(items) {
              + '<td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">' + (esc(r.tanggal_pengajuan) || '-') + '</td>'
              + '<td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap"><span class="font-semibold">' + esc(r.group) + '</span> / ' + esc(r.shift) + '</td>'
              + '<td class="px-4 py-3 text-sm font-mono text-gray-900">' + esc(r.part_no) + '</td>'
-             + '<td class="px-4 py-3 text-sm text-gray-800 max-w-xs truncate" title="' + esc(r.nama) + '">' + esc(r.nama) + '</td>'
+             + '<td class="px-4 py-3 text-sm text-gray-800 max-w-xs truncate" title="' + esc(r.process_no) + '">' + esc(r.process_no || '-') + '</td>'
              + '<td class="px-4 py-3"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + katCls + '">' + esc(r.kategori_problem) + '</span></td>'
              + '<td class="px-4 py-3 text-sm text-gray-700 text-center font-medium">' + (r.kekuatan_stock_fg ?? '-') + ' Hari</td>' 
              + '<td class="px-4 py-3 text-sm text-gray-600">' + esc(r.created_by_name || '-') + '</td>'
+             + '<td class="px-4 py-3 text-sm text-gray-600 max-w-xs truncate" title="' + esc(r.pic_names || '-') + '">' + esc(r.pic_names || '-') + '</td>'
              + '<td class="px-4 py-3">' + statusBadge(r.status) + '</td>'
              + '<td class="px-4 py-3"><div class="flex items-center justify-center space-x-1">' + btns + '</div></td>'
              + '</tr>';
@@ -321,46 +345,129 @@ function renderTable(items) {
 // CONFIRM STATUS
 // ════════════════════════════════════════════════════════
 async function confirmStatus(id, newStatus) {
-    if (newStatus === 'on_process') { await confirmToProcess(id); return; }
+    if (newStatus === 'on_process') { await openSelectPicModal(id); return; }
     if (newStatus === 'on_trial')   { await openAdditionalInfoModal(id); return; }
     if (newStatus === 'closed')     { await openClosedInfoModal(id);     return; }
 }
 
 // ════════════════════════════════════════════════════════
-// CONFIRM TO ON PROCESS (Open → On Process)
+// SELECT PIC MODAL — open (Open → On Process)
 // ════════════════════════════════════════════════════════
-async function confirmToProcess(id) {
-    const result = await Swal.fire({
-        title: 'Proses request ini?',
-        text: 'Status akan berubah dari Open menjadi On Process.',
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#000',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Ya, Proses!',
-        cancelButtonText: 'Batal',
+async function openSelectPicModal(id) {
+    _selectPicId = id;
+
+    // Reset mode ke "Sendiri", sembunyikan pilihan tim
+    document.querySelectorAll('input[name="picMode"]').forEach(r => r.checked = (r.value === 'sendiri'));
+    document.getElementById('selectPicTeamWrapper').classList.add('hidden');
+    const errEl = document.getElementById('errorSelectPicTeam');
+    errEl.textContent = ''; errEl.classList.add('hidden');
+
+    waitForJQuery(function () {
+        try { $('#selectPicTeamSelect').val(null).trigger('change'); } catch (e) {}
     });
-    if (!result.isConfirmed) return;
+
+    const btn = document.getElementById('submitSelectPicBtn');
+    btn.disabled = false;
+    btn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Proses Request</span>';
+
+    const modal   = document.getElementById('selectPicModal');
+    const content = document.getElementById('selectPicContent');
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+    }));
 
     try {
-        const res = await fetch('/request-repairs/' + id + '/status', {
+        const res    = await fetch('/request-repairs/' + id);
+        const result = await res.json();
+        if (result.success) document.getElementById('selectPicNo').textContent = result.data.no || '';
+    } catch (e) { /* no-op */ }
+}
+
+function closeSelectPicModal() {
+    const modal = document.getElementById('selectPicModal'), content = document.getElementById('selectPicContent');
+    content.classList.remove('scale-100', 'opacity-100'); content.classList.add('scale-95', 'opacity-0');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+function handleSelectPicBackdrop(e) {
+    if (e.target === document.getElementById('selectPicModal')) closeSelectPicModal();
+}
+
+// ════════════════════════════════════════════════════════
+// SELECT2 PIC CANDIDATES (role_id 1 & 7)
+// ════════════════════════════════════════════════════════
+function initPicSelect2() {
+    waitForJQuery(function () {
+        try { $('#selectPicTeamSelect').select2('destroy'); } catch (e) {}
+        $('#selectPicTeamSelect').select2({
+            placeholder: 'Cari nama / NIK...',
+            allowClear: true,
+            width: '100%',
+            multiple: true,
+            minimumInputLength: 0,
+            dropdownParent: $('#selectPicModal'),
+            ajax: {
+                url: '/request-repairs/pic-candidates',
+                dataType: 'json',
+                delay: 250,
+                data: function (p) { return { q: p.term || '' }; },
+                processResults: function (d) { return { results: d.results }; },
+                cache: true,
+            },
+        });
+    });
+}
+
+// ════════════════════════════════════════════════════════
+// SELECT PIC MODAL — submit
+// ════════════════════════════════════════════════════════
+async function submitSelectPic() {
+    const mode = document.querySelector('input[name="picMode"]:checked')?.value || 'sendiri';
+    const errEl = document.getElementById('errorSelectPicTeam');
+    errEl.textContent = ''; errEl.classList.add('hidden');
+
+    let picUserIds = [AUTH_USER_ID];
+
+    if (mode === 'tim') {
+        waitForJQuery(function () {}); // pastikan select2 sudah siap sebelum dibaca
+        const selected = ($('#selectPicTeamSelect').val() || []).map(v => parseInt(v, 10));
+        if (selected.length === 0) {
+            errEl.textContent = 'Pilih minimal 1 anggota tim, atau pilih mode "Sendiri".';
+            errEl.classList.remove('hidden');
+            return;
+        }
+        picUserIds = Array.from(new Set([AUTH_USER_ID, ...selected]));
+    }
+
+    const btn = document.getElementById('submitSelectPicBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg><span>Memproses...</span>';
+
+    try {
+        const res = await fetch('/request-repairs/' + _selectPicId + '/status', {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                 'Accept': 'application/json',
             },
-            body: JSON.stringify({ status: 'on_process' }),
+            body: JSON.stringify({ status: 'on_process', pic_user_ids: picUserIds }),
         });
         const data = await res.json();
         if (data.success) {
+            closeSelectPicModal();
             await Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, showConfirmButton: false, timer: 1500 });
             loadData();
         } else {
             Swal.fire('Gagal!', data.message || 'Terjadi kesalahan.', 'error');
+            btn.disabled = false;
+            btn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Proses Request</span>';
         }
     } catch (e) {
         Swal.fire('Error!', 'Terjadi kesalahan.', 'error');
+        btn.disabled = false;
+        btn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Proses Request</span>';
     }
 }
 
@@ -859,7 +966,7 @@ async function openDetailModal(id) {
         document.getElementById('detailStroke').textContent     = r.jumlah_stroke ? Number(r.jumlah_stroke).toLocaleString('id-ID') : '-';
         document.getElementById('detailLineMesin').textContent  = r.line_mesin  || '-';
         document.getElementById('detailPartNo').textContent     = r.part_no     || '-';
-        document.getElementById('detailNama').textContent       = r.nama        || '-';
+        document.getElementById('detailNama').textContent       = r.process_no  || '-';
         document.getElementById('detailProcessNo').textContent  = r.process_no  || '-';
         document.getElementById('detailCustomer').textContent   = r.customer    || '-';
         document.getElementById('detailKekuatanStockFg').textContent = r.kekuatan_stock_fg ?? '-';
@@ -998,7 +1105,7 @@ function updateShowingInfo(p) { document.getElementById('showingFrom').textConte
 // ════════════════════════════════════════════════════════
 function esc(str) { if (!str && str !== 0) return ''; const d = document.createElement('div'); d.textContent = String(str); return d.innerHTML; }
 function showLoading(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
-function showEmpty(msg) { document.getElementById('rrTableBody').innerHTML = '<tr><td colspan="10" class="px-6 py-12 text-center text-gray-500">' + msg + '</td></tr>'; }
+function showEmpty(msg) { document.getElementById('rrTableBody').innerHTML = '<tr><td colspan="11" class="px-6 py-12 text-center text-gray-500">' + msg + '</td></tr>'; }
 function modalShow(id) { const el = document.getElementById(id); el.style.display = 'flex'; requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.add('modal-fade-in'); }); }); }
 function modalHide(id) { const el = document.getElementById(id); el.classList.remove('modal-fade-in'); setTimeout(function () { el.style.display = 'none'; }, 300); }
 function clearErrors() { document.querySelectorAll('.error-message').forEach(function (el) { el.textContent = ''; }); }
@@ -1006,7 +1113,7 @@ function displayErrors(errors, prefix) { Object.keys(errors).forEach(function (k
 
 // ESC key
 document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { closeCreateModal(); closeEditModal(); closeDetailModal(); closeAdditionalInfoModal(); closeClosedInfoModal(); }
+    if (e.key === 'Escape') { closeCreateModal(); closeEditModal(); closeDetailModal(); closeSelectPicModal(); closeAdditionalInfoModal(); closeClosedInfoModal(); }
 });
 </script>
 @endpush
