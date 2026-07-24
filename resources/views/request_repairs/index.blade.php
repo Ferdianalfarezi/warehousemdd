@@ -145,6 +145,17 @@ let _durasiTimer        = null;
 let _closedInfoId = null;
 
 // ════════════════════════════════════════════════════════
+// PAUSE REASON LABELS (⬅️ baru)
+// ════════════════════════════════════════════════════════
+const PAUSE_REASON_LABEL = {
+    adjust_dimensi: 'Adjust Dimensi',
+    repair_line:    'Repair di Line',
+    trial:          'Trial',
+    cek_dies:       'Cek Dies',
+    meeting:        'Meeting',
+};
+
+// ════════════════════════════════════════════════════════
 // ICONS
 // ════════════════════════════════════════════════════════
 function makeBtn(onclick, title, bgColor, bgHoverColor, svgPath) {
@@ -176,12 +187,16 @@ const STATUS_CFG = {
     'on_process': { bg: '#dbeafe', color: '#1e40af', label: 'On Process' },
     'on_trial':   { bg: '#fef9c3', color: '#854d0e', label: 'On Trial'   },
     'closed':     { bg: '#dcfce7', color: '#166534', label: 'Closed'     },
+    'paused':     { bg: '#fee2e2', color: '#991b1b', label: 'Paused'     }, // ⬅️ baru — merah, gantiin "On Process" pas lagi di-pause
 };
 
-function statusBadge(status) {
-    const s = STATUS_CFG[status] || { bg: '#f3f4f6', color: '#4b5563', label: status };
-    return '<span style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:9999px;font-size:12px;font-weight:600;background-color:' + s.bg + ';color:' + s.color + ';">'
-         + s.label + '</span>';
+// ⬅️ diubah — terima isPaused & pauseReason, badge status langsung jadi "Paused" (bukan numpuk 2 badge)
+function statusBadge(status, isPaused, pauseReason) {
+    const key   = isPaused ? 'paused' : status;
+    const s     = STATUS_CFG[key] || { bg: '#f3f4f6', color: '#4b5563', label: status };
+    const title = isPaused ? ' title="' + esc(PAUSE_REASON_LABEL[pauseReason] || pauseReason || '') + '"' : '';
+    return '<span' + title + ' style="display:inline-flex;align-items:center;padding:4px 10px;border-radius:9999px;font-size:12px;font-weight:600;background-color:' + s.bg + ';color:' + s.color + ';cursor:' + (isPaused ? 'help' : 'default') + ';">'
+         + s.label + (isPaused ? ' · ' + (PAUSE_REASON_LABEL[pauseReason] || pauseReason) : '') + '</span>';
 }
 
 function okngBadge(val) {
@@ -324,7 +339,11 @@ function renderTable(items) {
                     '<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>');
             }
         var katCls = KATEGORI_BADGE[r.kategori_problem] || 'bg-gray-100 text-gray-700';
-        return '<tr class="hover:bg-gray-50 transition ' + (r.status === 'closed' ? 'opacity-70' : '') + '">'
+
+        // ⬅️ baru — row jadi merah muda kalau lagi paused
+        var rowCls = 'hover:bg-gray-50 transition ' + (r.status === 'closed' ? 'opacity-70' : '') + (r.is_paused ? ' bg-red-50 hover:bg-red-100' : '');
+
+        return '<tr class="' + rowCls + '">'
              + '<td class="px-4 py-3 text-sm text-gray-500">' + r.row_number + '</td>'
              + '<td class="px-4 py-3 text-sm font-mono font-semibold text-gray-900">' + esc(r.no) + '</td>'
              + '<td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">' + (esc(r.tanggal_pengajuan) || '-') + '</td>'
@@ -335,7 +354,7 @@ function renderTable(items) {
              + '<td class="px-4 py-3 text-sm text-gray-700 text-center font-medium">' + (r.kekuatan_stock_fg ?? '-') + ' Hari</td>' 
              + '<td class="px-4 py-3 text-sm text-gray-600">' + esc(r.created_by_name || '-') + '</td>'
              + '<td class="px-4 py-3 text-sm text-gray-600 max-w-xs truncate" title="' + esc(r.pic_names || '-') + '">' + esc(r.pic_names || '-') + '</td>'
-             + '<td class="px-4 py-3">' + statusBadge(r.status) + '</td>'
+             + '<td class="px-4 py-3">' + statusBadge(r.status, r.is_paused, r.pause_reason) + '</td>'
              + '<td class="px-4 py-3"><div class="flex items-center justify-center space-x-1">' + btns + '</div></td>'
              + '</tr>';
     }).join('');
@@ -503,7 +522,11 @@ async function openAdditionalInfoModal(id) {
     document.getElementById('durasiDisplay').textContent = 'Menghitung...';
     const btn = document.getElementById('submitAdditionalInfoBtn');
     btn.disabled = false;
+    btn.classList.remove('opacity-50', 'cursor-not-allowed');
     btn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Konfirmasi On Trial</span>';
+
+    // ⬅️ baru — reset UI pause/resume ke kondisi netral setiap buka modal
+    resetPauseUI();
 
     const modal   = document.getElementById('additionalInfoModal');
     const content = document.getElementById('additionalInfoContent');
@@ -517,13 +540,9 @@ async function openAdditionalInfoModal(id) {
         const res    = await fetch('/request-repairs/' + id);
         const result = await res.json();
         if (result.success) document.getElementById('additionalInfoNo').textContent = result.data.no || '';
-        const dRes  = await fetch('/request-repairs/' + id + '/durasi');
-        const dData = await dRes.json();
-        if (dData.success) {
-            _durasiStartSeconds = dData.seconds;
-            _durasiStartTime    = Date.now();
-            startDurasiTimer();
-        }
+
+        // ⬅️ diubah — pakai applyDurasiState() biar status paused ke-handle otomatis
+        await refreshDurasiState();
     } catch (e) {
         document.getElementById('durasiDisplay').textContent = '—';
     }
@@ -558,6 +577,10 @@ function formatDurasiJS(seconds) {
 // ADDITIONAL INFO MODAL — submit
 // ════════════════════════════════════════════════════════
 async function submitAdditionalInfo() {
+    // ⬅️ baru — guard tambahan di frontend, backend juga sudah menolak ini
+    const submitBtnCheck = document.getElementById('submitAdditionalInfoBtn');
+    if (submitBtnCheck && submitBtnCheck.disabled) return;
+
     ['AnalisaPenyebab', 'TindakanPerbaikan', 'CatatanSparepart'].forEach(k => {
         const el = document.getElementById('errorAdditional' + k);
         if (el) { el.textContent = ''; el.classList.add('hidden'); }
@@ -659,11 +682,12 @@ function handleAdditionalInfoBackdrop(e) {
 async function openClosedInfoModal(id) {
     _closedInfoId = id;
 
-    // Reset Hasil Akhir (⬅️ baru)
+    // Reset Hasil Akhir
     document.querySelectorAll('input[name="closedHasilAkhir"]').forEach(r => r.checked = false);
     const errHasilAkhir = document.getElementById('errorClosedHasilAkhir');
     errHasilAkhir.textContent = ''; errHasilAkhir.classList.add('hidden');
-    document.getElementById('hasilAkhirNgWarning').classList.add('hidden');
+    const ngWarning = document.getElementById('hasilAkhirNgWarning');
+    if (ngWarning) ngWarning.classList.add('hidden');
 
     // Reset section 1 — Monitoring Dies Temporary
     document.getElementById('closedTanggalCek').value    = '';
@@ -717,6 +741,7 @@ async function submitClosedInfo() {
         return;
     }
 
+    // Section 1 — Monitoring Dies Temporary
     const tanggalCek       = document.getElementById('closedTanggalCek').value;
     const lotProd          = document.getElementById('closedLotProd').value.trim();
     const awal             = document.querySelector('input[name="closedAwal"]:checked')?.value || '';
@@ -744,7 +769,7 @@ async function submitClosedInfo() {
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
             body: JSON.stringify({
                 status: 'closed',
-                hasil_akhir: hasilAkhir, 
+                hasil_akhir: hasilAkhir,
                 // Section 1
                 tanggal_cek:       tanggalCek      || null,
                 lot_prod:          lotProd         || null,
@@ -909,7 +934,7 @@ async function openEditModal(id) {
         document.getElementById('editKategori').value        = r.kategori_problem;
         document.getElementById('editKekuatanStockFg').value = r.kekuatan_stock_fg ?? '';
         document.getElementById('editDetailProyek').value    = r.detail_proyek || '';
-        document.getElementById('editStatusBadge').innerHTML = statusBadge(r.status);
+        document.getElementById('editStatusBadge').innerHTML = statusBadge(r.status, r.is_paused, r.pause_reason);
         document.getElementById('editProcessNoInput').classList.add('hidden');
         document.getElementById('editProcessNoSelect').classList.remove('hidden');
         document.getElementById('editProcessNoToggleBtn').textContent = 'Manual';
@@ -987,7 +1012,7 @@ async function openDetailModal(id) {
         document.getElementById('detailCustomer').textContent   = r.customer    || '-';
         document.getElementById('detailKekuatanStockFg').textContent = r.kekuatan_stock_fg ?? '-';
         document.getElementById('detailProyek').textContent     = r.detail_proyek || '-';
-        document.getElementById('detailStatus').innerHTML       = statusBadge(r.status);
+        document.getElementById('detailStatus').innerHTML       = statusBadge(r.status, r.is_paused, r.pause_reason);
         document.getElementById('detailJenis').innerHTML        = '<span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + (JENIS_BADGE[r.jenis] || 'bg-gray-100 text-gray-700') + '">' + esc(r.jenis) + '</span>';
         document.getElementById('detailKategori').innerHTML     = '<span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + (KATEGORI_BADGE[r.kategori_problem] || 'bg-gray-100 text-gray-700') + '">' + esc(r.kategori_problem) + '</span>';
         

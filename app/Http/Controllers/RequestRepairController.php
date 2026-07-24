@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\RequestRepair;
 use App\Models\RequestRepairHistory;
 use App\Models\RequestRepairAttempt;
+use App\Models\RequestRepairPause;
 use App\Models\Barang;
 use App\Models\DiesDetail;
 use App\Models\Line;
@@ -91,15 +92,17 @@ class RequestRepairController extends Controller
                 'created_by_name'   => $rr->creator->nama ?? '-',
                 'pic_names'         => $rr->picNamesString(),
                 'status'            => $rr->status,
-                'ng_attempt_count'  => $rr->ng_attempt_count, // ⬅️ baru
+                'ng_attempt_count'  => $rr->ng_attempt_count,
+                'is_paused'         => $rr->is_paused,      // ⬅️ baru
+                'pause_reason'      => $rr->pause_reason,   // ⬅️ baru
                 'can_edit'          => $rr->isEditable(),
                 'can_delete'        => $rr->isEditable(),
                 'can_to_process'    => $rr->canConfirmToProcess()
                                         && in_array($userRoleId, RequestRepair::ROLES_TO_ON_PROCESS),
-                // ⬅️ diubah: bukan lagi cuma cek role, tapi cek PIC / admin override
                 'can_to_on_trial'   => $rr->canUserConfirmToOnTrial($authUser),
                 'can_to_closed'     => $rr->canConfirmToClosed()
                                         && in_array($userRoleId, RequestRepair::ROLES_TO_CLOSED),
+                'can_pause'         => $rr->canUserPause($authUser), // ⬅️ baru — sama gate-nya dgn can_to_on_trial
             ];
         });
 
@@ -159,17 +162,149 @@ class RequestRepairController extends Controller
     }
 
     // ── AJAX: get durasi realtime ────────────────────────────
+    // ⬅️ diubah — kalau lagi paused, freeze di titik paused_at & dikurangi total_paused_seconds
     public function getDurasi(RequestRepair $requestRepair)
     {
-        $start   = $requestRepair->on_process_at ?? $requestRepair->created_at;
-        $seconds = $start ? (int) $start->diffInSeconds(now()) : 0;
+        $start = $requestRepair->on_process_at ?? $requestRepair->created_at;
+        $end   = $requestRepair->is_paused ? ($requestRepair->paused_at ?? now()) : now();
+
+        $rawSeconds = $start ? (int) $start->diffInSeconds($end) : 0;
+        $seconds    = max(0, $rawSeconds - $requestRepair->total_paused_seconds);
 
         return response()->json([
             'success'          => true,
+            'is_paused'        => $requestRepair->is_paused,
+            'pause_reason'     => $requestRepair->pause_reason,
             'seconds'          => $seconds,
             'durasi_formatted' => RequestRepair::formatDurasi($seconds),
             'started_at'       => $start?->toISOString(),
         ]);
+    }
+
+    // ── AJAX: pause on_process (⬅️ baru) ─────────────────────
+    public function pause(Request $request, RequestRepair $requestRepair)
+    {
+        $authUser = auth()->user();
+
+        if ($requestRepair->status !== RequestRepair::STATUS_ON_PROCESS) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Pause hanya bisa dilakukan saat status On Process.',
+            ], 422);
+        }
+        if ($requestRepair->is_paused) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data ini sudah dalam status Paused.',
+            ], 422);
+        }
+
+        $requestRepair->loadMissing('pics:id,nama');
+        if (!$requestRepair->canUserPause($authUser)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya PIC (' . $requestRepair->picNamesString() . ') atau Admin yang bisa melakukan pause.',
+            ], 403);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'alasan' => 'required|in:' . implode(',', array_keys(RequestRepairPause::ALASAN_LABELS)),
+        ], [
+            'alasan.required' => 'Pilih alasan pause terlebih dahulu.',
+            'alasan.in'       => 'Alasan pause tidak valid.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
+        }
+
+        DB::beginTransaction();
+        try {
+            $now = now();
+
+            RequestRepairPause::create([
+                'request_repair_id' => $requestRepair->id,
+                'no'                => $requestRepair->no,
+                'cycle_number'      => $requestRepair->cycle_number,
+                'alasan'            => $request->alasan,
+                'paused_at'         => $now,
+                'paused_by'         => $authUser->id,
+            ]);
+
+            $requestRepair->update([
+                'is_paused'    => true,
+                'paused_at'    => $now,
+                'pause_reason' => $request->alasan,
+            ]);
+
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => 'Repair berhasil di-pause: ' . (RequestRepairPause::ALASAN_LABELS[$request->alasan] ?? $request->alasan) . '.',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('RequestRepair Pause Error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
+        }
+    }
+
+    // ── AJAX: resume dari pause (⬅️ baru) ────────────────────
+    public function resume(RequestRepair $requestRepair)
+    {
+        $authUser = auth()->user();
+
+        if (!$requestRepair->is_paused) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data ini tidak sedang di-pause.',
+            ], 422);
+        }
+
+        $requestRepair->loadMissing('pics:id,nama');
+        if (!$requestRepair->canUserPause($authUser)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Hanya PIC (' . $requestRepair->picNamesString() . ') atau Admin yang bisa melakukan resume.',
+            ], 403);
+        }
+
+        DB::beginTransaction();
+        try {
+            $now = now();
+
+            $pause = RequestRepairPause::where('request_repair_id', $requestRepair->id)
+                ->where('cycle_number', $requestRepair->cycle_number)
+                ->whereNull('resumed_at')
+                ->latest('paused_at')
+                ->first();
+
+            $durasiPaused = 0;
+            if ($pause) {
+                $durasiPaused = (int) $pause->paused_at->diffInSeconds($now);
+                $pause->update([
+                    'resumed_at'            => $now,
+                    'durasi_paused_seconds' => $durasiPaused,
+                ]);
+            }
+
+            $requestRepair->update([
+                'is_paused'            => false,
+                'paused_at'            => null,
+                'pause_reason'         => null,
+                'total_paused_seconds' => $requestRepair->total_paused_seconds + $durasiPaused,
+            ]);
+
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => 'Repair dilanjutkan kembali.',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('RequestRepair Resume Error', ['error' => $e->getMessage()]);
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
+        }
     }
 
     // ── AJAX: kandidat PIC (role_id 1 & 7) ───────────────────
@@ -243,6 +378,7 @@ class RequestRepairController extends Controller
                 'created_by'        => auth()->id(),
                 'status'            => RequestRepair::STATUS_OPEN,
                 // on_process_at TIDAK diisi di sini — diisi saat dikonfirmasi ke On Process
+                // cycle_number pakai default DB (1)
             ]);
 
             DB::commit();
@@ -414,6 +550,14 @@ class RequestRepairController extends Controller
                 ], 422);
             }
 
+            // ⬅️ baru — wajib resume dulu sebelum bisa konfirmasi ke On Trial
+            if ($requestRepair->is_paused) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data ini sedang di-pause (' . (RequestRepairPause::ALASAN_LABELS[$requestRepair->pause_reason] ?? $requestRepair->pause_reason) . '). Resume terlebih dahulu sebelum konfirmasi ke On Trial.',
+                ], 422);
+            }
+
             $requestRepair->loadMissing('pics:id,nama');
 
             if (!$requestRepair->canUserConfirmToOnTrial($authUser)) {
@@ -472,8 +616,8 @@ class RequestRepairController extends Controller
         // ════════════════════════════════════════════════════
         // CLOSED → tergantung Hasil Akhir (OK / NG)
         // Bebas role (1, 8, 4), TIDAK terikat PIC — ini approval/verifikasi
-        //   - OK  → pindah ke history, hard delete dari request_repairs (flow lama)
-        //   - NG  → snapshot ke request_repair_attempts, reset & balik ke Open (⬅️ baru)
+        //   - OK  → pindah ke history, hard delete dari request_repairs
+        //   - NG  → snapshot ke request_repair_attempts, reset & balik ke Open
         // ════════════════════════════════════════════════════
         } elseif ($newStatus === RequestRepair::STATUS_CLOSED) {
 
@@ -491,7 +635,7 @@ class RequestRepairController extends Controller
             }
 
             $validator = Validator::make($request->all(), [
-                'hasil_akhir'       => 'required|in:OK,NG', // ⬅️ baru — trigger keputusan flow OK/NG
+                'hasil_akhir'       => 'required|in:OK,NG',
                 'tanggal_cek'       => 'nullable|date',
                 'lot_prod'          => 'nullable|string|max:255',
                 'awal'              => 'nullable|in:OK,NG',
@@ -514,7 +658,6 @@ class RequestRepairController extends Controller
                 return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
             }
 
-            // Snapshot nama PIC sebelum kemungkinan di-detach / record dihapus
             $requestRepair->loadMissing('pics:id,nama');
             $picNamesSnapshot = $requestRepair->picNamesString();
             $now = now();
@@ -530,12 +673,12 @@ class RequestRepairController extends Controller
                     $durasiOnTrialSeconds   = null;
 
                     if ($requestRepair->on_process_at && $requestRepair->on_trial_at) {
-                        $durasiOnProcessSeconds = (int) $requestRepair->on_process_at
-                            ->diffInSeconds($requestRepair->on_trial_at);
+                        // ⬅️ diubah — dikurangi total_paused_seconds biar durasi murni waktu kerja aktif
+                        $rawOnProcess = (int) $requestRepair->on_process_at->diffInSeconds($requestRepair->on_trial_at);
+                        $durasiOnProcessSeconds = max(0, $rawOnProcess - $requestRepair->total_paused_seconds);
                     }
                     if ($requestRepair->on_trial_at) {
-                        $durasiOnTrialSeconds = (int) $requestRepair->on_trial_at
-                            ->diffInSeconds($now);
+                        $durasiOnTrialSeconds = (int) $requestRepair->on_trial_at->diffInSeconds($now);
                     }
 
                     RequestRepairAttempt::create([
@@ -570,7 +713,7 @@ class RequestRepairController extends Controller
                         'plan_permanen'                  => $request->plan_permanen,
                         'actual_permanen'                => $request->actual_permanen,
                         'rootcause'                      => $request->rootcause,
-                        'recovery'                       => $request->recovery,
+                        'recovery'                        => $request->recovery,
                         'assy_trial_check'                => $request->assy_trial_check,
                         'judge_permanen'                 => $request->judge_permanen,
                         'on_process_at'                  => $requestRepair->on_process_at,
@@ -579,6 +722,8 @@ class RequestRepairController extends Controller
                         'durasi_on_process_seconds'      => $durasiOnProcessSeconds,
                         'durasi_on_trial_seconds'        => $durasiOnTrialSeconds,
                         'judged_by'                      => $authUser->id,
+                        'total_paused_seconds'           => $requestRepair->total_paused_seconds, // ⬅️ baru
+                        'cycle_number'                    => $requestRepair->cycle_number,          // ⬅️ baru
                     ]);
 
                     // Reset request_repair ke kondisi awal biar bisa dikerjakan ulang dari Open
@@ -601,6 +746,12 @@ class RequestRepairController extends Controller
                         'actual'                         => null,
                         'remark'                         => null,
                         'judge'                          => null,
+                        // ⬅️ baru — reset state pause & mulai siklus baru
+                        'is_paused'                      => false,
+                        'paused_at'                       => null,
+                        'pause_reason'                    => null,
+                        'total_paused_seconds'            => 0,
+                        'cycle_number'                     => $requestRepair->cycle_number + 1,
                     ]);
 
                     // PIC lama sudah kesimpen di snapshot attempt (pic_names),
@@ -632,16 +783,17 @@ class RequestRepairController extends Controller
                 $durasiTotalSeconds     = null;
 
                 if ($requestRepair->on_process_at && $requestRepair->on_trial_at) {
-                    $durasiOnProcessSeconds = (int) $requestRepair->on_process_at
-                        ->diffInSeconds($requestRepair->on_trial_at);
+                    // ⬅️ diubah — dikurangi total_paused_seconds
+                    $rawOnProcess = (int) $requestRepair->on_process_at->diffInSeconds($requestRepair->on_trial_at);
+                    $durasiOnProcessSeconds = max(0, $rawOnProcess - $requestRepair->total_paused_seconds);
                 }
                 if ($requestRepair->on_trial_at) {
-                    $durasiOnTrialSeconds = (int) $requestRepair->on_trial_at
-                        ->diffInSeconds($closedAt);
+                    $durasiOnTrialSeconds = (int) $requestRepair->on_trial_at->diffInSeconds($closedAt);
                 }
                 if ($requestRepair->on_process_at) {
-                    $durasiTotalSeconds = (int) $requestRepair->on_process_at
-                        ->diffInSeconds($closedAt);
+                    // ⬅️ diubah — total durasi juga dikurangi waktu pause (pause hanya terjadi di fase on_process)
+                    $rawTotal = (int) $requestRepair->on_process_at->diffInSeconds($closedAt);
+                    $durasiTotalSeconds = max(0, $rawTotal - $requestRepair->total_paused_seconds);
                 }
 
                 $repairCount = RequestRepairHistory::where('part_no', $requestRepair->part_no)->count() + 1;
@@ -700,10 +852,12 @@ class RequestRepairController extends Controller
                     'durasi_on_trial_seconds'       => $durasiOnTrialSeconds,
                     'durasi_total_seconds'          => $durasiTotalSeconds,
                     'repair_count'                  => $repairCount,
-                    'ng_attempt_count'               => $requestRepair->ng_attempt_count, // ⬅️ baru — bawa histori jumlah NG sebelum akhirnya OK
+                    'ng_attempt_count'               => $requestRepair->ng_attempt_count,
+                    'total_paused_seconds'           => $requestRepair->total_paused_seconds, // ⬅️ baru
+                    'cycle_number'                    => $requestRepair->cycle_number,          // ⬅️ baru
                 ]);
 
-                $requestRepair->delete(); // pivot pics ikut kehapus otomatis lewat cascadeOnDelete di migration
+                $requestRepair->delete(); // pivot pics & pauses ikut kehapus otomatis lewat cascadeOnDelete di migration
 
                 DB::commit();
                 return response()->json([

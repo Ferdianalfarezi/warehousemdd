@@ -179,7 +179,9 @@ Route::middleware('auth')->group(function () {
         Route::put('{requestRepair}',            [RequestRepairController::class, 'update'])->name('update');
         Route::patch('{requestRepair}/status',   [RequestRepairController::class, 'updateStatus'])->name('update-status');
         Route::delete('{requestRepair}',         [RequestRepairController::class, 'destroy'])->name('destroy');
-    });
+        Route::patch('{requestRepair}/pause',    [RequestRepairController::class, 'pause'])->name('pause')   ;
+        Route::patch('{requestRepair}/resume',   [RequestRepairController::class, 'resume']);
+        });
 
     // ── History Repair ─────────────────────────────────────────────────────
     Route::prefix('history-repairs')->name('history-repairs.')->group(function () {

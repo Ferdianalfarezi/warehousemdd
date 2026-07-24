@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\RequestRepairHistory;
 use App\Models\RequestRepairAttempt;
+use App\Models\RequestRepairPause;
 use Illuminate\Http\Request;
 
 class HistoryRepairController extends Controller
@@ -95,7 +96,7 @@ class HistoryRepairController extends Controller
                 'judge_monitoring'  => $h->judge_monitoring,
                 'judge_permanen'    => $h->judge_permanen,
                 'repair_count'      => $h->repair_count,
-                'ng_attempt_count'  => $h->ng_attempt_count, // ⬅️ baru — berapa kali NG sebelum akhirnya closed OK
+                'ng_attempt_count'  => $h->ng_attempt_count,
                 'durasi_total'      => RequestRepairHistory::formatDurasi($h->durasi_total_seconds),
             ];
         });
@@ -138,7 +139,6 @@ class HistoryRepairController extends Controller
             ->get();
 
         // ── Ambil semua riwayat percobaan NG (attempts) untuk kumpulan 'no' yang relevan ──
-        // ⬅️ baru — 1x query untuk semua record, di-group per 'no' biar efisien
         $noList = $historyRecords->pluck('no')->unique()->values();
 
         $attemptsByNo = RequestRepairAttempt::whereIn('no', $noList)
@@ -147,13 +147,26 @@ class HistoryRepairController extends Controller
             ->get()
             ->groupBy('no');
 
-        $records = $historyRecords->map(function ($h) use ($attemptsByNo) {
+        // ── Ambil semua sesi pause untuk kumpulan 'no' yang relevan (⬅️ baru) ──
+        // Di-group 2 level: [no][cycle_number] biar bisa dipetain persis ke siklus yang mana
+        // (siklus yang berhasil closed OK, atau siklus attempt yang gagal NG).
+        $pausesByNoCycle = RequestRepairPause::whereIn('no', $noList)
+            ->with('pausedBy:id,nama')
+            ->orderBy('paused_at')
+            ->get()
+            ->groupBy(['no', 'cycle_number']);
 
-            // Snapshot riwayat percobaan NG untuk 'no' repair ini (⬅️ baru)
-            $ngAttempts = ($attemptsByNo->get($h->no) ?? collect())->map(function ($a) {
+        $records = $historyRecords->map(function ($h) use ($attemptsByNo, $pausesByNoCycle) {
+
+            // Snapshot riwayat percobaan NG untuk 'no' repair ini
+            $ngAttempts = ($attemptsByNo->get($h->no) ?? collect())->map(function ($a) use ($pausesByNoCycle) {
+                $pauseSessions = ($pausesByNoCycle->get($a->no)[$a->cycle_number] ?? collect())
+                    ->map(fn ($p) => $this->mapPauseSession($p))
+                    ->values();
+
                 return [
                     'attempt_number'                 => $a->attempt_number,
-                    'pic_names'                       => $a->pic_names, // ⬅️ siapa yang nanganin percobaan ini
+                    'pic_names'                       => $a->pic_names,
                     'analisa_penyebab'               => $a->analisa_penyebab,
                     'tindakan_perbaikan'             => $a->tindakan_perbaikan,
                     'catatan_penggantian_sparepart'  => $a->catatan_penggantian_sparepart,
@@ -163,11 +176,19 @@ class HistoryRepairController extends Controller
                     'rootcause'                       => $a->rootcause,
                     'recovery'                        => $a->recovery,
                     'ng_judged_at'                    => $a->ng_judged_at?->format('d M Y, H:i'),
-                    'judged_by_name'                  => $a->judgedBy->nama ?? '-', // ⬅️ siapa yang mutusin NG
+                    'judged_by_name'                  => $a->judgedBy->nama ?? '-',
                     'durasi_on_process'               => RequestRepairHistory::formatDurasi($a->durasi_on_process_seconds),
                     'durasi_on_trial'                 => RequestRepairHistory::formatDurasi($a->durasi_on_trial_seconds),
+                    'total_paused_seconds'            => $a->total_paused_seconds, // ⬅️ baru
+                    'total_paused'                     => RequestRepairHistory::formatDurasi($a->total_paused_seconds), // ⬅️ baru
+                    'pause_sessions'                   => $pauseSessions, // ⬅️ baru
                 ];
             })->values();
+
+            // Sesi pause untuk siklus yang berhasil closed OK (⬅️ baru)
+            $pauseSessionsMain = ($pausesByNoCycle->get($h->no)[$h->cycle_number] ?? collect())
+                ->map(fn ($p) => $this->mapPauseSession($p))
+                ->values();
 
             return [
                 'id'                  => $h->id,
@@ -229,10 +250,15 @@ class HistoryRepairController extends Controller
                 'durasi_total' => RequestRepairHistory::formatDurasi($h->durasi_total_seconds),
                 'timeline'     => $h->getTimelineData(),
 
-                // ── Riwayat percobaan NG sebelum akhirnya OK (⬅️ baru)
-                'pic_names'        => $h->pic_names,        // PIC yang berhasil nanganin sampai closed OK
-                'ng_attempt_count' => $h->ng_attempt_count, // total percobaan gagal untuk repair (no) ini
-                'ng_attempts'      => $ngAttempts,          // detail tiap percobaan NG-nya
+                // ── Riwayat percobaan NG sebelum akhirnya OK
+                'pic_names'        => $h->pic_names,
+                'ng_attempt_count' => $h->ng_attempt_count,
+                'ng_attempts'      => $ngAttempts,
+
+                // ── Riwayat Pause untuk siklus yang berhasil closed OK ini (⬅️ baru)
+                'total_paused_seconds' => $h->total_paused_seconds,
+                'total_paused'          => RequestRepairHistory::formatDurasi($h->total_paused_seconds),
+                'pause_sessions'        => $pauseSessionsMain,
             ];
         });
 
@@ -241,6 +267,21 @@ class HistoryRepairController extends Controller
             'summary' => $summary,
             'records' => $records,
         ]);
+    }
+
+    // ── Helper: format 1 sesi pause untuk output JSON (⬅️ baru) ──
+    private function mapPauseSession(RequestRepairPause $p): array
+    {
+        return [
+            'alasan'       => $p->alasan,
+            'alasan_label' => $p->alasan_label,
+            'paused_at'    => $p->paused_at?->format('d M Y, H:i'),
+            'resumed_at'   => $p->resumed_at?->format('d M Y, H:i') ?? '-',
+            'durasi'       => $p->durasi_paused_seconds !== null
+                                ? RequestRepairHistory::formatDurasi($p->durasi_paused_seconds)
+                                : '-',
+            'paused_by_name' => $p->pausedBy->nama ?? '-',
+        ];
     }
 
         public function print(RequestRepairHistory $historyRepair)

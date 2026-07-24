@@ -41,39 +41,50 @@ class RequestRepair extends Model
         'standart_burry',
         'group_leader',
         'operator',
-        'ng_attempt_count',
         // On Trial — Section 3: Target Trial After Repair
         'plan',
         'actual',
         'remark',
         'judge',
-        'line_id',    // ⬅️ baru
+        'line_id',
         'line_mesin',
         // Status timestamps
         'on_process_at',
         'on_trial_at',
+        // NG attempt tracking
+        'ng_attempt_count',
+        // Pause/Resume tracking (⬅️ baru)
+        'is_paused',
+        'paused_at',
+        'pause_reason',
+        'total_paused_seconds',
+        'cycle_number',
     ];
 
     protected $casts = [
-        'tanggal_pengajuan' => 'date',
-        'jumlah_stroke'     => 'integer',
-        'kekuatan_stock_fg'  => 'integer',
-        'on_process_at'     => 'datetime',
-        'on_trial_at'       => 'datetime',
-        'ng_attempt_count' => 'integer',
+        'tanggal_pengajuan'    => 'date',
+        'jumlah_stroke'        => 'integer',
+        'kekuatan_stock_fg'    => 'integer',
+        'on_process_at'        => 'datetime',
+        'on_trial_at'          => 'datetime',
+        'ng_attempt_count'     => 'integer',
+        'is_paused'            => 'boolean',   // ⬅️ baru
+        'paused_at'            => 'datetime',  // ⬅️ baru
+        'total_paused_seconds' => 'integer',   // ⬅️ baru
+        'cycle_number'         => 'integer',   // ⬅️ baru
     ];
 
     // ── Constants ───────────────────────────────────────────
-    const STATUS_OPEN       = 'open';       // ⬅️ baru
+    const STATUS_OPEN       = 'open';
     const STATUS_ON_PROCESS = 'on_process';
     const STATUS_ON_TRIAL   = 'on_trial';
     const STATUS_CLOSED     = 'closed';
 
-    const ROLES_TO_ON_PROCESS = [1, 7];       // ⬅️ diubah dari [1, 2, 3, 7]
-    const ROLES_TO_ON_TRIAL   = [1, 2, 3, 7]; // ⬅️ sudah tidak dipakai untuk gate on_trial (digantikan PIC + admin override), dibiarkan untuk referensi
-    const ROLES_TO_CLOSED     = [1, 8, 4];    // ⬅️ diubah dari [1, 4]
+    const ROLES_TO_ON_PROCESS = [1, 7];
+    const ROLES_TO_ON_TRIAL   = [1, 2, 3, 7]; // sudah tidak dipakai untuk gate on_trial (digantikan PIC + admin override), dibiarkan untuk referensi
+    const ROLES_TO_CLOSED     = [1, 8, 4];
 
-    const ROLE_ADMIN_OVERRIDE = 1; // ⬅️ baru — role yang bisa override PIC di transisi on_process -> on_trial
+    const ROLE_ADMIN_OVERRIDE = 1; // role yang bisa override PIC di transisi on_process -> on_trial, dan pause/resume
 
     // ── Relations ───────────────────────────────────────────
     public function barang()
@@ -81,26 +92,30 @@ class RequestRepair extends Model
         return $this->belongsTo(Barang::class);
     }
 
-    public function attempts()
-    {
-        return $this->hasMany(RequestRepairAttempt::class);
-    }
-
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function line() // ⬅️ baru
+    public function line()
     {
         return $this->belongsTo(Line::class);
     }
 
-    // ⬅️ baru — daftar user yang jadi PIC (ditentukan saat Open -> On Process)
     public function pics()
     {
         return $this->belongsToMany(User::class, 'request_repair_pics', 'request_repair_id', 'user_id')
             ->withTimestamps();
+    }
+
+    public function attempts() // ⬅️ baru — riwayat percobaan yang berakhir NG
+    {
+        return $this->hasMany(RequestRepairAttempt::class);
+    }
+
+    public function pauses() // ⬅️ baru — log pause/resume
+    {
+        return $this->hasMany(RequestRepairPause::class);
     }
 
     // ── Accessor gambar_url ─────────────────────────────────
@@ -112,10 +127,10 @@ class RequestRepair extends Model
     // ── Helpers ─────────────────────────────────────────────
     public function isEditable(): bool
     {
-        return $this->status === self::STATUS_OPEN; // ⬅️ diubah, dulu on_process
+        return $this->status === self::STATUS_OPEN;
     }
 
-    public function canConfirmToProcess(): bool // ⬅️ baru
+    public function canConfirmToProcess(): bool
     {
         return $this->status === self::STATUS_OPEN;
     }
@@ -134,7 +149,7 @@ class RequestRepair extends Model
      * Cek apakah user tertentu tercatat sebagai salah satu PIC request repair ini.
      * Pakai collection yang sudah di-eager-load kalau ada (hindari N+1 query di list).
      */
-    public function isPic(int $userId): bool // ⬅️ baru
+    public function isPic(int $userId): bool
     {
         if ($this->relationLoaded('pics')) {
             return $this->pics->contains('id', $userId);
@@ -146,16 +161,26 @@ class RequestRepair extends Model
      * Aturan konfirmasi On Process -> On Trial:
      * harus salah satu PIC yang dipilih waktu On Process, ATAU role admin override (role_id 1).
      */
-    public function canUserConfirmToOnTrial(User $user): bool // ⬅️ baru
+    public function canUserConfirmToOnTrial(User $user): bool
     {
         return $this->canConfirmToOnTrial()
             && ($user->role_id === self::ROLE_ADMIN_OVERRIDE || $this->isPic($user->id));
     }
 
     /**
+     * ⬅️ baru — Aturan Pause/Resume: sama seperti konfirmasi On Trial —
+     * harus PIC yang tercatat ATAU admin override (role_id 1), dan status masih On Process.
+     */
+    public function canUserPause(User $user): bool
+    {
+        return $this->status === self::STATUS_ON_PROCESS
+            && ($user->role_id === self::ROLE_ADMIN_OVERRIDE || $this->isPic($user->id));
+    }
+
+    /**
      * Nama-nama PIC, digabung koma. Dipakai untuk badge tabel & pesan error.
      */
-    public function picNamesString(): string // ⬅️ baru
+    public function picNamesString(): string
     {
         $names = $this->relationLoaded('pics')
             ? $this->pics->pluck('nama')
@@ -169,7 +194,7 @@ class RequestRepair extends Model
     {
         $start = $this->on_process_at ?? $this->created_at;
         $end   = $this->on_trial_at ?? now();
-        return $start ? (int) $start->diffInSeconds($end) : null;
+        return $start ? max(0, (int) $start->diffInSeconds($end) - $this->total_paused_seconds) : null;
     }
 
     public function getDurasiOnTrialSeconds(): ?int
@@ -181,7 +206,7 @@ class RequestRepair extends Model
     public function getDurasiTotalSeconds(): ?int
     {
         $start = $this->on_process_at ?? $this->created_at;
-        return $start ? (int) $start->diffInSeconds(now()) : null;
+        return $start ? max(0, (int) $start->diffInSeconds(now()) - $this->total_paused_seconds) : null;
     }
 
     public static function formatDurasi(int $seconds): string
@@ -207,11 +232,11 @@ class RequestRepair extends Model
         $start = $this->on_process_at ?? $this->created_at;
 
         $onProcessSec = $this->on_trial_at && $start
-            ? (int) $start->diffInSeconds($this->on_trial_at)
+            ? max(0, (int) $start->diffInSeconds($this->on_trial_at) - $this->total_paused_seconds)
             : null;
 
         return [
-            'on_process_at'             => $this->on_process_at?->toISOString(), // ⬅️ diubah, jangan fallback ke created_at biar keliatan kapan mulai diproses beneran
+            'on_process_at'             => $this->on_process_at?->toISOString(),
             'on_trial_at'               => $this->on_trial_at?->toISOString(),
             'closed_at'                 => null,
             'durasi_on_process'         => $onProcessSec !== null ? self::formatDurasi($onProcessSec) : null,
