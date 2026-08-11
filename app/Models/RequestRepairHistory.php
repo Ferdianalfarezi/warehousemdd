@@ -28,6 +28,7 @@ class RequestRepairHistory extends Model
         'analisa_penyebab',
         'tindakan_perbaikan',
         'catatan_penggantian_sparepart',
+        'sparepart_items', // ⬅️ baru
         // On Trial — Section 2: Penanganan Problem Burry
         'item',
         'proses_grinding',
@@ -65,6 +66,9 @@ class RequestRepairHistory extends Model
         'durasi_on_trial_seconds',
         'durasi_total_seconds',
         'repair_count',
+        'ng_attempt_count',        // ⬅️ baru — sebelumnya dikirim controller tapi gak ke-fillable
+        'total_paused_seconds',    // ⬅️ baru — sama kasusnya
+        'cycle_number',            // ⬅️ baru — sama kasusnya
     ];
 
     protected $casts = [
@@ -79,6 +83,10 @@ class RequestRepairHistory extends Model
         'durasi_on_trial_seconds'   => 'integer',
         'durasi_total_seconds'      => 'integer',
         'repair_count'              => 'integer',
+        'sparepart_items'           => 'array',   // ⬅️ baru
+        'ng_attempt_count'          => 'integer', // ⬅️ baru
+        'total_paused_seconds'      => 'integer', // ⬅️ baru
+        'cycle_number'              => 'integer', // ⬅️ baru
     ];
 
     // ── Relasi ──────────────────────────────────────────────

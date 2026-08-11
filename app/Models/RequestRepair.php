@@ -33,6 +33,7 @@ class RequestRepair extends Model
         'analisa_penyebab',
         'tindakan_perbaikan',
         'catatan_penggantian_sparepart',
+        'sparepart_items',
         // On Trial — Section 2: Penanganan Problem Burry
         'item',
         'proses_grinding',
@@ -72,6 +73,7 @@ class RequestRepair extends Model
         'paused_at'            => 'datetime',  // ⬅️ baru
         'total_paused_seconds' => 'integer',   // ⬅️ baru
         'cycle_number'         => 'integer',   // ⬅️ baru
+        'sparepart_items'      => 'array',
     ];
 
     // ── Constants ───────────────────────────────────────────
@@ -84,7 +86,9 @@ class RequestRepair extends Model
     const ROLES_TO_ON_TRIAL   = [1, 2, 3, 7]; // sudah tidak dipakai untuk gate on_trial (digantikan PIC + admin override), dibiarkan untuk referensi
     const ROLES_TO_CLOSED     = [1, 8, 4];
 
-    const ROLE_ADMIN_OVERRIDE = 1; // role yang bisa override PIC di transisi on_process -> on_trial, dan pause/resume
+    const ROLE_ADMIN_OVERRIDE = 1; // role yang bisa override PIC di transisi on_process -> on_trial
+
+    const ROLES_CAN_PAUSE_RESUME = [1, 2, 7]; // ⬅️ baru — role yang boleh pause/resume, gak harus PIC yang tercatat & gak harus orang yang sama yang mem-pause
 
     // ── Relations ───────────────────────────────────────────
     public function barang()
@@ -168,13 +172,17 @@ class RequestRepair extends Model
     }
 
     /**
-     * ⬅️ baru — Aturan Pause/Resume: sama seperti konfirmasi On Trial —
-     * harus PIC yang tercatat ATAU admin override (role_id 1), dan status masih On Process.
+     * ⬅️ diubah — Aturan Pause/Resume: dibuka berbasis ROLE (1, 2, 7),
+     * bukan cuma PIC yang tercatat di request ini. Siapapun user dengan
+     * role di ROLES_CAN_PAUSE_RESUME boleh pause ATAU resume request
+     * repair manapun yang statusnya masih On Process — tidak harus jadi
+     * PIC di request itu, dan tidak harus orang yang sama yang tadi
+     * melakukan pause.
      */
     public function canUserPause(User $user): bool
     {
         return $this->status === self::STATUS_ON_PROCESS
-            && ($user->role_id === self::ROLE_ADMIN_OVERRIDE || $this->isPic($user->id));
+            && in_array($user->role_id, self::ROLES_CAN_PAUSE_RESUME, true);
     }
 
     /**

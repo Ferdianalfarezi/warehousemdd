@@ -7,9 +7,11 @@ use App\Models\RequestRepairHistory;
 use App\Models\RequestRepairAttempt;
 use App\Models\RequestRepairPause;
 use App\Models\Barang;
+use App\Models\Part;
 use App\Models\DiesDetail;
 use App\Models\Line;
 use App\Models\User;
+use App\Models\Supplier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +20,7 @@ use Illuminate\Support\Facades\Storage;
 
 class RequestRepairController extends Controller
 {
+    // ── Index ───────────────────────────────────────────────
     // ── Index ───────────────────────────────────────────────
     public function index()
     {
@@ -28,7 +31,10 @@ class RequestRepairController extends Controller
             $lines = Line::orderBy('nama_line')->get();
         }
 
-        return view('request_repairs.index', compact('lines'));
+        // ⬅️ baru — dipakai quick-add barang modal (tombol + di Part No)
+        $suppliers = Supplier::orderBy('nama')->get(['id', 'nama']);
+
+        return view('request_repairs.index', compact('lines', 'suppliers'));
     }
 
     // ── AJAX: table data ────────────────────────────────────
@@ -93,8 +99,8 @@ class RequestRepairController extends Controller
                 'pic_names'         => $rr->picNamesString(),
                 'status'            => $rr->status,
                 'ng_attempt_count'  => $rr->ng_attempt_count,
-                'is_paused'         => $rr->is_paused,      // ⬅️ baru
-                'pause_reason'      => $rr->pause_reason,   // ⬅️ baru
+                'is_paused'         => $rr->is_paused,
+                'pause_reason'      => $rr->pause_reason,
                 'can_edit'          => $rr->isEditable(),
                 'can_delete'        => $rr->isEditable(),
                 'can_to_process'    => $rr->canConfirmToProcess()
@@ -102,7 +108,7 @@ class RequestRepairController extends Controller
                 'can_to_on_trial'   => $rr->canUserConfirmToOnTrial($authUser),
                 'can_to_closed'     => $rr->canConfirmToClosed()
                                         && in_array($userRoleId, RequestRepair::ROLES_TO_CLOSED),
-                'can_pause'         => $rr->canUserPause($authUser), // ⬅️ baru — sama gate-nya dgn can_to_on_trial
+                'can_pause'         => $rr->canUserPause($authUser),
             ];
         });
 
@@ -144,6 +150,34 @@ class RequestRepairController extends Controller
         return response()->json(['results' => $results]);
     }
 
+    // ── AJAX: search parts buat sparepart selector ──────────
+    // PENTING: route ini HARUS didaftarkan sebelum route resource
+    // request-repairs/{request_repair}, sama alasannya kayak pic-candidates.
+    public function searchParts(Request $request)
+    {
+        $q = $request->get('q', '');
+
+        $parts = Part::when($q, function ($query) use ($q) {
+                $query->where('kode_part', 'like', "%{$q}%")
+                      ->orWhere('nama', 'like', "%{$q}%");
+            })
+            ->select('id', 'kode_part', 'nama', 'stock', 'satuan')
+            ->orderBy('nama')
+            ->limit(30)
+            ->get();
+
+        $results = $parts->map(fn ($p) => [
+            'id'     => $p->id,
+            'text'   => "{$p->kode_part} — {$p->nama} (stok: {$p->stock} {$p->satuan})",
+            'kode'   => $p->kode_part,
+            'nama'   => $p->nama,
+            'stock'  => $p->stock,
+            'satuan' => $p->satuan,
+        ]);
+
+        return response()->json(['results' => $results]);
+    }
+
     // ── AJAX: get process_no list by barang ─────────────────
     public function getProcessNos(Request $request)
     {
@@ -162,7 +196,6 @@ class RequestRepairController extends Controller
     }
 
     // ── AJAX: get durasi realtime ────────────────────────────
-    // ⬅️ diubah — kalau lagi paused, freeze di titik paused_at & dikurangi total_paused_seconds
     public function getDurasi(RequestRepair $requestRepair)
     {
         $start = $requestRepair->on_process_at ?? $requestRepair->created_at;
@@ -181,7 +214,7 @@ class RequestRepairController extends Controller
         ]);
     }
 
-    // ── AJAX: pause on_process (⬅️ baru) ─────────────────────
+    // ── AJAX: pause on_process ───────────────────────────────
     public function pause(Request $request, RequestRepair $requestRepair)
     {
         $authUser = auth()->user();
@@ -249,7 +282,7 @@ class RequestRepairController extends Controller
         }
     }
 
-    // ── AJAX: resume dari pause (⬅️ baru) ────────────────────
+    // ── AJAX: resume dari pause ──────────────────────────────
     public function resume(RequestRepair $requestRepair)
     {
         $authUser = auth()->user();
@@ -308,9 +341,6 @@ class RequestRepairController extends Controller
     }
 
     // ── AJAX: kandidat PIC (role_id 1 & 7) ───────────────────
-    // PENTING: route ini HARUS didaftarkan di atas route resource
-    // request-repairs/{request_repair}, kalau tidak "pic-candidates"
-    // akan tertangkap sebagai parameter {request_repair}.
     public function picCandidates()
     {
         $users = User::whereIn('role_id', RequestRepair::ROLES_TO_ON_PROCESS)
@@ -325,9 +355,37 @@ class RequestRepairController extends Controller
         return response()->json(['results' => $results]);
     }
 
+    // ── AJAX: kandidat pengaju (role_id 4) — dipakai admin (role 1) saat create ──
+    // PENTING: route ini HARUS didaftarkan sebelum route resource
+    // request-repairs/{request_repair}, sama alasannya kayak pic-candidates.
+    public function pengajuCandidates(Request $request)
+    {
+        $q = $request->get('q', '');
+
+        $users = User::where('role_id', 4)
+            ->when($q, function ($query) use ($q) {
+                $query->where(function ($q2) use ($q) {
+                    $q2->where('nama', 'like', "%{$q}%")
+                       ->orWhere('nik', 'like', "%{$q}%");
+                });
+            })
+            ->orderBy('nama')
+            ->limit(30)
+            ->get(['id', 'nama', 'nik']);
+
+        $results = $users->map(fn($u) => [
+            'id'   => $u->id,
+            'text' => $u->nama . ($u->nik ? " ({$u->nik})" : ''),
+        ]);
+
+        return response()->json(['results' => $results]);
+    }
+
     // ── Store ───────────────────────────────────────────────
     public function store(Request $request)
     {
+        $authUser = auth()->user();
+
         $validator = Validator::make($request->all(), [
             'tanggal_pengajuan' => 'required|date',
             'group'             => 'required|in:A,B',
@@ -341,6 +399,8 @@ class RequestRepairController extends Controller
             'kategori_problem'  => 'required|in:Dies,Burry,Dimensi,Human Error,Accessories',
             'detail_proyek'     => 'nullable|string',
             'gambar'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5000',
+            // ⬅️ baru — hanya efektif kalau yang login role_id 1, di-validasi ulang di server
+            'created_by'        => 'nullable|integer|exists:users,id',
         ]);
 
         if ($validator->fails()) {
@@ -355,6 +415,16 @@ class RequestRepairController extends Controller
             $gambarPath = null;
             if ($request->hasFile('gambar')) {
                 $gambarPath = $request->file('gambar')->store('request_repairs', 'public');
+            }
+
+            // ⬅️ baru — tentukan pengaju: default diri sendiri,
+            // kecuali yang login role_id 1 DAN target valid (role_id 4)
+            $createdBy = $authUser->id;
+            if (($authUser->role_id ?? null) == 1 && $request->filled('created_by')) {
+                $target = User::where('id', $request->created_by)->where('role_id', 4)->first();
+                if ($target) {
+                    $createdBy = $target->id;
+                }
             }
 
             $rr = RequestRepair::create([
@@ -375,10 +445,8 @@ class RequestRepairController extends Controller
                 'kategori_problem'  => $request->kategori_problem,
                 'detail_proyek'     => $request->detail_proyek,
                 'gambar'            => $gambarPath,
-                'created_by'        => auth()->id(),
+                'created_by'        => $createdBy, // ⬅️ diubah
                 'status'            => RequestRepair::STATUS_OPEN,
-                // on_process_at TIDAK diisi di sini — diisi saat dikonfirmasi ke On Process
-                // cycle_number pakai default DB (1)
             ]);
 
             DB::commit();
@@ -456,7 +524,6 @@ class RequestRepairController extends Controller
                 'kekuatan_stock_fg' => $request->kekuatan_stock_fg,
                 'kategori_problem'  => $request->kategori_problem,
                 'detail_proyek'     => $request->detail_proyek,
-                // created_by TIDAK diubah di sini
             ];
 
             if ($request->hasFile('gambar')) {
@@ -513,13 +580,11 @@ class RequestRepairController extends Controller
                 return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
             }
 
-            // Pastikan hanya user dengan role yang berwenang yang bisa jadi PIC
             $validPicIds = User::whereIn('id', $request->pic_user_ids)
                 ->whereIn('role_id', RequestRepair::ROLES_TO_ON_PROCESS)
                 ->pluck('id')
                 ->toArray();
 
-            // Diri sendiri selalu ikut tercatat sebagai PIC, meski cuma pilih "Sendiri"
             $picIds = array_values(array_unique(array_merge([$authUser->id], $validPicIds)));
 
             DB::beginTransaction();
@@ -540,6 +605,8 @@ class RequestRepairController extends Controller
 
         // ════════════════════════════════════════════════════
         // ON TRIAL — hanya PIC yang tercatat, ATAU admin override (role 1)
+        // sparepart pakai selector Part (multi) + potong stock di sini
+        // support mode durasi manual (role 1) yang mundurin on_trial_at
         // ════════════════════════════════════════════════════
         } elseif ($newStatus === RequestRepair::STATUS_ON_TRIAL) {
 
@@ -550,8 +617,11 @@ class RequestRepairController extends Controller
                 ], 422);
             }
 
-            // ⬅️ baru — wajib resume dulu sebelum bisa konfirmasi ke On Trial
-            if ($requestRepair->is_paused) {
+            // cek mode durasi manual (role 1 only, dicek ulang di server)
+            $isManualDurasi = $request->get('durasi_mode') === 'manual' && $userRoleId === 1;
+
+            // Kalau bukan manual override, tetep berlaku validasi "harus resume dulu"
+            if (!$isManualDurasi && $requestRepair->is_paused) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Data ini sedang di-pause (' . (RequestRepairPause::ALASAN_LABELS[$requestRepair->pause_reason] ?? $requestRepair->pause_reason) . '). Resume terlebih dahulu sebelum konfirmasi ke On Trial.',
@@ -570,7 +640,10 @@ class RequestRepairController extends Controller
             $validator = Validator::make($request->all(), [
                 'analisa_penyebab'              => 'required|string|max:255',
                 'tindakan_perbaikan'            => 'required|string|max:255',
-                'catatan_penggantian_sparepart' => 'required|string|max:255',
+                'catatan_penggantian_sparepart' => 'nullable|string|max:255',
+                'sparepart_items'                => 'nullable|array',
+                'sparepart_items.*.part_id'      => 'required|integer|exists:parts,id',
+                'sparepart_items.*.qty'          => 'required|integer|min:1',
                 'item'            => 'nullable|string|max:255',
                 'proses_grinding' => 'nullable|string|max:255',
                 'shim_up'         => 'nullable|string|max:255',
@@ -582,42 +655,128 @@ class RequestRepairController extends Controller
                 'actual' => 'nullable|string|max:255',
                 'remark' => 'nullable|string|max:255',
                 'judge'  => 'nullable|in:OK,NG',
+                'durasi_mode'           => 'nullable|in:otomatis,manual',
+                'durasi_manual_seconds' => 'nullable|integer|min:60|required_if:durasi_mode,manual',
             ], [
-                'analisa_penyebab.required'              => 'Analisa penyebab wajib diisi.',
-                'tindakan_perbaikan.required'            => 'Tindakan perbaikan wajib diisi.',
-                'catatan_penggantian_sparepart.required' => 'Catatan penggantian sparepart wajib diisi.',
+                'analisa_penyebab.required'   => 'Analisa penyebab wajib diisi.',
+                'tindakan_perbaikan.required' => 'Tindakan perbaikan wajib diisi.',
+                'sparepart_items.*.qty.min'   => 'Qty sparepart minimal 1.',
+                'durasi_manual_seconds.required_if' => 'Durasi manual wajib diisi.',
+                'durasi_manual_seconds.min'         => 'Durasi manual minimal 1 menit.',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
             }
 
-            $requestRepair->update([
-                'status'                        => RequestRepair::STATUS_ON_TRIAL,
-                'analisa_penyebab'              => $request->analisa_penyebab,
-                'tindakan_perbaikan'            => $request->tindakan_perbaikan,
-                'catatan_penggantian_sparepart' => $request->catatan_penggantian_sparepart,
-                'item'                          => $request->item,
-                'proses_grinding'               => $request->proses_grinding,
-                'shim_up'                       => $request->shim_up,
-                'status_burry'                  => $request->status_burry,
-                'standart_burry'                => $request->standart_burry,
-                'group_leader'                  => $request->group_leader,
-                'operator'                      => $request->operator,
-                'plan'                          => $request->plan,
-                'actual'                        => $request->actual,
-                'remark'                        => $request->remark,
-                'judge'                         => $request->judge,
-                'on_trial_at'                   => now(),
-            ]);
+            DB::beginTransaction();
+            try {
+                $now = now();
 
-            return response()->json(['success' => true, 'message' => 'Status berhasil diubah ke On Trial!']);
+                // hitung on_trial_at, tergantung mode (otomatis vs manual override)
+                $totalPausedSeconds = $requestRepair->total_paused_seconds;
+                $pauseFieldsReset   = [];
+
+                if ($isManualDurasi) {
+                    // Kalau lagi paused, tutup dulu sesi pause yang jalan biar total_paused_seconds akurat
+                    if ($requestRepair->is_paused) {
+                        $openPause = RequestRepairPause::where('request_repair_id', $requestRepair->id)
+                            ->where('cycle_number', $requestRepair->cycle_number)
+                            ->whereNull('resumed_at')
+                            ->latest('paused_at')
+                            ->first();
+
+                        if ($openPause) {
+                            $pausedFor = (int) $openPause->paused_at->diffInSeconds($now);
+                            $openPause->update(['resumed_at' => $now, 'durasi_paused_seconds' => $pausedFor]);
+                            $totalPausedSeconds += $pausedFor;
+                        }
+
+                        $pauseFieldsReset = [
+                            'is_paused'            => false,
+                            'paused_at'            => null,
+                            'pause_reason'         => null,
+                            'total_paused_seconds' => $totalPausedSeconds,
+                        ];
+                    }
+
+                    $baseStart = $requestRepair->on_process_at ?? $requestRepair->created_at;
+                    $onTrialAt = $baseStart->copy()->addSeconds((int) $request->durasi_manual_seconds + $totalPausedSeconds);
+
+                    // Cap biar gak nongol di masa depan (hindari durasi minus di tahap NG/Closed nanti)
+                    if ($onTrialAt->gt($now)) {
+                        $onTrialAt = $now;
+                    }
+                } else {
+                    $onTrialAt = $now;
+                }
+
+                // ── Lock row part, validasi stock, lalu kurangi ──
+                $sparepartSnapshot = [];
+
+                foreach ($request->sparepart_items as $itemInput) {
+                    $part = Part::where('id', $itemInput['part_id'])
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (!$part) {
+                        DB::rollBack();
+                        return response()->json(['success' => false, 'message' => 'Part tidak ditemukan.'], 422);
+                    }
+
+                    if ($part->stock < $itemInput['qty']) {
+                        DB::rollBack();
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Stock {$part->nama} tidak cukup. Sisa stock: {$part->stock}, diminta: {$itemInput['qty']}.",
+                        ], 422);
+                    }
+
+                    $part->decrement('stock', $itemInput['qty']);
+
+                    $sparepartSnapshot[] = [
+                        'part_id'   => $part->id,
+                        'kode_part' => $part->kode_part,
+                        'nama'      => $part->nama,
+                        'satuan'    => $part->satuan,
+                        'qty'       => (int) $itemInput['qty'],
+                    ];
+                }
+
+                $requestRepair->update(array_merge([
+                    'status'                        => RequestRepair::STATUS_ON_TRIAL,
+                    'analisa_penyebab'              => $request->analisa_penyebab,
+                    'tindakan_perbaikan'            => $request->tindakan_perbaikan,
+                    'catatan_penggantian_sparepart' => $request->catatan_penggantian_sparepart,
+                    'sparepart_items'               => $sparepartSnapshot,
+                    'item'                          => $request->item,
+                    'proses_grinding'               => $request->proses_grinding,
+                    'shim_up'                       => $request->shim_up,
+                    'status_burry'                  => $request->status_burry,
+                    'standart_burry'                => $request->standart_burry,
+                    'group_leader'                  => $request->group_leader,
+                    'operator'                      => $request->operator,
+                    'plan'                          => $request->plan,
+                    'actual'                        => $request->actual,
+                    'remark'                        => $request->remark,
+                    'judge'                         => $request->judge,
+                    'on_trial_at'                   => $onTrialAt, // otomatis pakai now(), manual pakai hasil hitungan mundur
+                ], $pauseFieldsReset)); // merge reset field pause kalau manual override dari state paused
+
+                DB::commit();
+                return response()->json(['success' => true, 'message' => 'Status berhasil diubah ke On Trial! Stock sparepart sudah dikurangi.']);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error('RequestRepair On Trial Error', ['error' => $e->getMessage()]);
+                return response()->json(['success' => false, 'message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
+            }
 
         // ════════════════════════════════════════════════════
         // CLOSED → tergantung Hasil Akhir (OK / NG)
-        // Bebas role (1, 8, 4), TIDAK terikat PIC — ini approval/verifikasi
         //   - OK  → pindah ke history, hard delete dari request_repairs
         //   - NG  → snapshot ke request_repair_attempts, reset & balik ke Open
+        //     (catatan: stock sparepart TIDAK dikembalikan walau NG,
+        //      karena part sudah terpakai secara fisik di percobaan sebelumnya)
         // ════════════════════════════════════════════════════
         } elseif ($newStatus === RequestRepair::STATUS_CLOSED) {
 
@@ -673,7 +832,6 @@ class RequestRepairController extends Controller
                     $durasiOnTrialSeconds   = null;
 
                     if ($requestRepair->on_process_at && $requestRepair->on_trial_at) {
-                        // ⬅️ diubah — dikurangi total_paused_seconds biar durasi murni waktu kerja aktif
                         $rawOnProcess = (int) $requestRepair->on_process_at->diffInSeconds($requestRepair->on_trial_at);
                         $durasiOnProcessSeconds = max(0, $rawOnProcess - $requestRepair->total_paused_seconds);
                     }
@@ -691,6 +849,7 @@ class RequestRepairController extends Controller
                         'analisa_penyebab'               => $requestRepair->analisa_penyebab,
                         'tindakan_perbaikan'             => $requestRepair->tindakan_perbaikan,
                         'catatan_penggantian_sparepart'  => $requestRepair->catatan_penggantian_sparepart,
+                        'sparepart_items'                => $requestRepair->sparepart_items,
                         'item'                           => $requestRepair->item,
                         'proses_grinding'                => $requestRepair->proses_grinding,
                         'shim_up'                        => $requestRepair->shim_up,
@@ -722,8 +881,8 @@ class RequestRepairController extends Controller
                         'durasi_on_process_seconds'      => $durasiOnProcessSeconds,
                         'durasi_on_trial_seconds'        => $durasiOnTrialSeconds,
                         'judged_by'                      => $authUser->id,
-                        'total_paused_seconds'           => $requestRepair->total_paused_seconds, // ⬅️ baru
-                        'cycle_number'                    => $requestRepair->cycle_number,          // ⬅️ baru
+                        'total_paused_seconds'           => $requestRepair->total_paused_seconds,
+                        'cycle_number'                    => $requestRepair->cycle_number,
                     ]);
 
                     // Reset request_repair ke kondisi awal biar bisa dikerjakan ulang dari Open
@@ -735,6 +894,7 @@ class RequestRepairController extends Controller
                         'analisa_penyebab'               => null,
                         'tindakan_perbaikan'             => null,
                         'catatan_penggantian_sparepart'  => null,
+                        'sparepart_items'                => null, // reset snapshot, siklus baru pilih sparepart lagi
                         'item'                           => null,
                         'proses_grinding'                => null,
                         'shim_up'                        => null,
@@ -746,7 +906,6 @@ class RequestRepairController extends Controller
                         'actual'                         => null,
                         'remark'                         => null,
                         'judge'                          => null,
-                        // ⬅️ baru — reset state pause & mulai siklus baru
                         'is_paused'                      => false,
                         'paused_at'                       => null,
                         'pause_reason'                    => null,
@@ -754,8 +913,6 @@ class RequestRepairController extends Controller
                         'cycle_number'                     => $requestRepair->cycle_number + 1,
                     ]);
 
-                    // PIC lama sudah kesimpen di snapshot attempt (pic_names),
-                    // di-detach biar mekanik lain bisa ambil dari awal via Select PIC modal
                     $requestRepair->pics()->detach();
 
                     DB::commit();
@@ -783,7 +940,6 @@ class RequestRepairController extends Controller
                 $durasiTotalSeconds     = null;
 
                 if ($requestRepair->on_process_at && $requestRepair->on_trial_at) {
-                    // ⬅️ diubah — dikurangi total_paused_seconds
                     $rawOnProcess = (int) $requestRepair->on_process_at->diffInSeconds($requestRepair->on_trial_at);
                     $durasiOnProcessSeconds = max(0, $rawOnProcess - $requestRepair->total_paused_seconds);
                 }
@@ -791,7 +947,6 @@ class RequestRepairController extends Controller
                     $durasiOnTrialSeconds = (int) $requestRepair->on_trial_at->diffInSeconds($closedAt);
                 }
                 if ($requestRepair->on_process_at) {
-                    // ⬅️ diubah — total durasi juga dikurangi waktu pause (pause hanya terjadi di fase on_process)
                     $rawTotal = (int) $requestRepair->on_process_at->diffInSeconds($closedAt);
                     $durasiTotalSeconds = max(0, $rawTotal - $requestRepair->total_paused_seconds);
                 }
@@ -819,6 +974,7 @@ class RequestRepairController extends Controller
                     'analisa_penyebab'              => $requestRepair->analisa_penyebab,
                     'tindakan_perbaikan'            => $requestRepair->tindakan_perbaikan,
                     'catatan_penggantian_sparepart' => $requestRepair->catatan_penggantian_sparepart,
+                    'sparepart_items'               => $requestRepair->sparepart_items,
                     'item'                          => $requestRepair->item,
                     'proses_grinding'               => $requestRepair->proses_grinding,
                     'shim_up'                       => $requestRepair->shim_up,
@@ -853,11 +1009,11 @@ class RequestRepairController extends Controller
                     'durasi_total_seconds'          => $durasiTotalSeconds,
                     'repair_count'                  => $repairCount,
                     'ng_attempt_count'               => $requestRepair->ng_attempt_count,
-                    'total_paused_seconds'           => $requestRepair->total_paused_seconds, // ⬅️ baru
-                    'cycle_number'                    => $requestRepair->cycle_number,          // ⬅️ baru
+                    'total_paused_seconds'           => $requestRepair->total_paused_seconds,
+                    'cycle_number'                    => $requestRepair->cycle_number,
                 ]);
 
-                $requestRepair->delete(); // pivot pics & pauses ikut kehapus otomatis lewat cascadeOnDelete di migration
+                $requestRepair->delete();
 
                 DB::commit();
                 return response()->json([

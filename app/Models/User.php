@@ -101,8 +101,8 @@ class User extends Authenticatable
     public static function maxLinesForJabatan(?string $jabatan): ?int
     {
         return match ($jabatan) {
-            'Leader'      => 3,
-            'Asst Leader' => 1,
+            'Leader'      => 5,
+            'Asst Leader' => 3,
             default       => null,
         };
     }

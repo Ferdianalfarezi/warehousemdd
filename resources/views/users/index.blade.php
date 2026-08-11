@@ -207,7 +207,7 @@
 @push('scripts')
 <script>
 const OPERATOR_ROLE_ID = 4;
-const JABATAN_MAX = { 'Leader': 3, 'Asst Leader': 1 };
+const JABATAN_MAX = { 'Leader': 5, 'Asst Leader': 3 };
 
 let allUsers = [];
 let filteredUsers = [];

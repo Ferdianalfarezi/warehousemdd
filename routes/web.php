@@ -130,7 +130,7 @@ Route::middleware('auth')->group(function () {
     });
     Route::resource('general-checkups', GeneralCheckupController::class);
 
-    // ── Checkup Parts ──────────────────────────────────────────────────────
+    // ── Checkup Parts ─────────────────────────────────────────────────────
     Route::prefix('checkup-parts')->name('checkup-parts.')->group(function () {
         Route::post('add',                          [CheckupPartController::class, 'store'])->name('add');
         Route::get('available',                     [CheckupPartController::class, 'getAvailableParts'])->name('available');
@@ -171,17 +171,19 @@ Route::middleware('auth')->group(function () {
         Route::get('/',                          [RequestRepairController::class, 'index'])->name('index');
         Route::get('data',                       [RequestRepairController::class, 'getData'])->name('data');           // ⚠️ sebelum {requestRepair}
         Route::get('search-barang',              [RequestRepairController::class, 'searchBarang'])->name('search-barang');
+        Route::get('search-parts',               [RequestRepairController::class, 'searchParts'])->name('search-parts'); // ⬅️ sebelum {requestRepair}
         Route::get('process-nos',                [RequestRepairController::class, 'getProcessNos'])->name('process-nos');
-        Route::get('pic-candidates',             [RequestRepairController::class, 'picCandidates'])->name('pic-candidates'); // ⬅️ BARU — sebelum {requestRepair}
+        Route::get('pic-candidates',             [RequestRepairController::class, 'picCandidates'])->name('pic-candidates'); // ⬅️ sebelum {requestRepair}
+        Route::get('pengaju-candidates',         [RequestRepairController::class, 'pengajuCandidates'])->name('pengaju-candidates'); // ⬅️ BARU — sebelum {requestRepair}
         Route::post('/',                         [RequestRepairController::class, 'store'])->name('store');
         Route::get('{requestRepair}/durasi',     [RequestRepairController::class, 'getDurasi'])->name('durasi');      // ⚠️ sebelum {requestRepair} show
         Route::get('{requestRepair}',            [RequestRepairController::class, 'show'])->name('show');
         Route::put('{requestRepair}',            [RequestRepairController::class, 'update'])->name('update');
         Route::patch('{requestRepair}/status',   [RequestRepairController::class, 'updateStatus'])->name('update-status');
         Route::delete('{requestRepair}',         [RequestRepairController::class, 'destroy'])->name('destroy');
-        Route::patch('{requestRepair}/pause',    [RequestRepairController::class, 'pause'])->name('pause')   ;
+        Route::patch('{requestRepair}/pause',    [RequestRepairController::class, 'pause'])->name('pause');
         Route::patch('{requestRepair}/resume',   [RequestRepairController::class, 'resume']);
-        });
+    });
 
     // ── History Repair ─────────────────────────────────────────────────────
     Route::prefix('history-repairs')->name('history-repairs.')->group(function () {

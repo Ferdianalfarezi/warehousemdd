@@ -106,6 +106,7 @@
 @include('request_repairs.select-pic')
 @include('request_repairs.additional-info')
 @include('request_repairs.closed-info')
+@include('request_repairs.quick-add-barang')
 
 @endsection
 
@@ -114,7 +115,8 @@
 // ════════════════════════════════════════════════════════
 // AUTH CONTEXT
 // ════════════════════════════════════════════════════════
-const AUTH_USER_ID = {{ auth()->id() }};
+const AUTH_USER_ID   = {{ auth()->id() }};
+const AUTH_USER_ROLE = {{ auth()->user()->role_id }}; // ⬅️ baru
 
 // ════════════════════════════════════════════════════════
 // STATE
@@ -145,7 +147,7 @@ let _durasiTimer        = null;
 let _closedInfoId = null;
 
 // ════════════════════════════════════════════════════════
-// PAUSE REASON LABELS (⬅️ baru)
+// PAUSE REASON LABELS
 // ════════════════════════════════════════════════════════
 const PAUSE_REASON_LABEL = {
     adjust_dimensi: 'Adjust Dimensi',
@@ -183,14 +185,13 @@ const JENIS_BADGE = {
     'Eksternal':     'bg-orange-100 text-orange-800',
 };
 const STATUS_CFG = {
-    'open':       { bg: '#dcfce7', color: '#166534', label: 'Open'       }, // hijau
+    'open':       { bg: '#dcfce7', color: '#166534', label: 'Open'       },
     'on_process': { bg: '#dbeafe', color: '#1e40af', label: 'On Process' },
     'on_trial':   { bg: '#fef9c3', color: '#854d0e', label: 'On Trial'   },
     'closed':     { bg: '#dcfce7', color: '#166534', label: 'Closed'     },
-    'paused':     { bg: '#fee2e2', color: '#991b1b', label: 'Paused'     }, // ⬅️ baru — merah, gantiin "On Process" pas lagi di-pause
+    'paused':     { bg: '#fee2e2', color: '#991b1b', label: 'Paused'     },
 };
 
-// ⬅️ diubah — terima isPaused & pauseReason, badge status langsung jadi "Paused" (bukan numpuk 2 badge)
 function statusBadge(status, isPaused, pauseReason) {
     const key   = isPaused ? 'paused' : status;
     const s     = STATUS_CFG[key] || { bg: '#f3f4f6', color: '#4b5563', label: status };
@@ -330,6 +331,14 @@ function renderTable(items) {
                 btns += makeBtn('confirmStatus(' + r.id + ', \'on_trial\')', 'Konfirmasi ke On Trial', '#16a34a', '#15803d',
                     '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>');
             }
+            // Pause/Resume buat role 1/2/7 yang BUKAN PIC (jadi gak punya tombol On Trial di atas)
+            if (r.can_pause && !r.can_to_on_trial) {
+                var pauseResumeIcon = r.is_paused
+                    ? '<path d="M8 5v14l11-7z"/>'                 // icon Resume (play)
+                    : '<path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/>'; // icon Pause (dua batang)
+                btns += makeBtn('openAdditionalInfoModal(' + r.id + ')', (r.is_paused ? 'Resume' : 'Pause'), '#dc2626', '#b91c1c',
+                    pauseResumeIcon);
+            }
             if (r.can_to_closed) {
                 btns += makeBtn('confirmStatus(' + r.id + ', \'closed\')', 'Konfirmasi ke Closed', '#16a34a', '#15803d',
                     '<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>');
@@ -340,7 +349,6 @@ function renderTable(items) {
             }
         var katCls = KATEGORI_BADGE[r.kategori_problem] || 'bg-gray-100 text-gray-700';
 
-        // ⬅️ baru — row jadi merah muda kalau lagi paused
         var rowCls = 'hover:bg-gray-50 transition ' + (r.status === 'closed' ? 'opacity-70' : '') + (r.is_paused ? ' bg-red-50 hover:bg-red-100' : '');
 
         return '<tr class="' + rowCls + '">'
@@ -375,7 +383,6 @@ async function confirmStatus(id, newStatus) {
 async function openSelectPicModal(id) {
     _selectPicId = id;
 
-    // Reset mode ke "Sendiri", sembunyikan pilihan tim
     document.querySelectorAll('input[name="picMode"]').forEach(r => r.checked = (r.value === 'sendiri'));
     document.getElementById('selectPicTeamWrapper').classList.add('hidden');
     const errEl = document.getElementById('errorSelectPicTeam');
@@ -449,7 +456,7 @@ async function submitSelectPic() {
     let picUserIds = [AUTH_USER_ID];
 
     if (mode === 'tim') {
-        waitForJQuery(function () {}); // pastikan select2 sudah siap sebelum dibaca
+        waitForJQuery(function () {});
         const selected = ($('#selectPicTeamSelect').val() || []).map(v => parseInt(v, 10));
         if (selected.length === 0) {
             errEl.textContent = 'Pilih minimal 1 anggota tim, atau pilih mode "Sendiri".';
@@ -500,6 +507,7 @@ async function openAdditionalInfoModal(id) {
     document.getElementById('additionalAnalisaPenyebab').value   = '';
     document.getElementById('additionalTindakanPerbaikan').value = '';
     document.getElementById('additionalCatatanSparepart').value  = '';
+    if (typeof resetSparepartSelector === 'function') resetSparepartSelector();
     // Reset section 2
     document.getElementById('additionalItem').value           = '';
     document.getElementById('additionalProsesGrinding').value = '';
@@ -514,7 +522,7 @@ async function openAdditionalInfoModal(id) {
     document.getElementById('additionalRemark').value = '';
     document.querySelectorAll('input[name="additionalJudge"]').forEach(r => r.checked = false);
     // Reset errors
-    ['AnalisaPenyebab', 'TindakanPerbaikan', 'CatatanSparepart'].forEach(k => {
+    ['AnalisaPenyebab', 'TindakanPerbaikan', 'CatatanSparepart', 'SparepartItems'].forEach(k => {
         const el = document.getElementById('errorAdditional' + k);
         if (el) { el.textContent = ''; el.classList.add('hidden'); }
     });
@@ -525,8 +533,9 @@ async function openAdditionalInfoModal(id) {
     btn.classList.remove('opacity-50', 'cursor-not-allowed');
     btn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Konfirmasi On Trial</span>';
 
-    // ⬅️ baru — reset UI pause/resume ke kondisi netral setiap buka modal
+    // Reset UI pause/resume ke kondisi netral setiap buka modal
     resetPauseUI();
+    if (typeof resetDurasiModeUI === 'function') resetDurasiModeUI();
 
     const modal   = document.getElementById('additionalInfoModal');
     const content = document.getElementById('additionalInfoContent');
@@ -536,12 +545,13 @@ async function openAdditionalInfoModal(id) {
         content.classList.add('scale-100', 'opacity-100');
     }));
 
+    waitForJQuery(function () { initSparepartSelect(); });
+
     try {
         const res    = await fetch('/request-repairs/' + id);
         const result = await res.json();
         if (result.success) document.getElementById('additionalInfoNo').textContent = result.data.no || '';
 
-        // ⬅️ diubah — pakai applyDurasiState() biar status paused ke-handle otomatis
         await refreshDurasiState();
     } catch (e) {
         document.getElementById('durasiDisplay').textContent = '—';
@@ -577,11 +587,10 @@ function formatDurasiJS(seconds) {
 // ADDITIONAL INFO MODAL — submit
 // ════════════════════════════════════════════════════════
 async function submitAdditionalInfo() {
-    // ⬅️ baru — guard tambahan di frontend, backend juga sudah menolak ini
     const submitBtnCheck = document.getElementById('submitAdditionalInfoBtn');
     if (submitBtnCheck && submitBtnCheck.disabled) return;
 
-    ['AnalisaPenyebab', 'TindakanPerbaikan', 'CatatanSparepart'].forEach(k => {
+    ['AnalisaPenyebab', 'TindakanPerbaikan', 'CatatanSparepart', 'SparepartItems'].forEach(k => {
         const el = document.getElementById('errorAdditional' + k);
         if (el) { el.textContent = ''; el.classList.add('hidden'); }
     });
@@ -610,11 +619,24 @@ async function submitAdditionalInfo() {
         const el = document.getElementById('errorAdditionalTindakanPerbaikan');
         el.textContent = 'Tindakan perbaikan wajib diisi.'; el.classList.remove('hidden'); hasError = true;
     }
-    if (!catatanSparepart) {
-        const el = document.getElementById('errorAdditionalCatatanSparepart');
-        el.textContent = 'Catatan penggantian sparepart wajib diisi.'; el.classList.remove('hidden'); hasError = true;
+
+    const durasiPayload = (typeof getDurasiManualPayload === 'function')
+        ? getDurasiManualPayload()
+        : { durasi_mode: 'otomatis', durasi_manual_seconds: null };
+
+    if (durasiPayload.durasi_mode === 'manual') {
+        const errEl = document.getElementById('errorDurasiManual');
+        if (!durasiPayload.durasi_manual_seconds || durasiPayload.durasi_manual_seconds < 60) {
+            if (errEl) { errEl.textContent = 'Durasi manual minimal 1 menit.'; errEl.classList.remove('hidden'); }
+            hasError = true;
+        } else if (errEl) {
+            errEl.textContent = ''; errEl.classList.add('hidden');
+        }
     }
+
     if (hasError) return;
+
+    const sparepartItemsPayload = window.selectedSpareparts.map(p => ({ part_id: p.part_id, qty: p.qty }));
 
     const btn = document.getElementById('submitAdditionalInfoBtn');
     btn.disabled = true;
@@ -628,11 +650,14 @@ async function submitAdditionalInfo() {
             body: JSON.stringify({
                 status: 'on_trial',
                 analisa_penyebab: analisaPenyebab, tindakan_perbaikan: tindakanPerbaikan,
-                catatan_penggantian_sparepart: catatanSparepart,
+                catatan_penggantian_sparepart: catatanSparepart || null,
+                sparepart_items: sparepartItemsPayload,
                 item: item || null, proses_grinding: prosesGrinding || null, shim_up: shimUp || null,
                 status_burry: statusBurry || null, standart_burry: standartBurry || null,
                 group_leader: groupLeader || null, operator: operator || null,
                 plan: plan || null, actual: actual || null, remark: remark || null, judge: judge || null,
+                durasi_mode: durasiPayload.durasi_mode,
+                durasi_manual_seconds: durasiPayload.durasi_manual_seconds,
             }),
         });
         const data = await res.json();
@@ -646,20 +671,28 @@ async function submitAdditionalInfo() {
                     'analisa_penyebab': 'errorAdditionalAnalisaPenyebab',
                     'tindakan_perbaikan': 'errorAdditionalTindakanPerbaikan',
                     'catatan_penggantian_sparepart': 'errorAdditionalCatatanSparepart',
+                    'sparepart_items': 'errorAdditionalSparepartItems',
+                    'durasi_manual_seconds': 'errorDurasiManual',
                 };
+                let matched = false;
                 Object.keys(fieldMap).forEach(key => {
-                    if (data.errors[key]) { const el = document.getElementById(fieldMap[key]); if (el) { el.textContent = data.errors[key][0]; el.classList.remove('hidden'); } }
+                    const errKey = Object.keys(data.errors).find(k => k === key || k.startsWith(key + '.'));
+                    if (errKey) {
+                        const el = document.getElementById(fieldMap[key]);
+                        if (el) { el.textContent = data.errors[errKey][0]; el.classList.remove('hidden'); matched = true; }
+                    }
                 });
+                if (!matched) Swal.fire('Gagal!', data.message || 'Terjadi kesalahan validasi.', 'error');
             } else { Swal.fire('Gagal!', data.message || 'Terjadi kesalahan.', 'error'); }
             btn.disabled = false;
             btn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Konfirmasi On Trial</span>';
-            startDurasiTimer();
+            if (typeof window._durasiMode === 'undefined' || window._durasiMode !== 'manual') startDurasiTimer();
         }
     } catch (e) {
         Swal.fire('Error!', 'Terjadi kesalahan.', 'error');
         btn.disabled = false;
         btn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><span>Konfirmasi On Trial</span>';
-        startDurasiTimer();
+        if (typeof window._durasiMode === 'undefined' || window._durasiMode !== 'manual') startDurasiTimer();
     }
 }
 
@@ -682,14 +715,12 @@ function handleAdditionalInfoBackdrop(e) {
 async function openClosedInfoModal(id) {
     _closedInfoId = id;
 
-    // Reset Hasil Akhir
     document.querySelectorAll('input[name="closedHasilAkhir"]').forEach(r => r.checked = false);
     const errHasilAkhir = document.getElementById('errorClosedHasilAkhir');
     errHasilAkhir.textContent = ''; errHasilAkhir.classList.add('hidden');
     const ngWarning = document.getElementById('hasilAkhirNgWarning');
     if (ngWarning) ngWarning.classList.add('hidden');
 
-    // Reset section 1 — Monitoring Dies Temporary
     document.getElementById('closedTanggalCek').value    = '';
     document.getElementById('closedLotProd').value       = '';
     document.getElementById('closedRemarkMonitoring').value = '';
@@ -699,7 +730,6 @@ async function openClosedInfoModal(id) {
     document.querySelectorAll('input[name="closedQty"]').forEach(r => r.checked = false);
     document.querySelectorAll('input[name="closedJudgeMonitoring"]').forEach(r => r.checked = false);
 
-    // Reset section 2 — Target Permanen Action
     document.getElementById('closedPlanPermanen').value    = '';
     document.getElementById('closedActualPermanen').value  = '';
     document.getElementById('closedRootcause').value       = '';
@@ -707,7 +737,6 @@ async function openClosedInfoModal(id) {
     document.getElementById('closedAssyTrialCheck').value  = '';
     document.querySelectorAll('input[name="closedJudgePermanen"]').forEach(r => r.checked = false);
 
-    // Reset button
     const btn = document.getElementById('submitClosedInfoBtn');
     btn.disabled = false;
     btn.innerHTML = '<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg><span>Konfirmasi Closed</span>';
@@ -741,7 +770,6 @@ async function submitClosedInfo() {
         return;
     }
 
-    // Section 1 — Monitoring Dies Temporary
     const tanggalCek       = document.getElementById('closedTanggalCek').value;
     const lotProd          = document.getElementById('closedLotProd').value.trim();
     const awal             = document.querySelector('input[name="closedAwal"]:checked')?.value || '';
@@ -751,7 +779,6 @@ async function submitClosedInfo() {
     const remarkMonitoring = document.getElementById('closedRemarkMonitoring').value.trim();
     const judgeMonitoring  = document.querySelector('input[name="closedJudgeMonitoring"]:checked')?.value || '';
 
-    // Section 2 — Target Permanen Action
     const planPermanen   = document.getElementById('closedPlanPermanen').value.trim();
     const actualPermanen = document.getElementById('closedActualPermanen').value.trim();
     const rootcause      = document.getElementById('closedRootcause').value.trim();
@@ -770,7 +797,6 @@ async function submitClosedInfo() {
             body: JSON.stringify({
                 status: 'closed',
                 hasil_akhir: hasilAkhir,
-                // Section 1
                 tanggal_cek:       tanggalCek      || null,
                 lot_prod:          lotProd         || null,
                 awal:              awal            || null,
@@ -779,7 +805,6 @@ async function submitClosedInfo() {
                 qty:               qty             || null,
                 remark_monitoring: remarkMonitoring|| null,
                 judge_monitoring:  judgeMonitoring || null,
-                // Section 2
                 plan_permanen:     planPermanen    || null,
                 actual_permanen:   actualPermanen  || null,
                 rootcause:         rootcause       || null,
@@ -819,6 +844,82 @@ function handleClosedInfoBackdrop(e) {
 }
 
 // ════════════════════════════════════════════════════════
+// QUICK ADD BARANG (tombol + di Part No)
+// ════════════════════════════════════════════════════════
+function openQuickAddBarangModal() {
+    document.getElementById('quickAddBarangForm').reset();
+    document.querySelectorAll('#quickAddBarangForm .error-message').forEach(el => el.textContent = '');
+
+    waitForJQuery(function () {
+        try { $('#qabSupplierId').select2('destroy'); } catch (e) {}
+        $('#qabSupplierId').select2({
+            placeholder: 'Pilih Supplier',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $('#quickAddBarangModal'),
+        });
+    });
+
+    const modal = document.getElementById('quickAddBarangModal');
+    modal.style.display = 'flex';
+    requestAnimationFrame(() => requestAnimationFrame(() => modal.classList.add('modal-fade-in')));
+}
+
+function closeQuickAddBarangModal() {
+    waitForJQuery(function () { try { $('#qabSupplierId').select2('destroy'); } catch (e) {} });
+    const modal = document.getElementById('quickAddBarangModal');
+    modal.classList.remove('modal-fade-in');
+    setTimeout(() => { modal.style.display = 'none'; }, 300);
+}
+
+async function submitQuickAddBarang() {
+    document.querySelectorAll('#quickAddBarangForm .error-message').forEach(el => el.textContent = '');
+
+    const fd = new FormData(document.getElementById('quickAddBarangForm'));
+
+    const btn = document.getElementById('qabSubmitBtn');
+    btn.disabled = true;
+    btn.textContent = 'Menyimpan...';
+
+    try {
+        const res = await fetch('/barangs', {
+            method: 'POST',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' },
+            body: fd,
+        });
+        const data = await res.json();
+
+        if (data.success && data.data) {
+            const b = data.data;
+
+            // Suntikkan barang baru ke dropdown Part No & langsung pilih
+            const newOption = new Option((b.kode_barang || '') + ' — ' + (b.nama || ''), b.id, true, true);
+            $('#createBarangId').append(newOption).trigger('change');
+
+            // Isi field auto-fill, sama seperti saat select2:select biasa
+            document.getElementById('createNamaDisplay').value     = b.nama || '';
+            document.getElementById('createCustomerDisplay').value = b.cust || '';
+            loadProcessNos(b.id, 'createProcessNoSelect');
+
+            closeQuickAddBarangModal();
+            Swal.fire({ icon: 'success', title: 'Part berhasil ditambahkan!', showConfirmButton: false, timer: 1200 });
+        } else if (data.errors) {
+            Object.keys(data.errors).forEach(key => {
+                const el = document.getElementById('error-qab-' + key);
+                if (el) el.textContent = data.errors[key][0];
+            });
+        } else {
+            Swal.fire('Gagal!', data.message || 'Terjadi kesalahan.', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error!', 'Terjadi kesalahan.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'Simpan & Pilih';
+    }
+}
+
+// ════════════════════════════════════════════════════════
 // SELECT2 BARANG
 // ════════════════════════════════════════════════════════
 function initBarangSelect2(selectId, modalId, cb) {
@@ -833,6 +934,31 @@ function initBarangSelect2(selectId, modalId, cb) {
         })
         .on('select2:select', function (e) { cb(e.params.data); })
         .on('select2:clear',  function ()  { cb(null); });
+    });
+}
+
+// ════════════════════════════════════════════════════════
+// SELECT2 CREATED BY (khusus role 1)
+// ════════════════════════════════════════════════════════
+function initCreatedBySelect2() {
+    if (AUTH_USER_ROLE != 1) return;
+    waitForJQuery(function () {
+        try { $('#createCreatedBy').select2('destroy'); } catch (e) {}
+        $('#createCreatedBy').select2({
+            placeholder: 'Default: Diri Sendiri',
+            allowClear: true,
+            width: '100%',
+            minimumInputLength: 0,
+            dropdownParent: $('#createModal'),
+            ajax: {
+                url: '/request-repairs/pengaju-candidates',
+                dataType: 'json',
+                delay: 250,
+                data: function (p) { return { q: p.term || '' }; },
+                processResults: function (d) { return { results: d.results }; },
+                cache: true,
+            },
+        });
     });
 }
 
@@ -896,6 +1022,7 @@ function openCreateModal() {
             document.getElementById('createProcessNoInput').value  = '';
         }
     });
+    initCreatedBySelect2();
     document.getElementById('createForm').onsubmit = async function (e) {
         e.preventDefault(); clearErrors();
         const fd = new FormData(this); fd.set('process_no', getProcessNoValue('create'));
@@ -908,7 +1035,10 @@ function openCreateModal() {
     };
 }
 function closeCreateModal() {
-    waitForJQuery(function () { try { $('#createBarangId').select2('destroy'); } catch(e) {} });
+    waitForJQuery(function () {
+        try { $('#createBarangId').select2('destroy'); } catch(e) {}
+        try { $('#createCreatedBy').select2('destroy'); } catch(e) {}
+    });
     modalHide('createModal');
 }
 
@@ -940,7 +1070,6 @@ async function openEditModal(id) {
         document.getElementById('editProcessNoToggleBtn').textContent = 'Manual';
         document.getElementById('editProcessNoInput').value = r.process_no || '';
 
-        // Gambar existing
         const editGambarCurrent  = document.getElementById('editGambarCurrent');
         const editGambarEmptyTxt = document.getElementById('editGambarEmptyText');
         if (r.gambar_url) {
@@ -1017,7 +1146,6 @@ async function openDetailModal(id) {
         document.getElementById('detailKategori').innerHTML     = '<span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + (KATEGORI_BADGE[r.kategori_problem] || 'bg-gray-100 text-gray-700') + '">' + esc(r.kategori_problem) + '</span>';
         
 
-        // ── Dibuat Oleh & Gambar ──
         document.getElementById('detailCreatedBy').textContent = r.created_by_name || '-';
         const detailGambarEl    = document.getElementById('detailGambar');
         const detailGambarEmpty = document.getElementById('detailGambarEmpty');
@@ -1031,13 +1159,23 @@ async function openDetailModal(id) {
         }
 
         // ── On Trial sections ──
-        const hasSection1 = r.analisa_penyebab || r.tindakan_perbaikan || r.catatan_penggantian_sparepart;
+        const hasSection1 = r.analisa_penyebab || r.tindakan_perbaikan || r.catatan_penggantian_sparepart || (r.sparepart_items && r.sparepart_items.length);
         const hasSection2 = r.item || r.proses_grinding || r.shim_up || r.status_burry || r.standart_burry || r.group_leader || r.operator;
         const hasSection3 = r.plan || r.actual || r.remark || r.judge;
         if (hasSection1 || hasSection2 || hasSection3) {
             document.getElementById('detailAnalisaPenyebab').textContent             = r.analisa_penyebab              || '-';
             document.getElementById('detailTindakanPerbaikan').textContent           = r.tindakan_perbaikan            || '-';
             document.getElementById('detailCatatanPenggantianSparepart').textContent = r.catatan_penggantian_sparepart || '-';
+            const sparepartListEl = document.getElementById('detailSparepartItems');
+            if (sparepartListEl) {
+                if (r.sparepart_items && r.sparepart_items.length) {
+                    sparepartListEl.innerHTML = r.sparepart_items.map(p =>
+                        '<li>' + esc(p.kode_part) + ' — ' + esc(p.nama) + ' <span class="text-gray-500">(' + p.qty + ' ' + esc(p.satuan || '') + ')</span></li>'
+                    ).join('');
+                } else {
+                    sparepartListEl.innerHTML = '<li class="text-gray-400">-</li>';
+                }
+            }
             document.getElementById('detailItem').textContent            = r.item            || '-';
             document.getElementById('detailProsesGrinding').textContent  = r.proses_grinding || '-';
             document.getElementById('detailShimUp').textContent          = r.shim_up         || '-';
@@ -1154,7 +1292,7 @@ function displayErrors(errors, prefix) { Object.keys(errors).forEach(function (k
 
 // ESC key
 document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { closeCreateModal(); closeEditModal(); closeDetailModal(); closeSelectPicModal(); closeAdditionalInfoModal(); closeClosedInfoModal(); }
+    if (e.key === 'Escape') { closeCreateModal(); closeEditModal(); closeDetailModal(); closeSelectPicModal(); closeAdditionalInfoModal(); closeClosedInfoModal(); closeQuickAddBarangModal(); }
 });
 </script>
 @endpush

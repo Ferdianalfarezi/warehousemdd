@@ -26,27 +26,21 @@ class PartController extends Controller
         $this->warehouseOrderService = $warehouseOrderService;
     }
 
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $suppliers = Supplier::all();
-        
-        // Hitung statistik stock berdasarkan logic min_stock (karena status adalah accessor)
-        // Status logic: habis = stock 0, low = stock <= min_stock, normal = stock > min_stock
+
         $stats = Part::selectRaw("
             COUNT(*) as total,
             SUM(CASE WHEN stock = 0 THEN 1 ELSE 0 END) as habis,
             SUM(CASE WHEN stock > 0 AND stock <= min_stock THEN 1 ELSE 0 END) as hampir_habis,
             SUM(CASE WHEN stock > min_stock THEN 1 ELSE 0 END) as stock_aman
         ")->first();
-        
-        // Count on_request dari tabel request_part_items yang masih pending/on_request
+
         $onRequest = Part::whereHas('requestPartItems', function($q) {
             $q->whereIn('item_status', ['pending', 'on_request']);
         })->count();
-        
+
         return view('parts.index', [
             'suppliers' => $suppliers,
             'totalParts' => $stats->total ?? 0,
@@ -57,130 +51,117 @@ class PartController extends Controller
         ]);
     }
 
-    /**
- * Get parts data for DataTable (Server-Side)
- */
-public function getData(Request $request)
-{
-    $perPage = $request->input('per_page', 20);
-    $page = $request->input('page', 1);
-    $search = $request->input('search', '');
-    $status = $request->input('status', '');
-    $showAll = $perPage === 'all' || $perPage === '-1';
+    public function getData(Request $request)
+    {
+        $perPage = $request->input('per_page', 20);
+        $page = $request->input('page', 1);
+        $search = $request->input('search', '');
+        $status = $request->input('status', '');
+        $showAll = $perPage === 'all' || $perPage === '-1';
 
-    // Base query dengan eager loading
-    $query = Part::with('supplier:id,nama');
+        $query = Part::with('supplier:id,nama');
 
-    // Filter search
-    if (!empty($search)) {
-        $query->where(function($q) use ($search) {
-            $q->where('kode_part', 'like', "%{$search}%")
-              ->orWhere('nama', 'like', "%{$search}%")
-              ->orWhere('address', 'like', "%{$search}%")
-              ->orWhereHas('supplier', function($sq) use ($search) {
-                  $sq->where('nama', 'like', "%{$search}%");
-              });
+        if (!empty($search)) {
+            $query->where(function($q) use ($search) {
+                $q->where('kode_part', 'like', "%{$search}%")
+                  ->orWhere('nama', 'like', "%{$search}%")
+                  ->orWhere('address', 'like', "%{$search}%")
+                  ->orWhereHas('supplier', function($sq) use ($search) {
+                      $sq->where('nama', 'like', "%{$search}%");
+                  });
+            });
+        }
+
+        if ($request->filled('stock_condition')) {
+            $condition = $request->stock_condition;
+
+            switch ($condition) {
+                case 'normal':
+                    $query->whereColumn('stock', '>', 'min_stock');
+                    break;
+                case 'low':
+                    $query->where('stock', '>', 0)
+                          ->whereColumn('stock', '<=', 'min_stock');
+                    break;
+                case 'out':
+                    $query->where('stock', '=', 0);
+                    break;
+                case 'on_request':
+                    $onRequestPartIds = DB::table('request_part_items')
+                        ->whereIn('item_status', ['pending', 'on_request'])
+                        ->pluck('part_id')
+                        ->unique()
+                        ->toArray();
+                    $query->whereIn('id', $onRequestPartIds);
+                    break;
+            }
+        }
+
+        if (!empty($status)) {
+            switch ($status) {
+                case 'habis':
+                    $query->where('stock', 0);
+                    break;
+                case 'low':
+                    $query->where('stock', '>', 0)->whereColumn('stock', '<=', 'min_stock');
+                    break;
+                case 'normal':
+                    $query->whereColumn('stock', '>', 'min_stock');
+                    break;
+            }
+        }
+
+        $total = $query->count();
+
+        if ($showAll) {
+            $parts = $query->latest()->get();
+            $perPage = $total;
+            $page = 1;
+        } else {
+            $perPage = (int) $perPage;
+            $parts = $query->latest()
+                           ->skip(($page - 1) * $perPage)
+                           ->take($perPage)
+                           ->get();
+        }
+
+        $data = $parts->map(function($part, $index) use ($page, $perPage, $showAll) {
+            $rowNumber = $showAll ? $index + 1 : (($page - 1) * $perPage) + $index + 1;
+            return [
+                'id' => $part->id,
+                'row_number' => $rowNumber,
+                'kode_part' => $part->kode_part,
+                'nama' => $part->nama,
+                'stock' => $part->stock,
+                'min_stock' => $part->min_stock,
+                'max_stock' => $part->max_stock,
+                'satuan' => $part->satuan,
+                'status' => $part->status,
+                'status_label' => $part->status_label,
+                'status_badge_class' => $part->status_badge_class,
+                'supplier_nama' => $part->supplier->nama ?? '-',
+                'address' => $part->address ?? 'N/A',
+                'id_pud' => $part->id_pud,
+                'gambar' => $part->gambar,
+                'image_path' => $part->image_path,
+                'is_below_min' => $part->isBelowMinStock(),
+            ];
         });
+
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'pagination' => [
+                'current_page' => (int) $page,
+                'per_page' => $showAll ? 'all' : (int) $perPage,
+                'total' => $total,
+                'total_pages' => $showAll ? 1 : ceil($total / $perPage),
+                'from' => $total > 0 ? (($page - 1) * ($showAll ? $total : $perPage)) + 1 : 0,
+                'to' => min($total, $page * ($showAll ? $total : $perPage)),
+            ]
+        ]);
     }
 
-    // Filter by stock condition
-    if ($request->filled('stock_condition')) {
-        $condition = $request->stock_condition;
-        
-        switch ($condition) {
-            case 'normal':
-                $query->whereColumn('stock', '>', 'min_stock');
-                break;
-            case 'low':
-                $query->where('stock', '>', 0)
-                      ->whereColumn('stock', '<=', 'min_stock');
-                break;
-            case 'out':
-                $query->where('stock', '=', 0);
-                break;
-            case 'on_request':
-                $onRequestPartIds = DB::table('request_part_items')
-                    ->whereIn('item_status', ['pending', 'on_request'])
-                    ->pluck('part_id')
-                    ->unique()
-                    ->toArray();
-                $query->whereIn('id', $onRequestPartIds);
-                break;
-        }
-    }
-
-    // Filter status (legacy - bisa dihapus kalau sudah gak dipake)
-    if (!empty($status)) {
-        switch ($status) {
-            case 'habis':
-                $query->where('stock', 0);
-                break;
-            case 'low':
-                $query->where('stock', '>', 0)->whereColumn('stock', '<=', 'min_stock');
-                break;
-            case 'normal':
-                $query->whereColumn('stock', '>', 'min_stock');
-                break;
-        }
-    }
-
-    // Get total sebelum pagination
-    $total = $query->count();
-
-    // Pagination atau Show All
-    if ($showAll) {
-        $parts = $query->latest()->get();
-        $perPage = $total;
-        $page = 1;
-    } else {
-        $perPage = (int) $perPage;
-        $parts = $query->latest()
-                       ->skip(($page - 1) * $perPage)
-                       ->take($perPage)
-                       ->get();
-    }
-
-    // Transform data untuk response
-    $data = $parts->map(function($part, $index) use ($page, $perPage, $showAll) {
-        $rowNumber = $showAll ? $index + 1 : (($page - 1) * $perPage) + $index + 1;
-        return [
-            'id' => $part->id,
-            'row_number' => $rowNumber,
-            'kode_part' => $part->kode_part,
-            'nama' => $part->nama,
-            'stock' => $part->stock,
-            'min_stock' => $part->min_stock,
-            'max_stock' => $part->max_stock,
-            'satuan' => $part->satuan,
-            'status' => $part->status,
-            'status_label' => $part->status_label,
-            'status_badge_class' => $part->status_badge_class,
-            'supplier_nama' => $part->supplier->nama ?? '-',
-            'address' => $part->address ?? 'N/A',
-            'id_pud' => $part->id_pud,
-            'gambar' => $part->gambar,
-            'image_path' => $part->image_path,
-            'is_below_min' => $part->isBelowMinStock(),
-        ];
-    });
-
-    return response()->json([
-        'success' => true,
-        'data' => $data,
-        'pagination' => [
-            'current_page' => (int) $page,
-            'per_page' => $showAll ? 'all' : (int) $perPage,
-            'total' => $total,
-            'total_pages' => $showAll ? 1 : ceil($total / $perPage),
-            'from' => $total > 0 ? (($page - 1) * ($showAll ? $total : $perPage)) + 1 : 0,
-            'to' => min($total, $page * ($showAll ? $total : $perPage)),
-        ]
-    ]);
-}
-
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -205,16 +186,15 @@ public function getData(Request $request)
 
         $data = $request->except('gambar');
 
-        // Handle image upload
         if ($request->hasFile('gambar')) {
             $image = $request->file('gambar');
             $imageName = time() . '_' . $image->getClientOriginalName();
-            
+
             $path = public_path('storage/parts');
             if (!file_exists($path)) {
                 mkdir($path, 0777, true);
             }
-            
+
             $image->move($path, $imageName);
             $data['gambar'] = $imageName;
         }
@@ -229,9 +209,6 @@ public function getData(Request $request)
         ]);
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show(Part $part)
     {
         $part->load('supplier');
@@ -241,9 +218,6 @@ public function getData(Request $request)
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Part $part)
     {
         $validator = Validator::make($request->all(), [
@@ -268,9 +242,7 @@ public function getData(Request $request)
 
         $data = $request->except('gambar');
 
-        // Handle image upload
         if ($request->hasFile('gambar')) {
-            // Delete old image
             if ($part->gambar) {
                 $oldImagePath = public_path('storage/parts/' . $part->gambar);
                 if (file_exists($oldImagePath)) {
@@ -280,12 +252,12 @@ public function getData(Request $request)
 
             $image = $request->file('gambar');
             $imageName = time() . '_' . $image->getClientOriginalName();
-            
+
             $path = public_path('storage/parts');
             if (!file_exists($path)) {
                 mkdir($path, 0777, true);
             }
-            
+
             $image->move($path, $imageName);
             $data['gambar'] = $imageName;
         }
@@ -300,9 +272,6 @@ public function getData(Request $request)
         ]);
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Part $part)
     {
         try {
@@ -314,7 +283,7 @@ public function getData(Request $request)
             }
 
             $part->delete();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Part berhasil dihapus!'
@@ -333,17 +302,11 @@ public function getData(Request $request)
         return view('parts.import', compact('suppliers'));
     }
 
-    /**
-     * Download template Excel
-     */
     public function downloadTemplate()
     {
         return Excel::download(new PartsTemplateExport(), 'template_import_parts.xlsx');
     }
 
-    /**
-     * Process import Excel
-     */
     public function import(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -360,9 +323,9 @@ public function getData(Request $request)
         try {
             $import = new PartsImport();
             Excel::import($import, $request->file('file'));
-            
+
             $results = $import->getResults();
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'Import completed!',
@@ -381,9 +344,6 @@ public function getData(Request $request)
         }
     }
 
-    /**
-     * Request part ke warehouse system
-     */
     public function requestToWarehouse(Request $request, Part $part)
     {
         $validator = Validator::make($request->all(), [
@@ -451,7 +411,7 @@ public function getData(Request $request)
 
             if (!$response['success']) {
                 DB::rollBack();
-                
+
                 $errorMessage = 'Gagal mengirim request ke warehouse.';
                 if (isset($response['data']['message'])) {
                     $errorMessage .= ' ' . $response['data']['message'];
@@ -465,8 +425,8 @@ public function getData(Request $request)
                 ], 400);
             }
 
-            $warehouseOrderId = $response['data']['data']['order_id'] 
-                ?? $response['data']['data']['id'] 
+            $warehouseOrderId = $response['data']['data']['order_id']
+                ?? $response['data']['data']['id']
                 ?? $response['data']['order_id']
                 ?? null;
 
@@ -492,7 +452,7 @@ public function getData(Request $request)
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             Log::error('Error requesting part to warehouse', [
                 'part_id' => $part->id,
                 'user_id' => $user->id,
@@ -506,9 +466,6 @@ public function getData(Request $request)
         }
     }
 
-    /**
-     * Bulk request parts ke warehouse
-     */
     public function bulkRequestWarehouse(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -542,10 +499,10 @@ public function getData(Request $request)
             ]);
 
             $warehouseItems = [];
-            
+
             foreach ($request->part_ids as $index => $partId) {
                 $part = Part::findOrFail($partId);
-                
+
                 if (!$part->id_pud) {
                     DB::rollBack();
                     return response()->json([
@@ -579,7 +536,7 @@ public function getData(Request $request)
 
             if (!$response['success']) {
                 DB::rollBack();
-                
+
                 $errorMessage = 'Gagal mengirim request ke warehouse.';
                 if (isset($response['data']['message'])) {
                     $errorMessage .= ' ' . $response['data']['message'];
@@ -591,8 +548,8 @@ public function getData(Request $request)
                 ], 400);
             }
 
-            $warehouseOrderId = $response['data']['data']['order_id'] 
-                ?? $response['data']['data']['id'] 
+            $warehouseOrderId = $response['data']['data']['order_id']
+                ?? $response['data']['data']['id']
                 ?? $response['data']['order_id']
                 ?? null;
 
@@ -616,7 +573,7 @@ public function getData(Request $request)
 
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             Log::error('Error bulk requesting parts', [
                 'error' => $e->getMessage(),
                 'user_id' => $user->id

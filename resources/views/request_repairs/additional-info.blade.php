@@ -65,7 +65,7 @@
                 <p id="durasiDisplay" class="font-mono text-3xl font-bold tracking-tight text-zinc-800">Menghitung...</p>
                 <p class="mt-2 text-xs text-zinc-500">Dihitung sejak request dibuat · otomatis berhenti saat submit · waktu pause tidak dihitung</p>
 
-                {{-- ⬅️ baru — Banner alasan pause, muncul kalau sedang paused --}}
+                {{-- Banner alasan pause, muncul kalau sedang paused --}}
                 <div id="pauseReasonBanner" class="hidden mt-3 flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5">
                     <svg class="h-4 w-4 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                         <path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/>
@@ -73,7 +73,7 @@
                     <p class="text-xs font-semibold text-red-700">Sedang di-pause: <span id="pauseReasonText">-</span></p>
                 </div>
 
-                {{-- ⬅️ baru — Tombol Pause / Resume --}}
+                {{-- Tombol Pause / Resume --}}
                 <div class="mt-4 flex items-center gap-2">
                     <button type="button" id="pauseBtn" onclick="togglePausePanel()"
                         class="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100">
@@ -87,7 +87,7 @@
                     </button>
                 </div>
 
-                {{-- ⬅️ baru — Panel pilihan alasan pause --}}
+                {{-- Panel pilihan alasan pause --}}
                 <div id="pauseReasonPanel" class="hidden mt-3 rounded-xl border border-zinc-200 bg-white p-3">
                     <p class="mb-2 text-xs font-semibold text-zinc-600">Pilih alasan pause:</p>
                     <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -115,10 +115,43 @@
                     <p id="errorPauseReason" class="mt-2 hidden text-xs text-red-500"></p>
                 </div>
 
-                {{-- ⬅️ baru — Hint kalau submit diblok karena masih paused --}}
+                {{-- Hint kalau submit diblok karena masih paused --}}
                 <p id="pausedSubmitHint" class="hidden mt-3 text-xs font-medium text-red-600">
                     ⚠️ Resume dulu sebelum bisa konfirmasi ke On Trial.
                 </p>
+
+                {{-- Mode Durasi (khusus role 1) — ⬅️ baru --}}
+                @if(auth()->user()->role_id === 1)
+                <div class="mt-4 border-t border-zinc-200 pt-4">
+                    <p class="mb-2 text-xs font-semibold text-zinc-600">Mode Durasi (Admin):</p>
+                    <div class="flex gap-2">
+                        <button type="button" id="durasiModeAutoBtn" onclick="setDurasiMode('otomatis')"
+                            class="flex-1 rounded-xl border-2 border-zinc-900 bg-zinc-900 px-4 py-2 text-xs font-semibold text-white transition">
+                            Otomatis
+                        </button>
+                        <button type="button" id="durasiModeManualBtn" onclick="setDurasiMode('manual')"
+                            class="flex-1 rounded-xl border-2 border-zinc-200 bg-white px-4 py-2 text-xs font-semibold text-zinc-600 transition hover:border-zinc-400">
+                            Manual
+                        </button>
+                    </div>
+
+                    <div id="durasiManualInputs" class="hidden mt-3 grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold text-zinc-600">Jam</label>
+                            <input type="number" min="0" id="durasiManualJam" placeholder="0"
+                                class="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-gray-700
+                                       focus:border-zinc-400 focus:ring-4 focus:ring-zinc-100">
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold text-zinc-600">Menit</label>
+                            <input type="number" min="0" max="59" id="durasiManualMenit" placeholder="0"
+                                class="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2 text-sm text-gray-700
+                                       focus:border-zinc-400 focus:ring-4 focus:ring-zinc-100">
+                        </div>
+                        <p id="errorDurasiManual" class="col-span-2 hidden text-xs text-red-500"></p>
+                    </div>
+                </div>
+                @endif
             </div>
 
             {{-- ══════════════════════════════════════════════
@@ -156,13 +189,27 @@
                         <p id="errorAdditionalTindakanPerbaikan" class="mt-1 hidden text-xs text-red-500"></p>
                     </div>
 
-                    {{-- Catatan Penggantian Sparepart --}}
+                    {{-- Sparepart Selector (⬅️ baru — multi-select search dari tabel parts) --}}
                     <div>
                         <label class="mb-1.5 block text-sm font-semibold text-gray-700">
-                            Catatan Penggantian Sparepart <span class="text-red-500">*</span>
+                            Sparepart yang Diganti <span class="text-red-500">*</span>
+                        </label>
+                        <select id="additionalSparepartSelect" class="w-full" style="width:100%">
+                            <option></option>
+                        </select>
+                        <p id="errorAdditionalSparepartItems" class="mt-1 hidden text-xs text-red-500"></p>
+
+                        {{-- List part terpilih + qty --}}
+                        <div id="sparepartSelectedList" class="mt-3 space-y-2"></div>
+                    </div>
+
+                    {{-- Catatan Tambahan (opsional, sebelumnya ini yg wajib jadi free text) --}}
+                    <div>
+                        <label class="mb-1.5 block text-sm font-semibold text-gray-700">
+                            Catatan Tambahan Sparepart
                         </label>
                         <input type="text" id="additionalCatatanSparepart"
-                            placeholder="Masukkan catatan penggantian sparepart..."
+                            placeholder="Catatan tambahan (opsional)..."
                             class="w-full rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm text-gray-700
                                    transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-100 placeholder:text-gray-400">
                         <p id="errorAdditionalCatatanSparepart" class="mt-1 hidden text-xs text-red-500"></p>
@@ -375,7 +422,7 @@
 
 <script>
 // ════════════════════════════════════════════════════════
-// PAUSE / RESUME — logic khusus modal Additional Info (⬅️ baru)
+// PAUSE / RESUME — logic khusus modal Additional Info
 // Catatan: _additionalInfoId, startDurasiTimer(), stopDurasiTimer(),
 // _durasiStartSeconds, _durasiStartTime sudah dideklarasikan di
 // request_repairs/index.blade.php dan bisa diakses dari sini karena
@@ -467,6 +514,11 @@ function applyDurasiState(data) {
     const submitBtn  = document.getElementById('submitAdditionalInfoBtn');
     const pausedHint = document.getElementById('pausedSubmitHint');
 
+    // ⬅️ baru — kalau mode manual lagi aktif, state pause dari server diabaikan
+    if (typeof window._durasiMode !== 'undefined' && window._durasiMode === 'manual') {
+        return;
+    }
+
     if (data.is_paused) {
         // ── Freeze timer, tampilkan state paused ──
         stopDurasiTimer();
@@ -500,5 +552,179 @@ function applyDurasiState(data) {
         _durasiStartTime    = Date.now();
         startDurasiTimer();
     }
+}
+
+// ════════════════════════════════════════════════════════
+// SPAREPART SELECTOR (⬅️ baru) — select2 ajax multi-pick + qty per item
+// selectedSpareparts didefinisikan sebagai window-level array supaya
+// bisa dibaca dari submitAdditionalInfo() di index.blade.php
+// ════════════════════════════════════════════════════════
+window.selectedSpareparts = window.selectedSpareparts || []; // {part_id, kode_part, nama, satuan, stock, qty}
+
+function initSparepartSelect() {
+    if (typeof $ === 'undefined' || !$.fn.select2) return;
+
+    try { $('#additionalSparepartSelect').select2('destroy'); } catch (e) {}
+
+    $('#additionalSparepartSelect').select2({
+        placeholder: 'Cari kode / nama part...',
+        allowClear: true,
+        width: '100%',
+        minimumInputLength: 1,
+        dropdownParent: $('#additionalInfoModal'),
+        ajax: {
+            url: '{{ route("request-repairs.search-parts") }}',
+            dataType: 'json',
+            delay: 250,
+            data: params => ({ q: params.term }),
+            processResults: data => ({ results: data.results }),
+            cache: true,
+        },
+    }).on('select2:select', function (e) {
+        const d = e.params.data;
+        if (!window.selectedSpareparts.find(p => p.part_id === d.id)) {
+            window.selectedSpareparts.push({
+                part_id: d.id, kode_part: d.kode, nama: d.nama,
+                satuan: d.satuan, stock: d.stock, qty: 1,
+            });
+        }
+        renderSparepartList();
+        // reset select2 biar bisa search part lain lagi
+        $(this).val(null).trigger('change');
+    });
+}
+
+function resetSparepartSelector() {
+    window.selectedSpareparts = [];
+    renderSparepartList();
+    if (typeof $ !== 'undefined' && $.fn.select2) {
+        try { $('#additionalSparepartSelect').val(null).trigger('change'); } catch (e) {}
+    }
+    const errEl = document.getElementById('errorAdditionalSparepartItems');
+    if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+}
+
+function renderSparepartList() {
+    const wrap = document.getElementById('sparepartSelectedList');
+    if (!wrap) return;
+    if (window.selectedSpareparts.length === 0) {
+        wrap.innerHTML = '<p class="text-xs text-zinc-400">Belum ada part dipilih.</p>';
+        return;
+    }
+    wrap.innerHTML = window.selectedSpareparts.map((p, idx) => `
+        <div class="flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2">
+            <div class="flex-1 min-w-0">
+                <p class="text-sm font-semibold text-zinc-700 truncate">${p.kode_part} — ${p.nama}</p>
+                <p class="text-xs text-zinc-500">Stock tersedia: ${p.stock} ${p.satuan || ''}</p>
+            </div>
+            <input type="number" min="1" max="${p.stock}" value="${p.qty}"
+                onchange="updateSparepartQty(${idx}, this.value)"
+                class="w-20 rounded-lg border border-zinc-300 px-2 py-1 text-sm text-center flex-shrink-0">
+            <button type="button" onclick="removeSparepart(${idx})"
+                class="text-red-500 hover:text-red-700 flex-shrink-0">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    `).join('');
+}
+
+function updateSparepartQty(idx, val) {
+    const p = window.selectedSpareparts[idx];
+    if (!p) return;
+    let qty = parseInt(val) || 1;
+    if (qty < 1) qty = 1;
+    if (p.stock && qty > p.stock) qty = p.stock;
+    p.qty = qty;
+    renderSparepartList();
+}
+
+function removeSparepart(idx) {
+    window.selectedSpareparts.splice(idx, 1);
+    renderSparepartList();
+}
+
+// ════════════════════════════════════════════════════════
+// MODE DURASI — Otomatis / Manual (khusus role 1) — ⬅️ baru
+// ════════════════════════════════════════════════════════
+window._durasiMode = 'otomatis';
+
+function setDurasiMode(mode) {
+    window._durasiMode = mode;
+
+    const autoBtn    = document.getElementById('durasiModeAutoBtn');
+    const manualBtn  = document.getElementById('durasiModeManualBtn');
+    const manualWrap = document.getElementById('durasiManualInputs');
+    const pauseBtn   = document.getElementById('pauseBtn');
+    const resumeBtn  = document.getElementById('resumeBtn');
+    const submitBtn  = document.getElementById('submitAdditionalInfoBtn');
+    const pausedHint = document.getElementById('pausedSubmitHint');
+
+    if (!autoBtn || !manualBtn || !manualWrap) return; // elemen cuma ada buat role 1
+
+    const activeCls   = ['bg-zinc-900', 'border-zinc-900', 'text-white'];
+    const inactiveCls = ['border-zinc-200', 'bg-white', 'text-zinc-600'];
+
+    if (mode === 'manual') {
+        autoBtn.classList.remove(...activeCls);     autoBtn.classList.add(...inactiveCls);
+        manualBtn.classList.remove(...inactiveCls); manualBtn.classList.add(...activeCls);
+        manualWrap.classList.remove('hidden');
+
+        stopDurasiTimer();
+
+        pauseBtn.disabled = true;  pauseBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        resumeBtn.disabled = true; resumeBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+        // manual override -> submit gak boleh keblok gara-gara status paused
+        if (submitBtn)  { submitBtn.disabled = false; submitBtn.classList.remove('opacity-50', 'cursor-not-allowed'); }
+        if (pausedHint) pausedHint.classList.add('hidden');
+    } else {
+        manualBtn.classList.remove(...activeCls);  manualBtn.classList.add(...inactiveCls);
+        autoBtn.classList.remove(...inactiveCls);  autoBtn.classList.add(...activeCls);
+        manualWrap.classList.add('hidden');
+
+        pauseBtn.disabled = false;  pauseBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        resumeBtn.disabled = false; resumeBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+
+        refreshDurasiState(); // balik ke state asli (termasuk re-cek pause)
+    }
+}
+
+function resetDurasiModeUI() {
+    window._durasiMode = 'otomatis';
+
+    const autoBtn    = document.getElementById('durasiModeAutoBtn');
+    const manualBtn  = document.getElementById('durasiModeManualBtn');
+    const manualWrap = document.getElementById('durasiManualInputs');
+    if (autoBtn && manualBtn && manualWrap) {
+        autoBtn.classList.add('bg-zinc-900', 'border-zinc-900', 'text-white');
+        autoBtn.classList.remove('border-zinc-200', 'bg-white', 'text-zinc-600');
+        manualBtn.classList.remove('bg-zinc-900', 'border-zinc-900', 'text-white');
+        manualBtn.classList.add('border-zinc-200', 'bg-white', 'text-zinc-600');
+        manualWrap.classList.add('hidden');
+    }
+
+    const jamEl   = document.getElementById('durasiManualJam');
+    const menitEl = document.getElementById('durasiManualMenit');
+    if (jamEl)   jamEl.value = '';
+    if (menitEl) menitEl.value = '';
+
+    const errEl = document.getElementById('errorDurasiManual');
+    if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+
+    const pauseBtn  = document.getElementById('pauseBtn');
+    const resumeBtn = document.getElementById('resumeBtn');
+    if (pauseBtn)  { pauseBtn.disabled = false;  pauseBtn.classList.remove('opacity-50', 'cursor-not-allowed'); }
+    if (resumeBtn) { resumeBtn.disabled = false; resumeBtn.classList.remove('opacity-50', 'cursor-not-allowed'); }
+}
+
+function getDurasiManualPayload() {
+    if (typeof window._durasiMode === 'undefined' || window._durasiMode !== 'manual') {
+        return { durasi_mode: 'otomatis', durasi_manual_seconds: null };
+    }
+    const jam   = parseInt(document.getElementById('durasiManualJam').value) || 0;
+    const menit = parseInt(document.getElementById('durasiManualMenit').value) || 0;
+    return { durasi_mode: 'manual', durasi_manual_seconds: (jam * 3600) + (menit * 60) };
 }
 </script>

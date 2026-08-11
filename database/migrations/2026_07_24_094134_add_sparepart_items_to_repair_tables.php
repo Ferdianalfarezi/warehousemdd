@@ -6,23 +6,23 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
+    public function up()
     {
-        Schema::table('repair_tables', function (Blueprint $table) {
-            //
+        Schema::table('request_repairs', function (Blueprint $table) {
+            $table->json('sparepart_items')->nullable()->after('catatan_penggantian_sparepart');
+        });
+        Schema::table('request_repair_attempts', function (Blueprint $table) {
+            $table->json('sparepart_items')->nullable()->after('catatan_penggantian_sparepart');
+        });
+        Schema::table('request_repair_histories', function (Blueprint $table) {
+            $table->json('sparepart_items')->nullable()->after('catatan_penggantian_sparepart');
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
+    public function down()
     {
-        Schema::table('repair_tables', function (Blueprint $table) {
-            //
-        });
+        Schema::table('request_repairs', fn (Blueprint $t) => $t->dropColumn('sparepart_items'));
+        Schema::table('request_repair_attempts', fn (Blueprint $t) => $t->dropColumn('sparepart_items'));
+        Schema::table('request_repair_histories', fn (Blueprint $t) => $t->dropColumn('sparepart_items'));
     }
 };
