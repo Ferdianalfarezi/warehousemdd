@@ -186,6 +186,38 @@
                     <p class="error-message text-xs text-red-500 mt-1" id="error-edit-gambar"></p>
                 </div>
 
+                {{-- Durasi On Process → On Trial — khusus admin, muncul kalau status sedang On Trial --}}
+                <div id="editDurasiSection" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">
+                        Durasi On Process → On Trial
+                    </label>
+                    <p class="text-xs text-gray-500 mb-3">
+                        Ubah durasi ini untuk menggeser waktu <span class="font-medium">On Trial</span> tercatat
+                        (dihitung mundur dari waktu mulai On Process). Biarkan seperti semula kalau tidak ingin mengubah.
+                    </p>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Hari</label>
+                            <input type="number" id="editDurasiHari" min="0" value="0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Jam</label>
+                            <input type="number" id="editDurasiJam" min="0" max="23" value="0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Menit</label>
+                            <input type="number" id="editDurasiMenit" min="0" max="59" value="0"
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                        </div>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-400">
+                        Durasi tersimpan saat ini: <span id="editDurasiCurrentLabel" class="font-semibold text-gray-600">-</span>
+                    </p>
+                    <p class="error-message text-xs text-red-500 mt-1" id="error-edit-durasi_manual_seconds"></p>
+                </div>
+
             </form>
         </div>
 

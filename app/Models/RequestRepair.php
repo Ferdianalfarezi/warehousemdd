@@ -129,7 +129,22 @@ class RequestRepair extends Model
     }
 
     // ── Helpers ─────────────────────────────────────────────
+    /**
+     * ⬅️ diubah — data dasar (form Edit) sekarang boleh diubah
+     * selama status Open ATAU On Trial. Di luar itu (On Process,
+     * Closed) tetap terkunci.
+     */
     public function isEditable(): bool
+    {
+        return in_array($this->status, [self::STATUS_OPEN, self::STATUS_ON_TRIAL], true);
+    }
+
+    /**
+     * ⬅️ baru — hapus permanen tetap dibatasi cuma pas Open,
+     * dipisah dari isEditable() supaya data yang lagi On Trial
+     * bisa diedit tapi TIDAK bisa dihapus.
+     */
+    public function isDeletable(): bool
     {
         return $this->status === self::STATUS_OPEN;
     }

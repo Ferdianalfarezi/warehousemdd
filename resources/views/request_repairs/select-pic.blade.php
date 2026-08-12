@@ -71,6 +71,18 @@
                 </label>
             </div>
 
+            {{-- Pilih PIC — mode Sendiri (single select, default diri sendiri, bisa diganti) --}}
+            <div id="selectPicSoloWrapper">
+                <label class="mb-1.5 block text-sm font-semibold text-gray-700">
+                    PIC <span class="text-red-500">*</span>
+                </label>
+                <select id="selectPicSoloSelect"
+                    class="w-full rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm text-gray-700">
+                </select>
+                <p class="mt-1 text-xs text-gray-400">Default diri kamu sendiri, tapi bisa diganti ke rekan lain kalau kamu yang mengajukan atas nama dia. <span class="font-medium text-gray-500">(Hanya member MDD yang dapat dipilih)</span></p>
+                <p id="errorSelectPicSolo" class="mt-1 hidden text-xs text-red-500"></p>
+            </div>
+
             {{-- Pilih anggota tim (muncul kalau mode = tim) --}}
             <div id="selectPicTeamWrapper" class="hidden">
                 <label class="mb-1.5 block text-sm font-semibold text-gray-700">
@@ -79,7 +91,7 @@
                 <select id="selectPicTeamSelect" multiple
                     class="w-full rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm text-gray-700">
                 </select>
-                <p class="mt-1 text-xs text-gray-400">Kamu otomatis tercatat sebagai salah satu PIC.</p>
+                <p class="mt-1 text-xs text-gray-400">Kamu otomatis tercatat sebagai salah satu PIC. <span class="font-medium text-gray-500">(Hanya member MDD yang dapat dipilih)</span></p>
                 <p id="errorSelectPicTeam" class="mt-1 hidden text-xs text-red-500"></p>
             </div>
 

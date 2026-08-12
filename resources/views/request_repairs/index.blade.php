@@ -116,6 +116,7 @@
 // AUTH CONTEXT
 // ════════════════════════════════════════════════════════
 const AUTH_USER_ID   = {{ auth()->id() }};
+const AUTH_USER_NAME = @json(auth()->user()->nama);
 const AUTH_USER_ROLE = {{ auth()->user()->role_id }}; // ⬅️ baru
 
 // ════════════════════════════════════════════════════════
@@ -229,12 +230,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // Toggle mode PIC: Sendiri / Bersama Tim
         if (e.target.name === 'picMode') {
-            const wrapper = document.getElementById('selectPicTeamWrapper');
+            const soloWrapper = document.getElementById('selectPicSoloWrapper');
+            const teamWrapper = document.getElementById('selectPicTeamWrapper');
             if (e.target.value === 'tim') {
-                wrapper.classList.remove('hidden');
+                soloWrapper.classList.add('hidden');
+                teamWrapper.classList.remove('hidden');
                 initPicSelect2();
             } else {
-                wrapper.classList.add('hidden');
+                teamWrapper.classList.add('hidden');
+                soloWrapper.classList.remove('hidden');
+                initPicSoloSelect2();
             }
         }
 
@@ -385,12 +390,17 @@ async function openSelectPicModal(id) {
 
     document.querySelectorAll('input[name="picMode"]').forEach(r => r.checked = (r.value === 'sendiri'));
     document.getElementById('selectPicTeamWrapper').classList.add('hidden');
-    const errEl = document.getElementById('errorSelectPicTeam');
-    errEl.textContent = ''; errEl.classList.add('hidden');
+    document.getElementById('selectPicSoloWrapper').classList.remove('hidden');
+
+    const errTeam = document.getElementById('errorSelectPicTeam');
+    errTeam.textContent = ''; errTeam.classList.add('hidden');
+    const errSolo = document.getElementById('errorSelectPicSolo');
+    errSolo.textContent = ''; errSolo.classList.add('hidden');
 
     waitForJQuery(function () {
         try { $('#selectPicTeamSelect').val(null).trigger('change'); } catch (e) {}
     });
+    initPicSoloSelect2();
 
     const btn = document.getElementById('submitSelectPicBtn');
     btn.disabled = false;
@@ -421,7 +431,36 @@ function handleSelectPicBackdrop(e) {
 }
 
 // ════════════════════════════════════════════════════════
-// SELECT2 PIC CANDIDATES (role_id 1 & 7)
+// SELECT2 PIC SOLO (mode "Sendiri" — default diri sendiri, bisa diganti)
+// ════════════════════════════════════════════════════════
+function initPicSoloSelect2() {
+    waitForJQuery(function () {
+        try { $('#selectPicSoloSelect').select2('destroy'); } catch (e) {}
+
+        $('#selectPicSoloSelect').empty();
+        const defaultOption = new Option(AUTH_USER_NAME + ' (Kamu)', AUTH_USER_ID, true, true);
+        $('#selectPicSoloSelect').append(defaultOption);
+
+        $('#selectPicSoloSelect').select2({
+            placeholder: 'Cari nama / NIK...',
+            allowClear: false,
+            width: '100%',
+            minimumInputLength: 0,
+            dropdownParent: $('#selectPicModal'),
+            ajax: {
+                url: '/request-repairs/pic-candidates',
+                dataType: 'json',
+                delay: 250,
+                data: function (p) { return { q: p.term || '' }; },
+                processResults: function (d) { return { results: d.results }; },
+                cache: true,
+            },
+        }).trigger('change');
+    });
+}
+
+// ════════════════════════════════════════════════════════
+// SELECT2 PIC CANDIDATES (role_id 1 & 7) — mode Tim
 // ════════════════════════════════════════════════════════
 function initPicSelect2() {
     waitForJQuery(function () {
@@ -450,20 +489,30 @@ function initPicSelect2() {
 // ════════════════════════════════════════════════════════
 async function submitSelectPic() {
     const mode = document.querySelector('input[name="picMode"]:checked')?.value || 'sendiri';
-    const errEl = document.getElementById('errorSelectPicTeam');
-    errEl.textContent = ''; errEl.classList.add('hidden');
+    const errTeam = document.getElementById('errorSelectPicTeam');
+    errTeam.textContent = ''; errTeam.classList.add('hidden');
+    const errSolo = document.getElementById('errorSelectPicSolo');
+    errSolo.textContent = ''; errSolo.classList.add('hidden');
 
-    let picUserIds = [AUTH_USER_ID];
+    let picUserIds = [];
 
     if (mode === 'tim') {
-        waitForJQuery(function () {});
         const selected = ($('#selectPicTeamSelect').val() || []).map(v => parseInt(v, 10));
         if (selected.length === 0) {
-            errEl.textContent = 'Pilih minimal 1 anggota tim, atau pilih mode "Sendiri".';
-            errEl.classList.remove('hidden');
+            errTeam.textContent = 'Pilih minimal 1 anggota tim, atau pilih mode "Sendiri".';
+            errTeam.classList.remove('hidden');
             return;
         }
         picUserIds = Array.from(new Set([AUTH_USER_ID, ...selected]));
+    } else {
+        const soloVal = $('#selectPicSoloSelect').val();
+        const soloId  = soloVal ? parseInt(soloVal, 10) : null;
+        if (!soloId) {
+            errSolo.textContent = 'Pilih PIC terlebih dahulu.';
+            errSolo.classList.remove('hidden');
+            return;
+        }
+        picUserIds = [soloId];
     }
 
     const btn = document.getElementById('submitSelectPicBtn');
@@ -1070,6 +1119,25 @@ async function openEditModal(id) {
         document.getElementById('editProcessNoToggleBtn').textContent = 'Manual';
         document.getElementById('editProcessNoInput').value = r.process_no || '';
 
+        // Durasi On Process → On Trial — cuma muncul kalau status On Trial & role admin
+        const editDurasiSection = document.getElementById('editDurasiSection');
+        const errDurasiEdit     = document.getElementById('error-edit-durasi_manual_seconds');
+        if (errDurasiEdit) { errDurasiEdit.textContent = ''; }
+        if (r.status === 'on_trial' && AUTH_USER_ROLE === 1) {
+            const currentSec = (r.timeline && r.timeline.durasi_on_process_seconds) || 0;
+            const dHari  = Math.floor(currentSec / 86400);
+            const dJam   = Math.floor((currentSec % 86400) / 3600);
+            const dMenit = Math.floor((currentSec % 3600) / 60);
+            document.getElementById('editDurasiHari').value  = dHari;
+            document.getElementById('editDurasiJam').value   = dJam;
+            document.getElementById('editDurasiMenit').value = dMenit;
+            document.getElementById('editDurasiCurrentLabel').textContent = currentSec ? formatDurasiJS(currentSec) : '-';
+            editDurasiSection.dataset.originalSeconds = currentSec;
+            editDurasiSection.classList.remove('hidden');
+        } else {
+            editDurasiSection.classList.add('hidden');
+        }
+
         const editGambarCurrent  = document.getElementById('editGambarCurrent');
         const editGambarEmptyTxt = document.getElementById('editGambarEmptyText');
         if (r.gambar_url) {
@@ -1098,6 +1166,19 @@ async function openEditModal(id) {
         document.getElementById('editForm').onsubmit = async function (e) {
             e.preventDefault(); clearErrors();
             const fd = new FormData(this); fd.append('_method', 'PUT'); fd.set('process_no', getProcessNoValue('edit'));
+
+            const editDurasiSection = document.getElementById('editDurasiSection');
+            if (!editDurasiSection.classList.contains('hidden')) {
+                const dHari   = parseInt(document.getElementById('editDurasiHari').value, 10)  || 0;
+                const dJam    = parseInt(document.getElementById('editDurasiJam').value, 10)   || 0;
+                const dMenit  = parseInt(document.getElementById('editDurasiMenit').value, 10) || 0;
+                const totalSeconds = (dHari * 86400) + (dJam * 3600) + (dMenit * 60);
+                const originalSeconds = parseInt(editDurasiSection.dataset.originalSeconds || '0', 10);
+                if (totalSeconds !== originalSeconds) {
+                    fd.set('durasi_manual_seconds', totalSeconds);
+                }
+            }
+
             try {
                 const res  = await fetch('/request-repairs/' + id, { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }, body: fd });
                 const data = await res.json();

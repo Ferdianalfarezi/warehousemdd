@@ -248,9 +248,14 @@ Route::middleware('auth')->group(function () {
                     'general_checkups' => \App\Models\GeneralCheckup::whereIn('status', [
                         'pending', 'on_process',
                     ])->count(),
+                    'request_repairs'  => \App\Models\RequestRepair::whereIn('status', [
+                        \App\Models\RequestRepair::STATUS_OPEN,
+                        \App\Models\RequestRepair::STATUS_ON_PROCESS,
+                        \App\Models\RequestRepair::STATUS_ON_TRIAL,
+                    ])->count(),
                 ]);
             } catch (\Exception $e) {
-                return response()->json(['request_parts' => 0, 'general_checkups' => 0]);
+                return response()->json(['request_parts' => 0, 'general_checkups' => 0, 'request_repairs' => 0]);
             }
         });
 

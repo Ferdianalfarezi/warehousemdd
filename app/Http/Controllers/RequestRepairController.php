@@ -102,7 +102,7 @@ class RequestRepairController extends Controller
                 'is_paused'         => $rr->is_paused,
                 'pause_reason'      => $rr->pause_reason,
                 'can_edit'          => $rr->isEditable(),
-                'can_delete'        => $rr->isEditable(),
+                'can_delete'        => $rr->isDeletable(), // ⬅️ diubah — pisah dari isEditable(), tetap cuma boleh pas Open
                 'can_to_process'    => $rr->canConfirmToProcess()
                                         && in_array($userRoleId, RequestRepair::ROLES_TO_ON_PROCESS),
                 'can_to_on_trial'   => $rr->canUserConfirmToOnTrial($authUser),
@@ -340,10 +340,10 @@ class RequestRepairController extends Controller
         }
     }
 
-    // ── AJAX: kandidat PIC (role_id 1 & 7) ───────────────────
+    // ── AJAX: kandidat PIC (hanya role_id 7 — member MDD) ────
     public function picCandidates()
     {
-        $users = User::whereIn('role_id', RequestRepair::ROLES_TO_ON_PROCESS)
+        $users = User::where('role_id', 7)
             ->orderBy('nama')
             ->get(['id', 'nama', 'nik']);
 
@@ -477,6 +477,8 @@ class RequestRepairController extends Controller
     // ── Update ──────────────────────────────────────────────
     public function update(Request $request, RequestRepair $requestRepair)
     {
+        $userRoleId = auth()->user()->role_id ?? null; // ⬅️ baru — dipakai buat gate edit durasi On Trial (khusus admin)
+
         if (!$requestRepair->isEditable()) {
             return response()->json([
                 'success' => false,
@@ -497,6 +499,8 @@ class RequestRepairController extends Controller
             'kategori_problem'  => 'required|in:Dies,Burry,Dimensi,Human Error,Accessories',
             'detail_proyek'     => 'nullable|string',
             'gambar'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5000',
+            // ⬅️ baru — edit durasi On Process → On Trial, cuma efektif kalau role admin & status on_trial, dicek ulang di server
+            'durasi_manual_seconds' => 'nullable|integer|min:60',
         ]);
 
         if ($validator->fails()) {
@@ -531,6 +535,30 @@ class RequestRepairController extends Controller
                     Storage::disk('public')->delete($requestRepair->gambar);
                 }
                 $updateData['gambar'] = $request->file('gambar')->store('request_repairs', 'public');
+            }
+
+            // ⬅️ baru — edit durasi On Process → On Trial dari form Edit.
+            // Cuma berlaku kalau: role admin, status lagi On Trial, dan field-nya beneran dikirim.
+            if (
+                $userRoleId === 1
+                && $requestRepair->status === RequestRepair::STATUS_ON_TRIAL
+                && $request->filled('durasi_manual_seconds')
+            ) {
+                $baseStart = $requestRepair->on_process_at ?? $requestRepair->created_at;
+
+                if ($baseStart) {
+                    $newOnTrialAt = $baseStart->copy()->addSeconds(
+                        (int) $request->durasi_manual_seconds + $requestRepair->total_paused_seconds
+                    );
+
+                    // Cap biar gak nongol di masa depan
+                    $now = now();
+                    if ($newOnTrialAt->gt($now)) {
+                        $newOnTrialAt = $now;
+                    }
+
+                    $updateData['on_trial_at'] = $newOnTrialAt;
+                }
             }
 
             $requestRepair->update($updateData);
@@ -573,19 +601,28 @@ class RequestRepairController extends Controller
                 'pic_user_ids'   => 'required|array|min:1',
                 'pic_user_ids.*' => 'integer|exists:users,id',
             ], [
-                'pic_user_ids.required' => 'Pilih minimal 1 PIC (diri sendiri atau tim).',
+                'pic_user_ids.required' => 'Pilih minimal 1 PIC.',
             ]);
 
             if ($validator->fails()) {
                 return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
             }
 
-            $validPicIds = User::whereIn('id', $request->pic_user_ids)
+            // ⬅️ diubah — TIDAK lagi paksa merge auth()->id() ke PIC.
+            // PIC sepenuhnya ditentukan dari pilihan frontend:
+            //   - mode "Sendiri" → 1 user bebas (default diri sendiri, bisa diganti)
+            //   - mode "Tim"     → auth user + anggota yang dipilih (di-handle di frontend)
+            $picIds = User::whereIn('id', $request->pic_user_ids)
                 ->whereIn('role_id', RequestRepair::ROLES_TO_ON_PROCESS)
                 ->pluck('id')
                 ->toArray();
 
-            $picIds = array_values(array_unique(array_merge([$authUser->id], $validPicIds)));
+            if (empty($picIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'PIC yang dipilih tidak valid.',
+                ], 422);
+            }
 
             DB::beginTransaction();
             try {
@@ -1038,7 +1075,7 @@ class RequestRepairController extends Controller
     // ── Destroy ─────────────────────────────────────────────
     public function destroy(RequestRepair $requestRepair)
     {
-        if (!$requestRepair->isEditable()) {
+        if (!$requestRepair->isDeletable()) {
             return response()->json([
                 'success' => false,
                 'message' => 'Data tidak dapat dihapus karena status sudah ' . $requestRepair->status . '.',

@@ -343,6 +343,7 @@
                                         </svg>
                                         Request Repair
                                     </div>
+                                    <span id="requestRepairBadge" class="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display:none;">0</span>
                                 </a>
                             </div>
                         </div>
@@ -675,9 +676,10 @@
     async function fetchTransactionCounts() {
         try {
             const data = await fetch('/api/transaction-counts').then(r => r.json());
-            setBadge('totalTransactionBadge', data.request_parts + data.general_checkups);
+            setBadge('totalTransactionBadge', data.request_parts + data.general_checkups + data.request_repairs);
             setBadge('requestPartBadge', data.request_parts);
             setBadge('checkupBadge', data.general_checkups);
+            setBadge('requestRepairBadge', data.request_repairs);
         } catch(e) {}
     }
 
