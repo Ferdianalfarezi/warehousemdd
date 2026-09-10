@@ -74,11 +74,11 @@
             <div>
                 <div class="flex items-center gap-2 mb-4">
                     <div class="h-px flex-1 bg-zinc-200"></div>
-                    <span class="text-xs font-bold uppercase tracking-widest text-zinc-500 px-2">Monitoring Dies Temporary</span>
+                    <span class="text-xs font-bold uppercase tracking-widest text-zinc-500 px-2">Monitoring Dies Repair  Temporary</span>
                     <div class="h-px flex-1 bg-zinc-200"></div>
                 </div>
                 <div class="space-y-4">
-
+                <label class="mb-1.5 block text-sm font-semibold text-gray-700">Judgment Hasil Trial Mengacu Ke Point SOP </label>
                     {{-- Row: Tanggal Cek + Lot Prod --}}
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>

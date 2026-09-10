@@ -24,6 +24,7 @@ use App\Http\Controllers\RequestPartController;
 use App\Http\Controllers\HistoryRequestPartController;
 use App\Http\Controllers\RequestRepairController;
 use App\Http\Controllers\HistoryRepairController;
+use App\Http\Controllers\DailyReportController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -167,6 +168,7 @@ Route::middleware('auth')->group(function () {
         Route::get('{historyRequestPart}', [HistoryRequestPartController::class, 'show'])->name('show');
     });
 
+    // ── Request Repairs ────────────────────────────────────────────────────
     Route::prefix('request-repairs')->name('request-repairs.')->group(function () {
         Route::get('/',                          [RequestRepairController::class, 'index'])->name('index');
         Route::get('data',                       [RequestRepairController::class, 'getData'])->name('data');           // ⚠️ sebelum {requestRepair}
@@ -174,7 +176,7 @@ Route::middleware('auth')->group(function () {
         Route::get('search-parts',               [RequestRepairController::class, 'searchParts'])->name('search-parts'); // ⬅️ sebelum {requestRepair}
         Route::get('process-nos',                [RequestRepairController::class, 'getProcessNos'])->name('process-nos');
         Route::get('pic-candidates',             [RequestRepairController::class, 'picCandidates'])->name('pic-candidates'); // ⬅️ sebelum {requestRepair}
-        Route::get('pengaju-candidates',         [RequestRepairController::class, 'pengajuCandidates'])->name('pengaju-candidates'); // ⬅️ BARU — sebelum {requestRepair}
+        Route::get('pengaju-candidates',         [RequestRepairController::class, 'pengajuCandidates'])->name('pengaju-candidates'); // ⬅️ sebelum {requestRepair}
         Route::post('/',                         [RequestRepairController::class, 'store'])->name('store');
         Route::get('{requestRepair}/durasi',     [RequestRepairController::class, 'getDurasi'])->name('durasi');      // ⚠️ sebelum {requestRepair} show
         Route::get('{requestRepair}',            [RequestRepairController::class, 'show'])->name('show');
@@ -183,6 +185,20 @@ Route::middleware('auth')->group(function () {
         Route::delete('{requestRepair}',         [RequestRepairController::class, 'destroy'])->name('destroy');
         Route::patch('{requestRepair}/pause',    [RequestRepairController::class, 'pause'])->name('pause');
         Route::patch('{requestRepair}/resume',   [RequestRepairController::class, 'resume']);
+    });
+
+    // ── Daily Reports ──────────────────────────────────────────────────────
+    // ⬅️ BARU — timesheet otomatis dari Request Repair + General Checkup
+    Route::prefix('daily-reports')->name('daily-reports.')->group(function () {
+        Route::get('/',                       [DailyReportController::class, 'index'])->name('index');
+        Route::get('data',                    [DailyReportController::class, 'getData'])->name('data');   // ⚠️ sebelum {dailyReport}
+
+        // 'items' HARUS sebelum {dailyReport} biar gak ketangkep model binding
+        Route::post('items',                  [DailyReportController::class, 'storeItem'])->name('items.store');
+        Route::put('items/{item}',            [DailyReportController::class, 'updateItem'])->name('items.update');
+        Route::delete('items/{item}',         [DailyReportController::class, 'destroyItem'])->name('items.destroy');
+
+        Route::patch('{dailyReport}/catatan', [DailyReportController::class, 'updateCatatan'])->name('catatan');
     });
 
     // ── History Repair ─────────────────────────────────────────────────────

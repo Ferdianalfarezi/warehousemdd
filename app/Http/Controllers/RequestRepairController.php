@@ -34,15 +34,23 @@ class RequestRepairController extends Controller
         // ⬅️ baru — dipakai quick-add barang modal (tombol + di Part No)
         $suppliers = Supplier::orderBy('nama')->get(['id', 'nama']);
 
-        return view('request_repairs.index', compact('lines', 'suppliers'));
+        // ⬅️ baru — daftar customer unik dari master barang, buat isi dropdown filter
+        $customers = Barang::whereNotNull('cust')
+            ->where('cust', '!=', '')
+            ->distinct()
+            ->orderBy('cust')
+            ->pluck('cust');
+
+        return view('request_repairs.index', compact('lines', 'suppliers', 'customers'));
     }
 
     // ── AJAX: table data ────────────────────────────────────
     public function getData(Request $request)
     {
-        $search  = $request->get('search', '');
-        $perPage = $request->get('per_page', 20);
-        $page    = (int) $request->get('page', 1);
+        $search   = $request->get('search', '');
+        $customer = $request->get('customer', ''); // ⬅️ baru — filter by customer
+        $perPage  = $request->get('per_page', 20);
+        $page     = (int) $request->get('page', 1);
 
         $query = RequestRepair::with(['barang:id,kode_barang,nama', 'creator:id,nama', 'pics:id,nama'])
             ->when($search, function ($q) use ($search) {
@@ -56,6 +64,10 @@ class RequestRepairController extends Controller
                        ->orWhere('kategori_problem', 'like', "%{$search}%")
                        ->orWhere('status',          'like', "%{$search}%");
                 });
+            })
+            // ⬅️ baru — filter exact match berdasarkan customer terpilih di dropdown
+            ->when($customer, function ($q) use ($customer) {
+                $q->where('customer', $customer);
             });
 
         $total = $query->count();

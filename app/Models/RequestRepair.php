@@ -84,7 +84,7 @@ class RequestRepair extends Model
 
     const ROLES_TO_ON_PROCESS = [1, 7];
     const ROLES_TO_ON_TRIAL   = [1, 2, 3, 7]; // sudah tidak dipakai untuk gate on_trial (digantikan PIC + admin override), dibiarkan untuk referensi
-    const ROLES_TO_CLOSED     = [1, 8, 4];
+    const ROLES_TO_CLOSED     = [1, 8, 4,3];
 
     const ROLE_ADMIN_OVERRIDE = 1; // role yang bisa override PIC di transisi on_process -> on_trial
 

@@ -330,7 +330,7 @@
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                                         </svg>
-                                        General Checkups
+                                        Preventive
                                     </div>
                                     <span id="checkupBadge" class="bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display:none;">0</span>
                                 </a>
@@ -485,6 +485,16 @@
                             </div>
                         </div>
                     </div>
+
+                     <!-- Daily Report -->
+                    <a href="{{ route('daily-reports.index') }}"
+                       class="menu-item flex items-center px-4 py-2.5 text-gray-300 {{ request()->routeIs('daily-reports.*') ? 'active' : '' }}">
+                        <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                        </svg>
+                        <span class="font-semibold text-sm">Daily Report</span>
+                    </a>
                 @endif
                 </nav>
             </div>

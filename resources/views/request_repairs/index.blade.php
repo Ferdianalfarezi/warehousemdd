@@ -42,6 +42,15 @@
                     <option value="all">Semua</option>
                 </select>
             </div>
+            <div class="flex-shrink-0">
+                <select id="customerFilterSelect"
+                    class="px-5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition">
+                    <option value="">Semua Customer</option>
+                    @foreach($customers as $cust)
+                        <option value="{{ $cust }}">{{ $cust }}</option>
+                    @endforeach
+                </select>
+            </div>
         </div>
     </div>
 
@@ -122,12 +131,13 @@ const AUTH_USER_ROLE = {{ auth()->user()->role_id }}; // ⬅️ baru
 // ════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════
-let currentPage   = 1;
-let perPage       = 20;
-let searchQuery   = '';
-let totalPages    = 1;
-let isLoading     = false;
-let searchTimeout = null;
+let currentPage     = 1;
+let perPage         = 20;
+let searchQuery     = '';
+let customerFilter  = ''; // ⬅️ baru
+let totalPages      = 1;
+let isLoading        = false;
+let searchTimeout    = null;
 
 // ════════════════════════════════════════════════════════
 // SELECT PIC MODAL STATE
@@ -224,6 +234,12 @@ document.addEventListener('DOMContentLoaded', function () {
         loadData();
     });
 
+    document.getElementById('customerFilterSelect').addEventListener('change', function () {
+        customerFilter = this.value;
+        currentPage = 1;
+        loadData();
+    });
+
     document.addEventListener('change', function (e) {
         if (e.target.id === 'createProcessNoSelect') syncProcessNoFromSelect('createProcessNoSelect');
         if (e.target.id === 'editProcessNoSelect')   syncProcessNoFromSelect('editProcessNoSelect');
@@ -287,7 +303,7 @@ async function loadData() {
     isLoading = true;
     showLoading(true);
     try {
-        const params = new URLSearchParams({ page: currentPage, per_page: perPage, search: searchQuery });
+        const params = new URLSearchParams({ page: currentPage, per_page: perPage, search: searchQuery, customer: customerFilter });
         const res    = await fetch('/request-repairs/data?' + params, {
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
         });
