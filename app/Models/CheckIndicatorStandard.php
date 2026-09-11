@@ -2,24 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class CheckIndicatorStandard extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
         'check_indicator_id',
         'poin',
-        'metode',
         'standar',
     ];
 
-    /**
-     * Get the check indicator that owns the standard.
-     */
-    public function checkIndicator()
+    public function checkIndicator(): BelongsTo
     {
         return $this->belongsTo(CheckIndicator::class);
     }

@@ -11,19 +11,31 @@
             <h1 class="text-3xl font-bold text-gray-900">Service Schedules</h1>
             <p class="text-gray-600 mt-1">Manage maintenance schedules for items</p>
         </div>
-        <button 
-            onclick="openCreateModal()"
-            class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
-        >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-            </svg>
-            <span>Add Schedule</span>
-        </button>
+        <div class="flex items-center space-x-3">
+            <button 
+                onclick="openImportModal()"
+                class="bg-white border-2 border-black text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition flex items-center space-x-2"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                </svg>
+                <span>Import Excel</span>
+            </button>
+
+            <button 
+                onclick="openCreateModal()"
+                class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                <span>Add Schedule</span>
+            </button>
+        </div>
     </div>
 
     <!-- Stats Cards -->
-<div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
     <!-- Total -->
     <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
         <div class="flex items-center justify-between">
@@ -34,21 +46,6 @@
             <div class="bg-gray-100 p-3 rounded-lg">
                 <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                </svg>
-            </div>
-        </div>
-    </div>
-
-    <!-- Terjadwal -->
-    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
-        <div class="flex items-center justify-between">
-            <div>
-                <p class="text-xs font-semibold text-green-600 uppercase tracking-wider">Terjadwal</p>
-                <p class="text-2xl font-bold text-green-900 mt-1">{{ $stats['terjadwal'] }}</p>
-            </div>
-            <div class="bg-green-100 p-3 rounded-lg">
-                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                 </svg>
             </div>
         </div>
@@ -146,6 +143,7 @@
                     <option value="harian">Harian</option>
                     <option value="mingguan">Mingguan</option>
                     <option value="bulanan">Bulanan</option>
+                    <option value="tahunan">Tahunan</option>
                     <option value="custom">Custom</option>
                 </select>
             </div>
@@ -250,7 +248,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                 </svg>
                                 <p class="mt-4 text-gray-600 font-semibold">No schedules found</p>
-                                <p class="text-gray-500 text-sm">Click "Add Schedule" to create maintenance schedule</p>
+                                <p class="text-gray-500 text-sm">Click "Add Schedule" or "Import Excel" to create maintenance schedule</p>
                             </td>
                         </tr>
                     @endforelse
@@ -279,6 +277,9 @@
 
 <!-- Include Edit Modal -->
 @include('schedules.edit')
+
+<!-- Include Import Modal -->
+@include('schedules.import')
 
 @endsection
 
@@ -534,6 +535,7 @@ function updateIntervalLabel() {
         'harian': 'hari',
         'mingguan': 'minggu', 
         'bulanan': 'bulan',
+        'tahunan': 'tahun',
         'custom': 'hari'
     };
     
@@ -552,6 +554,7 @@ function updateEditIntervalLabel() {
         'harian': 'hari',
         'mingguan': 'minggu', 
         'bulanan': 'bulan',
+        'tahunan': 'tahun',
         'custom': 'hari'
     };
     
@@ -723,6 +726,7 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
         closeCreateModal();
         closeEditModal();
+        closeImportModal();
     }
 });
 </script>

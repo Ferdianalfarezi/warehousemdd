@@ -109,9 +109,12 @@ Route::middleware('auth')->group(function () {
 
     // ── Schedules ──────────────────────────────────────────────────────────
     Route::get('/barangs-for-schedule', [ScheduleController::class, 'getBarangsForSchedule'])->name('barangs.for-schedule');
+    Route::post('/schedules/import', [ScheduleController::class, 'importExcel'])->name('schedules.import');
     Route::resource('schedules', ScheduleController::class);
 
     // ── Check Indicators ───────────────────────────────────────────────────
+    Route::post('/check-indicators/import', [CheckIndicatorController::class, 'importExcel'])
+    ->name('check-indicators.import');
     Route::resource('check-indicators', CheckIndicatorController::class);
 
     // ── Users ──────────────────────────────────────────────────────────────

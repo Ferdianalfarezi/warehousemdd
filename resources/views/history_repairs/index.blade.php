@@ -79,8 +79,8 @@
 
     {{-- Search & Filter Bar --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div class="flex flex-col md:flex-row md:items-center md:space-x-4 space-y-3 md:space-y-0">
-            <div class="w-full md:w-1/2 lg:w-1/3 relative">
+        <div class="flex flex-col md:flex-row md:items-center md:flex-wrap gap-3">
+            <div class="w-full md:w-1/3 lg:w-1/4 relative">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -90,7 +90,22 @@
                     class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
                     placeholder="Cari no, part no, nama...">
             </div>
-            <div class="flex-shrink-0">
+
+            {{-- Date Range Filter (Tgl Closed) --}}
+            <div class="flex items-center gap-2">
+                <label for="dateFromInput" class="text-xs font-medium text-gray-500 whitespace-nowrap">Tgl Closed</label>
+                <input type="date" id="dateFromInput"
+                    class="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition text-sm">
+                <span class="text-gray-400 text-sm">s/d</span>
+                <input type="date" id="dateToInput"
+                    class="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition text-sm">
+                <button id="clearDateBtn" type="button"
+                    class="hidden text-xs text-gray-500 hover:text-gray-800 underline whitespace-nowrap">
+                    Reset
+                </button>
+            </div>
+
+            <div class="flex-shrink-0 md:ml-auto">
                 <select id="perPageSelect"
                     class="px-5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition">
                     <option value="20">20 per page</option>
@@ -166,6 +181,8 @@
 let currentPage   = 1;
 let perPage       = 20;
 let searchQuery   = '';
+let dateFrom      = '';
+let dateTo        = '';
 let totalPages    = 1;
 let isLoading     = false;
 let searchTimeout = null;
@@ -214,7 +231,35 @@ document.addEventListener('DOMContentLoaded', function () {
         currentPage = 1;
         loadData();
     });
+
+    document.getElementById('dateFromInput').addEventListener('change', function () {
+        dateFrom = this.value;
+        currentPage = 1;
+        toggleClearDateBtn();
+        loadData();
+    });
+
+    document.getElementById('dateToInput').addEventListener('change', function () {
+        dateTo = this.value;
+        currentPage = 1;
+        toggleClearDateBtn();
+        loadData();
+    });
+
+    document.getElementById('clearDateBtn').addEventListener('click', function () {
+        dateFrom = '';
+        dateTo = '';
+        document.getElementById('dateFromInput').value = '';
+        document.getElementById('dateToInput').value   = '';
+        currentPage = 1;
+        toggleClearDateBtn();
+        loadData();
+    });
 });
+
+function toggleClearDateBtn() {
+    document.getElementById('clearDateBtn').classList.toggle('hidden', !dateFrom && !dateTo);
+}
 
 // ════════════════════════════════════════════════════════
 // LOAD SUMMARY
@@ -275,7 +320,13 @@ async function loadData() {
     isLoading = true;
     showLoading(true);
     try {
-        const params = new URLSearchParams({ page: currentPage, per_page: perPage, search: searchQuery });
+        const params = new URLSearchParams({
+            page: currentPage,
+            per_page: perPage,
+            search: searchQuery,
+            date_from: dateFrom,
+            date_to: dateTo,
+        });
         const res    = await fetch('/history-repairs/data?' + params, {
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
         });
@@ -303,7 +354,7 @@ function renderTable(items) {
     if (!items || items.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-16 text-center">'
             + '<p class="text-gray-600 font-semibold">Tidak ada data history</p>'
-            + '<p class="text-gray-500 text-sm">' + (searchQuery ? 'Coba kata kunci lain' : 'Belum ada repair yang closed') + '</p>'
+            + '<p class="text-gray-500 text-sm">' + (searchQuery || dateFrom || dateTo ? 'Coba kata kunci / rentang tanggal lain' : 'Belum ada repair yang closed') + '</p>'
             + '</td></tr>';
         return;
     }

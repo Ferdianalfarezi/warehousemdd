@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Schedule;
 use App\Models\Barang;
+use App\Services\SchedulePreventiveParser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class ScheduleController extends Controller
 {
@@ -14,10 +16,8 @@ class ScheduleController extends Controller
     {
         $schedules = Schedule::with('barang')->latest()->get();
         
-        // Count by status untuk stats cards
         $stats = [
             'total' => $schedules->count(),
-            'terjadwal' => $schedules->where('status', 'terjadwal')->count(),
             'segera' => $schedules->where('status', 'segera')->count(),
             'hari_ini' => $schedules->where('status', 'hari_ini')->count(),
             'terlambat' => $schedules->where('status', 'terlambat')->count(),
@@ -36,7 +36,7 @@ class ScheduleController extends Controller
         $validator = \Validator::make($request->all(), [
             'barang_id' => 'required|exists:barangs,id|unique:schedules,barang_id',
             'mulai_service' => 'required|date',
-            'periode' => 'required|in:harian,mingguan,bulanan,custom',
+            'periode' => 'required|in:harian,mingguan,bulanan,tahunan,custom',
             'interval_value' => 'required|integer|min:1',
         ]);
 
@@ -60,7 +60,6 @@ class ScheduleController extends Controller
             $schedule->periode = $request->periode;
             $schedule->interval_value = $request->interval_value;
             
-            // Auto calculate next service
             $schedule->calculateNextService();
             
             $schedule->save();
@@ -84,30 +83,30 @@ class ScheduleController extends Controller
     }
 
     public function show($id)
-{
-    try {
-        $schedule = Schedule::with('barang')->findOrFail($id);
-        
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'id' => $schedule->id,
-                'barang_id' => $schedule->barang_id,
-                'kode_barang' => $schedule->barang->kode_barang,
-                'nama' => $schedule->barang->nama,
-                'mulai_service' => \Carbon\Carbon::parse($schedule->mulai_service)->format('Y-m-d'),
-                'periode' => $schedule->periode,
-                'interval_value' => $schedule->interval_value,
-                'service_berikutnya' => $schedule->service_berikutnya,
-            ]
-        ]);
-    } catch (\Exception $e) {
-        return response()->json([
-            'success' => false,
-            'message' => 'Schedule tidak ditemukan'
-        ], 404);
+    {
+        try {
+            $schedule = Schedule::with('barang')->findOrFail($id);
+            
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'id' => $schedule->id,
+                    'barang_id' => $schedule->barang_id,
+                    'kode_barang' => $schedule->barang->kode_barang,
+                    'nama' => $schedule->barang->nama,
+                    'mulai_service' => \Carbon\Carbon::parse($schedule->mulai_service)->format('Y-m-d'),
+                    'periode' => $schedule->periode,
+                    'interval_value' => $schedule->interval_value,
+                    'service_berikutnya' => $schedule->service_berikutnya,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Schedule tidak ditemukan'
+            ], 404);
+        }
     }
-}
 
     public function edit(Schedule $schedule)
     {
@@ -118,7 +117,7 @@ class ScheduleController extends Controller
     {
         $validator = \Validator::make($request->all(), [
             'mulai_service' => 'required|date',
-            'periode' => 'required|in:harian,mingguan,bulanan,custom',
+            'periode' => 'required|in:harian,mingguan,bulanan,tahunan,custom',
             'interval_value' => 'required|integer|min:1',
         ]);
 
@@ -135,7 +134,6 @@ class ScheduleController extends Controller
             $schedule->periode = $request->periode;
             $schedule->interval_value = $request->interval_value;
             
-            // Recalculate next service
             $schedule->calculateNextService();
             $schedule->save();
 
@@ -187,5 +185,79 @@ class ScheduleController extends Controller
             Log::error('Error getting barangs: ' . $e->getMessage());
             return response()->json([], 500);
         }
+    }
+
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'excel_file' => 'required|file|mimes:xlsx,xls|max:20480',
+        ]);
+
+        $path = $request->file('excel_file')->getRealPath();
+
+        try {
+            $parsedRows = (new SchedulePreventiveParser())->parse($path);
+        } catch (Throwable $e) {
+            Log::error('Schedule Import Parse Error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal membaca file Excel: ' . $e->getMessage(),
+            ], 422);
+        }
+
+        $imported = [];
+        $skippedNoBarang = [];
+        $skippedNoMarks = [];
+
+        DB::beginTransaction();
+        try {
+            foreach ($parsedRows as $row) {
+                if ($row['status'] === 'no_marks') {
+                    $skippedNoMarks[] = $row['part_no'];
+                    continue;
+                }
+
+                $barang = Barang::where('kode_barang', $row['part_no'])->first();
+
+                if (!$barang) {
+                    $skippedNoBarang[] = $row['part_no'];
+                    continue;
+                }
+
+                $schedule = Schedule::firstOrNew(['barang_id' => $barang->id]);
+                $schedule->barang_id = $barang->id;
+                $schedule->gambar = $barang->gambar;
+                $schedule->kode_barang = $barang->kode_barang;
+                $schedule->nama = $barang->nama;
+                $schedule->mulai_service = $row['mulai_service'];
+                $schedule->periode = $row['periode'];
+                $schedule->interval_value = $row['interval_value'];
+                $schedule->terakhir_service = null;
+                $schedule->save();
+
+                $imported[] = $row['part_no'];
+            }
+
+            DB::commit();
+        } catch (Throwable $e) {
+            DB::rollBack();
+            Log::error('Schedule Import Save Error', ['error' => $e->getMessage()]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan saat menyimpan data: ' . $e->getMessage(),
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Import selesai.',
+            'summary' => [
+                'imported_count' => count($imported),
+                'skipped_no_barang_count' => count($skippedNoBarang),
+                'skipped_no_marks_count' => count($skippedNoMarks),
+                'skipped_no_barang_list' => $skippedNoBarang,
+                'skipped_no_marks_list' => $skippedNoMarks,
+            ],
+        ]);
     }
 }

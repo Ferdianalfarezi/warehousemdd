@@ -41,30 +41,13 @@
                             </svg>
                         </div>
                         <div class="flex-1">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="text-xs text-gray-500">Kode Barang</p>
-                                    <p id="editDetailKodeBarang" class="font-semibold text-gray-900">-</p>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-500">Supplier</p>
-                                    <p id="editDetailSupplier" class="font-semibold text-gray-900">-</p>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <p class="text-xs text-gray-500">Nama</p>
-                                <p id="editDetailNama" class="font-semibold text-gray-900">-</p>
-                            </div>
+                            <p class="text-xs text-gray-500">Kode Barang</p>
+                            <p id="editDetailKodeBarang" class="font-semibold text-gray-900">-</p>
+
+                            <p class="text-xs text-gray-500 mt-2">Nama</p>
+                            <p id="editDetailNama" class="font-semibold text-gray-900">-</p>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Parts Used List -->
-            <div id="editPartsUsedSection" class="hidden">
-                <label class="block text-sm font-semibold text-gray-700 mb-3">Parts Used in This Barang</label>
-                <div id="editPartsUsedList" class="space-y-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <!-- Parts will be loaded here as list -->
                 </div>
             </div>
 
@@ -75,9 +58,7 @@
                 </div>
 
                 <div id="editBagianContainer">
-                    <!-- Single Bagian card -->
                     <div class="bagian-card bg-gray-50 border-2 border-gray-200 rounded-xl p-5">
-                        <!-- Header -->
                         <div class="flex items-center justify-between mb-4">
                             <div class="flex items-center space-x-2">
                                 <div class="w-8 h-8 bg-black text-white rounded-lg flex items-center justify-center font-bold text-sm">
@@ -137,29 +118,28 @@
     async function openEditModal(id) {
         try {
             const response = await fetch(`/check-indicators/${id}/edit`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
             const data = await response.json();
             
             if (data.success) {
                 const indicator = data.data;
                 
-                // Set ID
                 document.getElementById('editCheckIndicatorId').value = indicator.id;
-                
-                // Set Barang
                 document.getElementById('editBarangId').value = indicator.barang_id;
                 
-                // Load barang details
                 await loadEditBarangDetails(indicator.barang_id);
                 
-                // Set Nama Bagian
                 document.getElementById('editNamaBagian').value = indicator.nama_bagian;
                 
-                // Clear and load standards
                 const standardsContainer = document.getElementById('editStandardsContainer');
                 standardsContainer.innerHTML = '';
                 editStandardCounter = 0;
                 
-                indicator.standards.forEach((standard, index) => {
+                indicator.standards.forEach((standard) => {
                     editStandardCounter++;
                     const standardHTML = `
                         <div class="standard-row bg-white border border-gray-300 rounded-lg p-4">
@@ -171,27 +151,19 @@
                                 </button>
                             </div>
                             
-                            <div class="grid grid-cols-3 gap-3">
+                            <div class="grid grid-cols-2 gap-3">
                                 <div>
                                     <label class="block text-xs font-medium text-gray-700 mb-1">Poin</label>
                                     <input type="text" name="bagian[1][standards][${editStandardCounter}][poin]" 
-                                        value="${standard.poin}" required
+                                        value="${standard.poin ?? ''}" required
                                         placeholder="1, 2, A, B, dll"
                                         class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition">
                                 </div>
                                 <div>
-                                    <label class="block text-xs font-medium text-gray-700 mb-1">Metode</label>
-                                    <input type="text" name="bagian[1][standards][${editStandardCounter}][metode]" 
-                                        value="${standard.metode}" required
-                                        placeholder="Visual Check, Pengukuran, dll"
-                                        class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition">
-                                </div>
-                                <div>
                                     <label class="block text-xs font-medium text-gray-700 mb-1">Standar</label>
-                                    <input type="text" name="bagian[1][standards][${editStandardCounter}][standar]" 
-                                        value="${standard.standar}" required
+                                    <textarea name="bagian[1][standards][${editStandardCounter}][standar]" required rows="2"
                                         placeholder="Tidak ada kerusakan, dll"
-                                        class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition">
+                                        class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition">${standard.standar ?? ''}</textarea>
                                 </div>
                             </div>
                         </div>
@@ -205,9 +177,11 @@
                 modal.classList.remove('hidden');
                 modal.classList.add('flex');
                 setTimeout(() => modal.classList.add('modal-fade-in'), 10);
+            } else {
+                Swal.fire('Error!', data.message || 'Failed to load check indicator data', 'error');
             }
         } catch (error) {
-            console.error('Error:', error);
+            console.error('openEditModal error:', error);
             Swal.fire('Error!', 'Failed to load check indicator data', 'error');
         }
     }
@@ -226,23 +200,24 @@
     async function loadEditBarangDetails(barangId) {
         if (!barangId) {
             document.getElementById('editBarangDetailsSection').classList.add('hidden');
-            document.getElementById('editPartsUsedSection').classList.add('hidden');
             return;
         }
 
         try {
             const response = await fetch(`/barangs/${barangId}/details`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
             const data = await response.json();
             
             if (data.success) {
                 const barang = data.data;
                 
-                // Update details
-                document.getElementById('editDetailKodeBarang').textContent = barang.kode_barang;
-                document.getElementById('editDetailNama').textContent = barang.nama;
-                document.getElementById('editDetailSupplier').textContent = barang.supplier.nama;
+                document.getElementById('editDetailKodeBarang').textContent = barang.kode_barang ?? '-';
+                document.getElementById('editDetailNama').textContent = barang.nama ?? '-';
                 
-                // Update image
                 if (barang.gambar) {
                     document.getElementById('editDetailGambar').src = `/storage/barangs/${barang.gambar}`;
                     document.getElementById('editDetailGambar').classList.remove('hidden');
@@ -252,41 +227,12 @@
                     document.getElementById('editNoDetailGambar').classList.remove('hidden');
                 }
                 
-                // Update Parts Used List
-                const partsUsedList = document.getElementById('editPartsUsedList');
-                partsUsedList.innerHTML = '';
-                
-                if (barang.parts && barang.parts.length > 0) {
-                    barang.parts.forEach((part, index) => {
-                        partsUsedList.innerHTML += `
-                            <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-blue-300 transition">
-                                <div class="flex items-center space-x-3">
-                                    <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                        ${index + 1}
-                                    </span>
-                                    <div>
-                                        <p class="text-sm font-semibold text-gray-900">${part.nama}</p>
-                                        <p class="text-xs text-gray-500">${part.kode_part}</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-xs text-gray-500">Quantity</p>
-                                    <p class="text-sm font-bold text-blue-600">${part.pivot.quantity}</p>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    
-                    document.getElementById('editPartsUsedSection').classList.remove('hidden');
-                } else {
-                    partsUsedList.innerHTML = '<p class="text-sm text-gray-500 italic text-center py-4">No parts used in this barang</p>';
-                    document.getElementById('editPartsUsedSection').classList.remove('hidden');
-                }
-                
                 document.getElementById('editBarangDetailsSection').classList.remove('hidden');
+            } else {
+                Swal.fire('Error!', data.message || 'Gagal memuat detail barang', 'error');
             }
         } catch (error) {
-            console.error('Error:', error);
+            console.error('loadEditBarangDetails error:', error);
             Swal.fire('Error!', 'Failed to load barang details', 'error');
         }
     }
@@ -305,7 +251,7 @@
                     </button>
                 </div>
                 
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-medium text-gray-700 mb-1">Poin</label>
                         <input type="text" name="bagian[1][standards][${editStandardCounter}][poin]" required
@@ -313,16 +259,10 @@
                             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition">
                     </div>
                     <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Metode</label>
-                        <input type="text" name="bagian[1][standards][${editStandardCounter}][metode]" required
-                            placeholder="Visual Check, Pengukuran, dll"
-                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition">
-                    </div>
-                    <div>
                         <label class="block text-xs font-medium text-gray-700 mb-1">Standar</label>
-                        <input type="text" name="bagian[1][standards][${editStandardCounter}][standar]" required
+                        <textarea name="bagian[1][standards][${editStandardCounter}][standar]" required rows="2"
                             placeholder="Tidak ada kerusakan, dll"
-                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition">
+                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition"></textarea>
                     </div>
                 </div>
             </div>
@@ -339,14 +279,11 @@
         const formData = new FormData(this);
         const id = document.getElementById('editCheckIndicatorId').value;
         
-        // Convert FormData to JSON structure
         const data = {
             barang_id: formData.get('barang_id'),
-            part_id: null,
             bagian: []
         };
 
-        // Parse bagian data
         const bagianData = {};
         for (let [key, value] of formData.entries()) {
             if (key.startsWith('bagian[')) {
@@ -375,10 +312,9 @@
             }
         }
 
-        // Convert to array and clean up
         data.bagian = Object.values(bagianData).map(b => ({
             nama_bagian: b.nama_bagian,
-            standards: Object.values(b.standards).filter(s => s.poin && s.metode && s.standar)
+            standards: Object.values(b.standards).filter(s => s.poin && s.standar)
         }));
 
         try {

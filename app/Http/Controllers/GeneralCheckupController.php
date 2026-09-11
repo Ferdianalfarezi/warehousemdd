@@ -130,23 +130,19 @@ class GeneralCheckupController extends Controller
         }
     }
 
-    /**
-     * Auto-populate checkups from schedules
-     */
     public function autoPopulate()
     {
         DB::beginTransaction();
         try {
-            // Get schedules with status "hari_ini" only (exclude "segera")
+            // Ambil schedule yang statusnya "hari_ini" ATAU "terlambat"
             $schedules = Schedule::with('barang')
-                ->where('status', 'hari_ini')
+                ->whereIn('status', ['hari_ini', 'terlambat'])
                 ->get();
 
             $created = 0;
             $skipped = 0;
 
             foreach ($schedules as $schedule) {
-                // Check if already exists
                 $exists = GeneralCheckup::where('schedule_id', $schedule->id)
                     ->whereIn('status', ['pending', 'on_process'])
                     ->exists();

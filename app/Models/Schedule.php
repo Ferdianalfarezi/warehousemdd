@@ -27,7 +27,7 @@ class Schedule extends Model
         'mulai_service' => 'date',
         'service_berikutnya' => 'date',
         'terakhir_service' => 'date',
-        'interval_value' => 'integer', // CASTING
+        'interval_value' => 'integer',
     ];
 
     public function barang()
@@ -38,16 +38,11 @@ class Schedule extends Model
     /**
      * Calculate next service date
      */
-    /**
- * Calculate next service date
- */
     public function calculateNextService()
     {
-        // Pastikan interval_value adalah integer
         $interval = (int) $this->interval_value;
         $baseDate = $this->terakhir_service ?: $this->mulai_service;
         
-        // Gunakan method yang berbeda berdasarkan periode
         switch ($this->periode) {
             case 'harian':
                 $this->service_berikutnya = Carbon::parse($baseDate)->addDays($interval);
@@ -58,6 +53,9 @@ class Schedule extends Model
             case 'bulanan':
                 $this->service_berikutnya = Carbon::parse($baseDate)->addMonths($interval);
                 break;
+            case 'tahunan':
+                $this->service_berikutnya = Carbon::parse($baseDate)->addYears($interval);
+                break;
             case 'custom':
                 $this->service_berikutnya = Carbon::parse($baseDate)->addDays($interval);
                 break;
@@ -65,7 +63,6 @@ class Schedule extends Model
                 $this->service_berikutnya = Carbon::parse($baseDate)->addDays($interval);
         }
         
-        // Simple status calculation
         $today = Carbon::today();
         $nextService = Carbon::parse($this->service_berikutnya);
         
@@ -89,6 +86,7 @@ class Schedule extends Model
             'harian' => 'hari',
             'mingguan' => 'minggu', 
             'bulanan' => 'bulan',
+            'tahunan' => 'tahun',
             'custom' => 'hari'
         ];
 

@@ -21,20 +21,14 @@ use Illuminate\Support\Facades\Storage;
 class RequestRepairController extends Controller
 {
     // ── Index ───────────────────────────────────────────────
-    // ── Index ───────────────────────────────────────────────
     public function index()
     {
-        $lines = auth()->user()->lines()->orderBy('nama_line')->get();
+        // ⬅️ Line master masih dipertahankan di sini (dipakai buat filter/tampilan lain di index,
+        // bukan lagi buat form Create/Edit — line/mesin di form sekarang input manual).
+        $lines = Line::orderBy('nama_line')->get();
 
-        if ($lines->isEmpty()) {
-            // fallback untuk user yang gak punya line ter-assign (misal admin)
-            $lines = Line::orderBy('nama_line')->get();
-        }
-
-        // ⬅️ baru — dipakai quick-add barang modal (tombol + di Part No)
         $suppliers = Supplier::orderBy('nama')->get(['id', 'nama']);
 
-        // ⬅️ baru — daftar customer unik dari master barang, buat isi dropdown filter
         $customers = Barang::whereNotNull('cust')
             ->where('cust', '!=', '')
             ->distinct()
@@ -48,7 +42,7 @@ class RequestRepairController extends Controller
     public function getData(Request $request)
     {
         $search   = $request->get('search', '');
-        $customer = $request->get('customer', ''); // ⬅️ baru — filter by customer
+        $customer = $request->get('customer', '');
         $perPage  = $request->get('per_page', 20);
         $page     = (int) $request->get('page', 1);
 
@@ -65,7 +59,6 @@ class RequestRepairController extends Controller
                        ->orWhere('status',          'like', "%{$search}%");
                 });
             })
-            // ⬅️ baru — filter exact match berdasarkan customer terpilih di dropdown
             ->when($customer, function ($q) use ($customer) {
                 $q->where('customer', $customer);
             });
@@ -114,7 +107,7 @@ class RequestRepairController extends Controller
                 'is_paused'         => $rr->is_paused,
                 'pause_reason'      => $rr->pause_reason,
                 'can_edit'          => $rr->isEditable(),
-                'can_delete'        => $rr->isDeletable(), // ⬅️ diubah — pisah dari isEditable(), tetap cuma boleh pas Open
+                'can_delete'        => $rr->isDeletable(),
                 'can_to_process'    => $rr->canConfirmToProcess()
                                         && in_array($userRoleId, RequestRepair::ROLES_TO_ON_PROCESS),
                 'can_to_on_trial'   => $rr->canUserConfirmToOnTrial($authUser),
@@ -163,8 +156,6 @@ class RequestRepairController extends Controller
     }
 
     // ── AJAX: search parts buat sparepart selector ──────────
-    // PENTING: route ini HARUS didaftarkan sebelum route resource
-    // request-repairs/{request_repair}, sama alasannya kayak pic-candidates.
     public function searchParts(Request $request)
     {
         $q = $request->get('q', '');
@@ -191,6 +182,8 @@ class RequestRepairController extends Controller
     }
 
     // ── AJAX: get process_no list by barang ─────────────────
+    // ⚠️ Sudah tidak dipakai lagi oleh form Create (process_no sekarang manual),
+    // dibiarkan tetap ada kalau masih dipakai di tempat lain / bisa dihapus kalau tidak.
     public function getProcessNos(Request $request)
     {
         $barangId = $request->get('barang_id');
@@ -368,8 +361,6 @@ class RequestRepairController extends Controller
     }
 
     // ── AJAX: kandidat pengaju (role_id 4) — dipakai admin (role 1) saat create ──
-    // PENTING: route ini HARUS didaftarkan sebelum route resource
-    // request-repairs/{request_repair}, sama alasannya kayak pic-candidates.
     public function pengajuCandidates(Request $request)
     {
         $q = $request->get('q', '');
@@ -393,6 +384,29 @@ class RequestRepairController extends Controller
         return response()->json(['results' => $results]);
     }
 
+    // ── Helper: sync process_no baru ke master DiesDetail ────
+    private function syncProcessNoMaster(int $barangId, ?string $processNo): void
+    {
+        $processNo = trim((string) $processNo);
+        if ($processNo === '') {
+            return;
+        }
+
+        $exists = DiesDetail::where('barang_id', $barangId)
+            ->where('process_no', $processNo)
+            ->exists();
+
+        if (!$exists) {
+            $maxSortOrder = DiesDetail::where('barang_id', $barangId)->max('sort_order');
+
+            DiesDetail::create([
+                'barang_id'  => $barangId,
+                'process_no' => $processNo,
+                'sort_order' => ($maxSortOrder ?? 0) + 1,
+            ]);
+        }
+    }
+
     // ── Store ───────────────────────────────────────────────
     public function store(Request $request)
     {
@@ -403,7 +417,7 @@ class RequestRepairController extends Controller
             'group'             => 'required|in:A,B',
             'shift'             => 'required|in:Pagi,Malam',
             'jumlah_stroke'     => 'required|integer|min:0',
-            'line_id'           => 'nullable|exists:lines,id',
+            'line_mesin'        => 'nullable|string|max:255', // ⬅️ diubah — line/mesin sekarang manual, gak lagi FK ke master Line
             'barang_id'         => 'required|exists:barangs,id',
             'process_no'        => 'nullable|string|max:100',
             'jenis'             => 'required|in:Milik Sendiri,Eksternal',
@@ -411,7 +425,6 @@ class RequestRepairController extends Controller
             'kategori_problem'  => 'required|in:Dies,Burry,Dimensi,Human Error,Accessories',
             'detail_proyek'     => 'nullable|string',
             'gambar'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5000',
-            // ⬅️ baru — hanya efektif kalau yang login role_id 1, di-validasi ulang di server
             'created_by'        => 'nullable|integer|exists:users,id',
         ]);
 
@@ -422,15 +435,12 @@ class RequestRepairController extends Controller
         DB::beginTransaction();
         try {
             $barang = Barang::findOrFail($request->barang_id);
-            $line   = $request->line_id ? Line::find($request->line_id) : null;
 
             $gambarPath = null;
             if ($request->hasFile('gambar')) {
                 $gambarPath = $request->file('gambar')->store('request_repairs', 'public');
             }
 
-            // ⬅️ baru — tentukan pengaju: default diri sendiri,
-            // kecuali yang login role_id 1 DAN target valid (role_id 4)
             $createdBy = $authUser->id;
             if (($authUser->role_id ?? null) == 1 && $request->filled('created_by')) {
                 $target = User::where('id', $request->created_by)->where('role_id', 4)->first();
@@ -439,25 +449,27 @@ class RequestRepairController extends Controller
                 }
             }
 
+            $this->syncProcessNoMaster($barang->id, $request->process_no);
+
             $rr = RequestRepair::create([
                 'no'                => RequestRepair::generateNo(),
                 'tanggal_pengajuan' => $request->tanggal_pengajuan,
                 'group'             => $request->group,
                 'shift'             => $request->shift,
                 'jumlah_stroke'     => $request->jumlah_stroke,
-                'line_id'           => $line->id ?? null,
-                'line_mesin'        => $line ? ($line->nama_line . ' - ' . $line->mesin) : null,
+                'line_id'           => null,                    // ⬅️ diubah — udah gak dipakai, dibiarkan null
+                'line_mesin'        => $request->line_mesin,    // ⬅️ diubah — langsung dari input manual user
                 'barang_id'         => $barang->id,
                 'part_no'           => $barang->kode_barang,
                 'nama'              => $barang->nama,
                 'process_no'        => $request->process_no,
                 'customer'          => $barang->cust,
                 'jenis'             => $request->jenis,
-                'kekuatan_stock_fg' => $request->kekuatan_stock_fg,
+                'kekuatan_stock_fg' => $request->kekuatan_stock_fg ?? 24,
                 'kategori_problem'  => $request->kategori_problem,
                 'detail_proyek'     => $request->detail_proyek,
                 'gambar'            => $gambarPath,
-                'created_by'        => $createdBy, // ⬅️ diubah
+                'created_by'        => $createdBy,
                 'status'            => RequestRepair::STATUS_OPEN,
             ]);
 
@@ -489,7 +501,7 @@ class RequestRepairController extends Controller
     // ── Update ──────────────────────────────────────────────
     public function update(Request $request, RequestRepair $requestRepair)
     {
-        $userRoleId = auth()->user()->role_id ?? null; // ⬅️ baru — dipakai buat gate edit durasi On Trial (khusus admin)
+        $userRoleId = auth()->user()->role_id ?? null;
 
         if (!$requestRepair->isEditable()) {
             return response()->json([
@@ -503,7 +515,7 @@ class RequestRepairController extends Controller
             'group'             => 'required|in:A,B',
             'shift'             => 'required|in:Pagi,Malam',
             'jumlah_stroke'     => 'required|integer|min:0',
-            'line_id'           => 'nullable|exists:lines,id',
+            'line_mesin'        => 'nullable|string|max:255', // ⬅️ diubah — manual, gak lagi FK ke master Line
             'barang_id'         => 'required|exists:barangs,id',
             'process_no'        => 'nullable|string|max:100',
             'jenis'             => 'required|in:Milik Sendiri,Eksternal',
@@ -511,7 +523,6 @@ class RequestRepairController extends Controller
             'kategori_problem'  => 'required|in:Dies,Burry,Dimensi,Human Error,Accessories',
             'detail_proyek'     => 'nullable|string',
             'gambar'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5000',
-            // ⬅️ baru — edit durasi On Process → On Trial, cuma efektif kalau role admin & status on_trial, dicek ulang di server
             'durasi_manual_seconds' => 'nullable|integer|min:60',
         ]);
 
@@ -522,15 +533,16 @@ class RequestRepairController extends Controller
         DB::beginTransaction();
         try {
             $barang = Barang::findOrFail($request->barang_id);
-            $line   = $request->line_id ? Line::find($request->line_id) : null;
+
+            $this->syncProcessNoMaster($barang->id, $request->process_no);
 
             $updateData = [
                 'tanggal_pengajuan' => $request->tanggal_pengajuan,
                 'group'             => $request->group,
                 'shift'             => $request->shift,
                 'jumlah_stroke'     => $request->jumlah_stroke,
-                'line_id'           => $line->id ?? null,
-                'line_mesin'        => $line ? ($line->nama_line . ' - ' . $line->mesin) : null,
+                'line_id'           => null,                 // ⬅️ diubah — udah gak dipakai lagi
+                'line_mesin'        => $request->line_mesin, // ⬅️ diubah — manual dari input user
                 'barang_id'         => $barang->id,
                 'part_no'           => $barang->kode_barang,
                 'nama'              => $barang->nama,
@@ -549,8 +561,6 @@ class RequestRepairController extends Controller
                 $updateData['gambar'] = $request->file('gambar')->store('request_repairs', 'public');
             }
 
-            // ⬅️ baru — edit durasi On Process → On Trial dari form Edit.
-            // Cuma berlaku kalau: role admin, status lagi On Trial, dan field-nya beneran dikirim.
             if (
                 $userRoleId === 1
                 && $requestRepair->status === RequestRepair::STATUS_ON_TRIAL
@@ -563,7 +573,6 @@ class RequestRepairController extends Controller
                         (int) $request->durasi_manual_seconds + $requestRepair->total_paused_seconds
                     );
 
-                    // Cap biar gak nongol di masa depan
                     $now = now();
                     if ($newOnTrialAt->gt($now)) {
                         $newOnTrialAt = $now;
@@ -620,10 +629,6 @@ class RequestRepairController extends Controller
                 return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
             }
 
-            // ⬅️ diubah — TIDAK lagi paksa merge auth()->id() ke PIC.
-            // PIC sepenuhnya ditentukan dari pilihan frontend:
-            //   - mode "Sendiri" → 1 user bebas (default diri sendiri, bisa diganti)
-            //   - mode "Tim"     → auth user + anggota yang dipilih (di-handle di frontend)
             $picIds = User::whereIn('id', $request->pic_user_ids)
                 ->whereIn('role_id', RequestRepair::ROLES_TO_ON_PROCESS)
                 ->pluck('id')
@@ -654,8 +659,6 @@ class RequestRepairController extends Controller
 
         // ════════════════════════════════════════════════════
         // ON TRIAL — hanya PIC yang tercatat, ATAU admin override (role 1)
-        // sparepart pakai selector Part (multi) + potong stock di sini
-        // support mode durasi manual (role 1) yang mundurin on_trial_at
         // ════════════════════════════════════════════════════
         } elseif ($newStatus === RequestRepair::STATUS_ON_TRIAL) {
 
@@ -666,10 +669,8 @@ class RequestRepairController extends Controller
                 ], 422);
             }
 
-            // cek mode durasi manual (role 1 only, dicek ulang di server)
             $isManualDurasi = $request->get('durasi_mode') === 'manual' && $userRoleId === 1;
 
-            // Kalau bukan manual override, tetep berlaku validasi "harus resume dulu"
             if (!$isManualDurasi && $requestRepair->is_paused) {
                 return response()->json([
                     'success' => false,
@@ -722,12 +723,10 @@ class RequestRepairController extends Controller
             try {
                 $now = now();
 
-                // hitung on_trial_at, tergantung mode (otomatis vs manual override)
                 $totalPausedSeconds = $requestRepair->total_paused_seconds;
                 $pauseFieldsReset   = [];
 
                 if ($isManualDurasi) {
-                    // Kalau lagi paused, tutup dulu sesi pause yang jalan biar total_paused_seconds akurat
                     if ($requestRepair->is_paused) {
                         $openPause = RequestRepairPause::where('request_repair_id', $requestRepair->id)
                             ->where('cycle_number', $requestRepair->cycle_number)
@@ -752,7 +751,6 @@ class RequestRepairController extends Controller
                     $baseStart = $requestRepair->on_process_at ?? $requestRepair->created_at;
                     $onTrialAt = $baseStart->copy()->addSeconds((int) $request->durasi_manual_seconds + $totalPausedSeconds);
 
-                    // Cap biar gak nongol di masa depan (hindari durasi minus di tahap NG/Closed nanti)
                     if ($onTrialAt->gt($now)) {
                         $onTrialAt = $now;
                     }
@@ -760,7 +758,6 @@ class RequestRepairController extends Controller
                     $onTrialAt = $now;
                 }
 
-                // ── Lock row part, validasi stock, lalu kurangi ──
                 $sparepartSnapshot = [];
 
                 foreach ($request->sparepart_items as $itemInput) {
@@ -809,8 +806,8 @@ class RequestRepairController extends Controller
                     'actual'                        => $request->actual,
                     'remark'                        => $request->remark,
                     'judge'                         => $request->judge,
-                    'on_trial_at'                   => $onTrialAt, // otomatis pakai now(), manual pakai hasil hitungan mundur
-                ], $pauseFieldsReset)); // merge reset field pause kalau manual override dari state paused
+                    'on_trial_at'                   => $onTrialAt,
+                ], $pauseFieldsReset));
 
                 DB::commit();
                 return response()->json(['success' => true, 'message' => 'Status berhasil diubah ke On Trial! Stock sparepart sudah dikurangi.']);
@@ -822,10 +819,6 @@ class RequestRepairController extends Controller
 
         // ════════════════════════════════════════════════════
         // CLOSED → tergantung Hasil Akhir (OK / NG)
-        //   - OK  → pindah ke history, hard delete dari request_repairs
-        //   - NG  → snapshot ke request_repair_attempts, reset & balik ke Open
-        //     (catatan: stock sparepart TIDAK dikembalikan walau NG,
-        //      karena part sudah terpakai secara fisik di percobaan sebelumnya)
         // ════════════════════════════════════════════════════
         } elseif ($newStatus === RequestRepair::STATUS_CLOSED) {
 
@@ -934,7 +927,6 @@ class RequestRepairController extends Controller
                         'cycle_number'                    => $requestRepair->cycle_number,
                     ]);
 
-                    // Reset request_repair ke kondisi awal biar bisa dikerjakan ulang dari Open
                     $requestRepair->update([
                         'status'                        => RequestRepair::STATUS_OPEN,
                         'ng_attempt_count'               => $requestRepair->ng_attempt_count + 1,
@@ -943,7 +935,7 @@ class RequestRepairController extends Controller
                         'analisa_penyebab'               => null,
                         'tindakan_perbaikan'             => null,
                         'catatan_penggantian_sparepart'  => null,
-                        'sparepart_items'                => null, // reset snapshot, siklus baru pilih sparepart lagi
+                        'sparepart_items'                => null,
                         'item'                           => null,
                         'proses_grinding'                => null,
                         'shim_up'                        => null,

@@ -120,9 +120,8 @@
                                     <span class="bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs font-medium">
                                         {{ $standard->poin }}
                                     </span>
-                                    <p class="text-sm text-gray-600">{{ $standard->metode }}</p>
                                 </div>
-                                <p class="text-sm text-gray-500 italic">Visual dan check: {{ $standard->standar }}</p>
+                                <p class="text-sm text-gray-600 whitespace-pre-line">{{ $standard->standar }}</p>
                             </div>
 
                             <!-- Status Buttons -->

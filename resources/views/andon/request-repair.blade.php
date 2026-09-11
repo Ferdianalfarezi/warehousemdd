@@ -43,7 +43,7 @@ tr[data-status="on_trial"] {
     background: rgba(234, 179, 8, 0.05);
 }
 
-/* Row highlight berdasarkan sisa Stock FG (dihitung dari tanggal_pengajuan) */
+/* Row highlight berdasarkan sisa Stock FG (dihitung dalam Jam dari created_at) */
 tr[data-stock-level="critical"] {
     background: rgba(220, 38, 38, 0.25) !important;
 }
@@ -131,6 +131,24 @@ tr[data-stock-level="warning"] {
     $openCount = $requestRepairs->where('status', 'open')->count();
     $onProcessCount = $requestRepairs->where('status', 'on_process')->count();
     $onTrialCount = $requestRepairs->where('status', 'on_trial')->count();
+
+    // ⬅️ baru — konversi jam ke format Hari/Jam buat kolom Stock FG.
+    // < 24 jam tetep "X Jam". Pas 24 jam kelipatan -> "X Hari" (tanpa sisa jam).
+    // Kalau ada sisa jam -> "X Hari Y Jam".
+    function formatJamKeHari(?int $jam): string
+    {
+        if (is_null($jam)) {
+            return '-';
+        }
+        if ($jam < 24) {
+            return "{$jam} Jam";
+        }
+
+        $hari    = intdiv($jam, 24);
+        $sisaJam = $jam % 24;
+
+        return $sisaJam > 0 ? "{$hari} Hari {$sisaJam} Jam" : "{$hari} Hari";
+    }
 @endphp
 
 <div class="summary-cards mt-2 mb-2 mr-2">
@@ -194,15 +212,17 @@ tr[data-stock-level="warning"] {
         <tbody class="table-dark-custom text-center" id="tableBody" style="font-size: 1.15rem;">
             @forelse($requestRepairs as $rr)
                 @php
-                    // Sisa stock FG dihitung mundur dari tanggal_pengajuan
+                    // Stock FG satuan Jam. Elapsed dihitung dari created_at (timestamp asli),
+                    // BUKAN tanggal_pengajuan (kolom itu cast 'date', gak nyimpen jam).
+                    // Threshold critical <=4 jam, warning <=8 jam — asumsi, tinggal ganti kalau beda.
                     $stockLevel = null;
-                    if ($rr->tanggal_pengajuan && !is_null($rr->kekuatan_stock_fg)) {
-                        $daysElapsed = (int) $rr->tanggal_pengajuan->startOfDay()->diffInDays(now()->startOfDay());
-                        $sisaStockFg = $rr->kekuatan_stock_fg - $daysElapsed;
+                    if (!is_null($rr->kekuatan_stock_fg)) {
+                        $hoursElapsed = (int) $rr->created_at->diffInHours(now());
+                        $sisaStockFg  = $rr->kekuatan_stock_fg - $hoursElapsed;
 
-                        if ($sisaStockFg <= 1) {
+                        if ($sisaStockFg <= 4) {
                             $stockLevel = 'critical';
-                        } elseif ($sisaStockFg <= 2) {
+                        } elseif ($sisaStockFg <= 8) {
                             $stockLevel = 'warning';
                         }
                     }
@@ -230,7 +250,7 @@ tr[data-stock-level="warning"] {
                         <span class="kategori-text {{ $kategoriClass }}">{{ $rr->kategori_problem }}</span>
                     </td>
                     <td>{{ $rr->group }} / {{ $rr->shift }}</td>
-                    <td style="font-weight: bold;">{{ $rr->kekuatan_stock_fg }} Hari</td>
+                    <td style="font-weight: bold;">{{ formatJamKeHari($rr->kekuatan_stock_fg) }}</td>
 
                     <td>
                         @if($rr->status === 'on_process' && $rr->on_process_at)

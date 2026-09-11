@@ -39,10 +39,10 @@
         </div>
 
         {{-- ══════════════════════════════════════════════
-            SECTION 0: Hasil Akhir (trigger flow OK/NG) — ⬅️ baru
+            SECTION 0: Hasil Akhir (trigger flow OK/NG)
         ══════════════════════════════════════════════ --}}
-        <div class="px-6 pt-5 flex-shrink-0">
-            <label class="mb-2 block text-sm font-bold text-gray-800">Hasil Akhir</label>
+        <div class="px-6 pt-6 pb-5 flex-shrink-0">
+            <label class="mb-2.5 block text-sm font-bold text-gray-800">Hasil Akhir</label>
             <div class="flex gap-3">
                 <label class="okng-option flex-1 cursor-pointer">
                     <input type="radio" name="closedHasilAkhir" value="OK" class="okng-radio-hidden">
@@ -78,7 +78,7 @@
                     <div class="h-px flex-1 bg-zinc-200"></div>
                 </div>
                 <div class="space-y-4">
-                <label class="mb-1.5 block text-sm font-semibold text-gray-700">Judgment Hasil Trial Mengacu Ke Point SOP </label>
+
                     {{-- Row: Tanggal Cek + Lot Prod --}}
                     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div>
@@ -88,57 +88,59 @@
                                        transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-100">
                         </div>
                         <div>
-                            <label class="mb-1.5 block text-sm font-semibold text-gray-700">Lot Prod</label>
+                            <label class="mb-1.5 block text-sm font-semibold text-gray-700">Lot Produksi Baru</label>
                             <input type="text" id="closedLotProd" placeholder="Lot prod..."
                                 class="w-full rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm text-gray-700
                                        transition focus:border-zinc-400 focus:ring-4 focus:ring-zinc-100 placeholder:text-gray-400">
                         </div>
                     </div>
 
-                    {{-- Row: Awal + Tengah --}}
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                            <label class="mb-1.5 block text-sm font-semibold text-gray-700">Awal</label>
-                            <div class="flex gap-3">
-                                <label class="okng-option flex-1 cursor-pointer">
-                                    <input type="radio" name="closedAwal" value="OK" class="okng-radio-hidden">
-                                    <div class="okng-card flex items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-2.5 transition-all duration-200 hover:border-zinc-400">
-                                        <div class="okng-dot h-2.5 w-2.5 rounded-full bg-zinc-300 transition"></div>
-                                        <span class="text-sm font-semibold text-gray-700">OK</span>
-                                    </div>
-                                </label>
-                                <label class="okng-option flex-1 cursor-pointer">
-                                    <input type="radio" name="closedAwal" value="NG" class="okng-radio-hidden">
-                                    <div class="okng-card flex items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-2.5 transition-all duration-200 hover:border-zinc-400">
-                                        <div class="okng-dot h-2.5 w-2.5 rounded-full bg-zinc-300 transition"></div>
-                                        <span class="text-sm font-semibold text-gray-700">NG</span>
-                                    </div>
-                                </label>
-                            </div>
-                        </div>
-                        <div>
-                            <label class="mb-1.5 block text-sm font-semibold text-gray-700">Tengah</label>
-                            <div class="flex gap-3">
-                                <label class="okng-option flex-1 cursor-pointer">
-                                    <input type="radio" name="closedTengah" value="OK" class="okng-radio-hidden">
-                                    <div class="okng-card flex items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-2.5 transition-all duration-200 hover:border-zinc-400">
-                                        <div class="okng-dot h-2.5 w-2.5 rounded-full bg-zinc-300 transition"></div>
-                                        <span class="text-sm font-semibold text-gray-700">OK</span>
-                                    </div>
-                                </label>
-                                <label class="okng-option flex-1 cursor-pointer">
-                                    <input type="radio" name="closedTengah" value="NG" class="okng-radio-hidden">
-                                    <div class="okng-card flex items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-2.5 transition-all duration-200 hover:border-zinc-400">
-                                        <div class="okng-dot h-2.5 w-2.5 rounded-full bg-zinc-300 transition"></div>
-                                        <span class="text-sm font-semibold text-gray-700">NG</span>
-                                    </div>
-                                </label>
-                            </div>
+                    <label class="mb-1.5 block text-sm font-semibold text-gray-700">Judgment Hasil Trial Mengacu Ke Point SOP </label>
+
+                    {{-- Row: Awal (full width, Tengah disembunyikan dulu) --}}
+                    <div>
+                        
+                        <div class="flex gap-3">
+                            <label class="okng-option flex-1 cursor-pointer">
+                                <input type="radio" name="closedAwal" value="OK" class="okng-radio-hidden">
+                                <div class="okng-card flex items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-2.5 transition-all duration-200 hover:border-zinc-400">
+                                    <div class="okng-dot h-2.5 w-2.5 rounded-full bg-zinc-300 transition"></div>
+                                    <span class="text-sm font-semibold text-gray-700">OK</span>
+                                </div>
+                            </label>
+                            <label class="okng-option flex-1 cursor-pointer">
+                                <input type="radio" name="closedAwal" value="NG" class="okng-radio-hidden">
+                                <div class="okng-card flex items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-2.5 transition-all duration-200 hover:border-zinc-400">
+                                    <div class="okng-dot h-2.5 w-2.5 rounded-full bg-zinc-300 transition"></div>
+                                    <span class="text-sm font-semibold text-gray-700">NG</span>
+                                </div>
+                            </label>
                         </div>
                     </div>
 
-                    {{-- Row: Akhir + Qty --}}
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {{-- Tengah: disembunyikan dulu --}}
+                    <div id="wrapperClosedTengah" style="display:none">
+                        <label class="mb-1.5 block text-sm font-semibold text-gray-700">Tengah</label>
+                        <div class="flex gap-3">
+                            <label class="okng-option flex-1 cursor-pointer">
+                                <input type="radio" name="closedTengah" value="OK" class="okng-radio-hidden">
+                                <div class="okng-card flex items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-2.5 transition-all duration-200 hover:border-zinc-400">
+                                    <div class="okng-dot h-2.5 w-2.5 rounded-full bg-zinc-300 transition"></div>
+                                    <span class="text-sm font-semibold text-gray-700">OK</span>
+                                </div>
+                            </label>
+                            <label class="okng-option flex-1 cursor-pointer">
+                                <input type="radio" name="closedTengah" value="NG" class="okng-radio-hidden">
+                                <div class="okng-card flex items-center justify-center gap-2 rounded-xl border-2 border-zinc-200 bg-white py-2.5 transition-all duration-200 hover:border-zinc-400">
+                                    <div class="okng-dot h-2.5 w-2.5 rounded-full bg-zinc-300 transition"></div>
+                                    <span class="text-sm font-semibold text-gray-700">NG</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {{-- Row: Akhir + Qty — disembunyikan dulu --}}
+                    <div id="wrapperClosedAkhirQty" class="grid grid-cols-1 gap-4 sm:grid-cols-2" style="display:none">
                         <div>
                             <label class="mb-1.5 block text-sm font-semibold text-gray-700">Akhir</label>
                             <div class="flex gap-3">
@@ -179,8 +181,8 @@
                         </div>
                     </div>
 
-                    {{-- Row: Remark + Judge --}}
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    {{-- Row: Remark + Judge — disembunyikan dulu --}}
+                    <div id="wrapperClosedRemarkJudge" class="grid grid-cols-1 gap-4 sm:grid-cols-2" style="display:none">
                         <div>
                             <label class="mb-1.5 block text-sm font-semibold text-gray-700">Remark</label>
                             <input type="text" id="closedRemarkMonitoring" placeholder="Remark..."

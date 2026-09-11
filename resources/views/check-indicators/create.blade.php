@@ -40,30 +40,13 @@
                             </svg>
                         </div>
                         <div class="flex-1">
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <p class="text-xs text-gray-500">Kode Barang</p>
-                                    <p id="detailKodeBarang" class="font-semibold text-gray-900">-</p>
-                                </div>
-                                <div>
-                                    <p class="text-xs text-gray-500">Supplier</p>
-                                    <p id="detailSupplier" class="font-semibold text-gray-900">-</p>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <p class="text-xs text-gray-500">Nama</p>
-                                <p id="detailNama" class="font-semibold text-gray-900">-</p>
-                            </div>
+                            <p class="text-xs text-gray-500">Kode Barang</p>
+                            <p id="detailKodeBarang" class="font-semibold text-gray-900">-</p>
+
+                            <p class="text-xs text-gray-500 mt-2">Nama</p>
+                            <p id="detailNama" class="font-semibold text-gray-900">-</p>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <!-- Parts Used List (replaces Related Part section) -->
-            <div id="partsUsedSection" class="hidden">
-                <label class="block text-sm font-semibold text-gray-700 mb-3">Parts Used in This Barang</label>
-                <div id="partsUsedList" class="space-y-2 bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <!-- Parts will be loaded here as list -->
                 </div>
             </div>
 
@@ -109,7 +92,6 @@
         document.getElementById('createForm').reset();
         document.getElementById('bagianContainer').innerHTML = '';
         document.getElementById('barangDetailsSection').classList.add('hidden');
-        document.getElementById('partsUsedSection').classList.add('hidden');
         bagianCounter = 0;
         clearErrors();
         
@@ -130,23 +112,24 @@
     async function loadBarangDetails(barangId) {
         if (!barangId) {
             document.getElementById('barangDetailsSection').classList.add('hidden');
-            document.getElementById('partsUsedSection').classList.add('hidden');
             return;
         }
 
         try {
             const response = await fetch(`/barangs/${barangId}/details`);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
             const data = await response.json();
             
             if (data.success) {
                 const barang = data.data;
                 
-                // Update details
-                document.getElementById('detailKodeBarang').textContent = barang.kode_barang;
-                document.getElementById('detailNama').textContent = barang.nama;
-                document.getElementById('detailSupplier').textContent = barang.supplier.nama;
+                document.getElementById('detailKodeBarang').textContent = barang.kode_barang ?? '-';
+                document.getElementById('detailNama').textContent = barang.nama ?? '-';
                 
-                // Update image
                 if (barang.gambar) {
                     document.getElementById('detailGambar').src = `/storage/barangs/${barang.gambar}`;
                     document.getElementById('detailGambar').classList.remove('hidden');
@@ -156,41 +139,12 @@
                     document.getElementById('noDetailGambar').classList.remove('hidden');
                 }
                 
-                // Update Parts Used List
-                const partsUsedList = document.getElementById('partsUsedList');
-                partsUsedList.innerHTML = '';
-                
-                if (barang.parts && barang.parts.length > 0) {
-                    barang.parts.forEach((part, index) => {
-                        partsUsedList.innerHTML += `
-                            <div class="flex items-center justify-between bg-white border border-gray-200 rounded-lg px-4 py-3 hover:border-blue-300 transition">
-                                <div class="flex items-center space-x-3">
-                                    <span class="w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-bold">
-                                        ${index + 1}
-                                    </span>
-                                    <div>
-                                        <p class="text-sm font-semibold text-gray-900">${part.nama}</p>
-                                        <p class="text-xs text-gray-500">${part.kode_part}</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <p class="text-xs text-gray-500">Quantity</p>
-                                    <p class="text-sm font-bold text-blue-600">${part.pivot.quantity}</p>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    
-                    document.getElementById('partsUsedSection').classList.remove('hidden');
-                } else {
-                    partsUsedList.innerHTML = '<p class="text-sm text-gray-500 italic text-center py-4">No parts used in this barang</p>';
-                    document.getElementById('partsUsedSection').classList.remove('hidden');
-                }
-                
                 document.getElementById('barangDetailsSection').classList.remove('hidden');
+            } else {
+                Swal.fire('Error!', data.message || 'Gagal memuat detail barang', 'error');
             }
         } catch (error) {
-            console.error('Error:', error);
+            console.error('loadBarangDetails error:', error);
             Swal.fire('Error!', 'Failed to load barang details', 'error');
         }
     }
@@ -244,7 +198,6 @@
         
         document.getElementById('bagianContainer').innerHTML += bagianHTML;
         
-        // Auto add first standard
         addStandard(bagianCounter);
     }
 
@@ -269,7 +222,7 @@
                     </button>
                 </div>
                 
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-2 gap-3">
                     <!-- Poin -->
                     <div>
                         <label class="block text-xs font-medium text-gray-700 mb-1">Poin</label>
@@ -278,20 +231,12 @@
                             class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition">
                     </div>
 
-                    <!-- Metode -->
-                    <div>
-                        <label class="block text-xs font-medium text-gray-700 mb-1">Metode</label>
-                        <input type="text" name="bagian[${bagianId}][standards][${standardCount}][metode]" required
-                            placeholder="Visual Check, Pengukuran, dll"
-                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition">
-                    </div>
-
                     <!-- Standar -->
                     <div>
                         <label class="block text-xs font-medium text-gray-700 mb-1">Standar</label>
-                        <input type="text" name="bagian[${bagianId}][standards][${standardCount}][standar]" required
+                        <textarea name="bagian[${bagianId}][standards][${standardCount}][standar]" required rows="2"
                             placeholder="Tidak ada kerusakan, dll"
-                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition">
+                            class="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 focus:border-black focus:ring-1 focus:ring-black transition"></textarea>
                     </div>
                 </div>
             </div>
@@ -307,14 +252,11 @@
 
         const formData = new FormData(this);
         
-        // Convert FormData to JSON structure
         const data = {
             barang_id: formData.get('barang_id'),
-            part_id: null, // No longer needed
             bagian: []
         };
 
-        // Parse bagian data
         const bagianData = {};
         for (let [key, value] of formData.entries()) {
             if (key.startsWith('bagian[')) {
@@ -343,10 +285,9 @@
             }
         }
 
-        // Convert to array and clean up
         data.bagian = Object.values(bagianData).map(b => ({
             nama_bagian: b.nama_bagian,
-            standards: Object.values(b.standards).filter(s => s.poin && s.metode && s.standar)
+            standards: Object.values(b.standards).filter(s => s.poin && s.standar)
         }));
 
         try {

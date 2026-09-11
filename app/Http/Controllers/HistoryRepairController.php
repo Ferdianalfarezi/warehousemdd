@@ -37,12 +37,14 @@ class HistoryRepairController extends Controller
         ]);
     }
 
-    // ── AJAX: table data ─────────────────────────────────────
+        // ── AJAX: table data ─────────────────────────────────────
     public function getData(Request $request)
     {
-        $search  = $request->get('search', '');
-        $perPage = $request->get('per_page', 20);
-        $page    = (int) $request->get('page', 1);
+        $search   = $request->get('search', '');
+        $perPage  = $request->get('per_page', 20);
+        $page     = (int) $request->get('page', 1);
+        $dateFrom = $request->get('date_from');
+        $dateTo   = $request->get('date_to');
 
         $latestIds = RequestRepairHistory::selectRaw('MAX(id) as id')
             ->groupBy('part_no');
@@ -60,6 +62,12 @@ class HistoryRepairController extends Controller
                        ->orWhere('request_repair_histories.process_no',       'like', "%{$search}%")
                        ->orWhere('request_repair_histories.kategori_problem', 'like', "%{$search}%");
                 });
+            })
+            ->when($dateFrom, function ($q) use ($dateFrom) {
+                $q->whereDate('request_repair_histories.closed_at', '>=', $dateFrom);
+            })
+            ->when($dateTo, function ($q) use ($dateTo) {
+                $q->whereDate('request_repair_histories.closed_at', '<=', $dateTo);
             });
 
         $total = $query->count();

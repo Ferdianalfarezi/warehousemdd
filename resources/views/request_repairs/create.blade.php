@@ -81,15 +81,12 @@
                         <p class="error-message text-xs text-red-500 mt-1" id="error-create-jumlah_stroke"></p>
                     </div>
                     <div>
+                        {{-- ⬅️ diubah — line/mesin sekarang full manual (input text), tidak lagi pilih dari master Line --}}
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Line / Mesin</label>
-                        <select name="line_id" id="createLineId"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
-                            <option value="">Pilih Line / Mesin</option>
-                            @foreach($lines as $line)
-                                <option value="{{ $line->id }}">{{ $line->nama_line }} — {{ $line->mesin }}</option>
-                            @endforeach
-                        </select>
-                        <p class="error-message text-xs text-red-500 mt-1" id="error-create-line_id"></p>
+                        <input type="text" name="line_mesin" id="createLineMesin"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black"
+                            placeholder="Contoh: Line 1 - PR 1">
+                        <p class="error-message text-xs text-red-500 mt-1" id="error-create-line_mesin"></p>
                     </div>
                 </div>
 
@@ -130,24 +127,23 @@
                     </div>
                 </div>
 
-                {{-- Process No --}}
+                {{-- Process No — manual only, otomatis tersimpan ke master (DiesDetail) di backend --}}
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-1">Process No</label>
-                    <div class="flex space-x-2">
-                        <select id="createProcessNoSelect"
-                            class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
-                            <option value="">— Pilih dulu Part No —</option>
-                        </select>
-                        <input type="text" name="process_no" id="createProcessNoInput"
-                            class="hidden flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black"
-                            placeholder="Input manual process no">
-                        <button type="button" id="createProcessNoToggleBtn"
-                            onclick="toggleManualProcessNo('create')"
-                            class="px-3 py-2 border border-gray-300 rounded-lg text-xs font-medium text-gray-600 hover:bg-gray-50 transition whitespace-nowrap">
-                            Manual
-                        </button>
-                    </div>
+                    <input type="text" name="process_no" id="createProcessNoInput"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black"
+                        placeholder="Masukkan process no">
+                    <p class="text-xs text-gray-400 mt-1">Process No baru otomatis tersimpan ke data master part ini.</p>
                     <p class="error-message text-xs text-red-500 mt-1" id="error-create-process_no"></p>
+                </div>
+
+                {{-- Kekuatan Stock FG — satuan Jam, default 24 --}}
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Kekuatan Stock FG (Jam)</label>
+                    <input type="number" name="kekuatan_stock_fg" id="createKekuatanStockFg" min="0" value="24"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black"
+                        placeholder="24">
+                    <p class="error-message text-xs text-red-500 mt-1" id="error-create-kekuatan_stock_fg"></p>
                 </div>
 
                 {{-- Jenis + Kategori --}}
@@ -160,7 +156,7 @@
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
                             <option value="">Pilih Jenis</option>
                             <option value="Milik Sendiri">Milik Sendiri</option>
-                            <option value="Eksternal">Eksternal</option>
+                            <option value="Eksternal" selected>Eksternal</option>
                         </select>
                         <p class="error-message text-xs text-red-500 mt-1" id="error-create-jenis"></p>
                     </div>
@@ -181,18 +177,9 @@
                     </div>
                 </div>
 
-                {{-- Kekuatan Stock FG --}}
-                <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Kekuatan Stock FG (Hari)</label>
-                    <input type="number" name="kekuatan_stock_fg" id="createKekuatanStockFg" min="0"
-                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black"
-                        placeholder="0">
-                    <p class="error-message text-xs text-red-500 mt-1" id="error-create-kekuatan_stock_fg"></p>
-                </div>
-
                 {{-- Detail Proyek --}}
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">Detail Proyek</label>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Detail Problem</label>
                     <textarea name="detail_proyek" id="createDetailProyek" rows="3"
                         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black resize-none"
                         placeholder="Deskripsi detail masalah / proyek..."></textarea>

@@ -11,15 +11,27 @@
             <h1 class="text-3xl font-bold text-gray-900">Check Indicators</h1>
             <p class="text-gray-600 mt-1">Manage quality check standards for products</p>
         </div>
-        <button 
-            onclick="openCreateModal()"
-            class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
-        >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-            </svg>
-            <span>Add Check Indicator</span>
-        </button>
+        <div class="flex items-center space-x-3">
+            <button 
+                onclick="openImportModal()"
+                class="bg-white border-2 border-black text-black px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition flex items-center space-x-2"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                </svg>
+                <span>Import Excel</span>
+            </button>
+
+            <button 
+                onclick="openCreateModal()"
+                class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
+            >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                <span>Add Check Indicator</span>
+            </button>
+        </div>
     </div>
 
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -64,7 +76,6 @@
                     <tr>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">No</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Barang</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Parts</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Bagian</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Standards</th>
                         <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
@@ -102,19 +113,6 @@
                                 </div>
                             </td>
 
-                            <!-- Jumlah Parts -->
-                            <td class="px-6 py-4">
-                                @if ($indicator->barang->parts->count() > 0)
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                                        {{ $indicator->barang->parts->count() }} Parts
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
-                                        No Parts
-                                    </span>
-                                @endif
-                            </td>
-
                             <!-- Nama Bagian -->
                             <td class="px-6 py-4 text-sm font-semibold text-gray-900">
                                 {{ $indicator->nama_bagian }}
@@ -149,14 +147,14 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="px-6 py-16 text-center">
+                            <td colspan="5" class="px-6 py-16 text-center">
                                 <div class="flex flex-col items-center">
                                     <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                               d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
                                     </svg>
                                     <p class="mt-4 text-gray-600 font-semibold">No check indicators found</p>
-                                    <p class="text-sm text-gray-500">Click "Add Check Indicator" to create one</p>
+                                    <p class="text-sm text-gray-500">Click "Add Check Indicator" or "Import Excel" to create one</p>
                                 </div>
                             </td>
                         </tr>
@@ -182,6 +180,7 @@
 @include('check-indicators.create')
 @include('check-indicators.edit')
 @include('check-indicators.detail')
+@include('check-indicators.import')
 
 @endsection
 
@@ -238,7 +237,7 @@
         if (totalEntries === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="px-6 py-12 text-center">
+                    <td colspan="5" class="px-6 py-12 text-center">
                         <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                         </svg>
@@ -303,6 +302,7 @@
             closeViewModal();
             closeCreateModal();
             closeEditModal();
+            closeImportModal();
         }
     });
 </script>

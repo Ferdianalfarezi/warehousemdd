@@ -218,6 +218,25 @@ function okngBadge(val) {
 }
 
 // ════════════════════════════════════════════════════════
+// STOCK FG (JAM) FORMATTER — ⬅️ baru
+// Input selalu dalam satuan JAM (integer). Kalau >= 24 jam,
+// ditampilkan sebagai "X Hari Y Jam" (Y Jam cuma muncul kalau > 0).
+// Contoh: 12 -> "12 Jam", 24 -> "1 Hari", 36 -> "1 Hari 12 Jam".
+// ════════════════════════════════════════════════════════
+function formatStockFgJam(totalJam) {
+    if (totalJam === null || totalJam === undefined || totalJam === '') return '-';
+    totalJam = parseInt(totalJam, 10);
+    if (isNaN(totalJam) || totalJam < 0) return '-';
+
+    const hari = Math.floor(totalJam / 24);
+    const jam  = totalJam % 24;
+
+    if (hari > 0 && jam > 0) return hari + ' Hari ' + jam + ' Jam';
+    if (hari > 0)            return hari + ' Hari';
+    return jam + ' Jam';
+}
+
+// ════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function () {
@@ -241,8 +260,8 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.addEventListener('change', function (e) {
-        if (e.target.id === 'createProcessNoSelect') syncProcessNoFromSelect('createProcessNoSelect');
-        if (e.target.id === 'editProcessNoSelect')   syncProcessNoFromSelect('editProcessNoSelect');
+        // ⬅️ diubah — listener untuk sinkronisasi select↔input process_no dihapus,
+        // karena Process No sekarang selalu input manual (tidak ada select lagi).
 
         // Toggle mode PIC: Sendiri / Bersama Tim
         if (e.target.name === 'picMode') {
@@ -380,7 +399,7 @@ function renderTable(items) {
              + '<td class="px-4 py-3 text-sm font-mono text-gray-900">' + esc(r.part_no) + '</td>'
              + '<td class="px-4 py-3 text-sm text-gray-800 max-w-xs truncate" title="' + esc(r.process_no) + '">' + esc(r.process_no || '-') + '</td>'
              + '<td class="px-4 py-3"><span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + katCls + '">' + esc(r.kategori_problem) + '</span></td>'
-             + '<td class="px-4 py-3 text-sm text-gray-700 text-center font-medium">' + (r.kekuatan_stock_fg ?? '-') + ' Hari</td>' 
+             + '<td class="px-4 py-3 text-sm text-gray-700 text-center font-medium">' + formatStockFgJam(r.kekuatan_stock_fg) + '</td>'
              + '<td class="px-4 py-3 text-sm text-gray-600">' + esc(r.created_by_name || '-') + '</td>'
              + '<td class="px-4 py-3 text-sm text-gray-600 max-w-xs truncate" title="' + esc(r.pic_names || '-') + '">' + esc(r.pic_names || '-') + '</td>'
              + '<td class="px-4 py-3">' + statusBadge(r.status, r.is_paused, r.pause_reason) + '</td>'
@@ -964,7 +983,7 @@ async function submitQuickAddBarang() {
             // Isi field auto-fill, sama seperti saat select2:select biasa
             document.getElementById('createNamaDisplay').value     = b.nama || '';
             document.getElementById('createCustomerDisplay').value = b.cust || '';
-            loadProcessNos(b.id, 'createProcessNoSelect');
+            // ⬅️ diubah — Process No sekarang manual, tidak ada lagi auto-populate list dari master
 
             closeQuickAddBarangModal();
             Swal.fire({ icon: 'success', title: 'Part berhasil ditambahkan!', showConfirmButton: false, timer: 1200 });
@@ -1028,39 +1047,6 @@ function initCreatedBySelect2() {
 }
 
 // ════════════════════════════════════════════════════════
-// PROCESS NO
-// ════════════════════════════════════════════════════════
-async function loadProcessNos(barangId, selectElId, current) {
-    current = current || '';
-    const sel = document.getElementById(selectElId);
-    sel.innerHTML = '<option value="">Loading...</option>';
-    try {
-        const res  = await fetch('/request-repairs/process-nos?barang_id=' + barangId);
-        const data = await res.json();
-        let opts = '<option value="">— Pilih Process No —</option>';
-        if (data.data && data.data.length) {
-            data.data.forEach(function (pn) { opts += '<option value="' + esc(pn) + '"' + (pn === current ? ' selected' : '') + '>' + esc(pn) + '</option>'; });
-        } else { opts = '<option value="">Tidak ada process no terdaftar</option>'; }
-        sel.innerHTML = opts; sel.value = current; syncProcessNoFromSelect(selectElId);
-    } catch (e) { sel.innerHTML = '<option value="">Gagal load process no</option>'; }
-}
-function syncProcessNoFromSelect(selectElId) {
-    const prefix = selectElId.replace('ProcessNoSelect', '');
-    const inputEl = document.getElementById(prefix + 'ProcessNoInput');
-    if (!inputEl || !inputEl.classList.contains('hidden')) return;
-    inputEl.value = document.getElementById(selectElId).value || '';
-}
-function toggleManualProcessNo(prefix) {
-    const sel = document.getElementById(prefix + 'ProcessNoSelect'), inp = document.getElementById(prefix + 'ProcessNoInput'), btn = document.getElementById(prefix + 'ProcessNoToggleBtn');
-    if (!inp.classList.contains('hidden')) { inp.classList.add('hidden'); sel.classList.remove('hidden'); btn.textContent = 'Manual'; inp.value = sel.value || ''; }
-    else { sel.classList.add('hidden'); inp.classList.remove('hidden'); btn.textContent = 'Pilih List'; inp.value = ''; inp.focus(); }
-}
-function getProcessNoValue(prefix) {
-    const inp = document.getElementById(prefix + 'ProcessNoInput'), sel = document.getElementById(prefix + 'ProcessNoSelect');
-    return inp.classList.contains('hidden') ? (sel.value || '') : (inp.value || '');
-}
-
-// ════════════════════════════════════════════════════════
 // CREATE MODAL
 // ════════════════════════════════════════════════════════
 function openCreateModal() {
@@ -1068,29 +1054,23 @@ function openCreateModal() {
     document.getElementById('createForm').reset();
     document.getElementById('createNamaDisplay').value     = '';
     document.getElementById('createCustomerDisplay').value = '';
-    document.getElementById('createProcessNoSelect').innerHTML = '<option value="">— Pilih dulu Part No —</option>';
+    // ⬅️ diubah — Process No sekarang input manual langsung, tidak ada select/toggle lagi
     document.getElementById('createProcessNoInput').value  = '';
-    document.getElementById('createProcessNoInput').classList.add('hidden');
-    document.getElementById('createProcessNoSelect').classList.remove('hidden');
-    document.getElementById('createProcessNoToggleBtn').textContent = 'Manual';
     document.getElementById('createGambarPreview').classList.add('hidden');
     clearErrors();
     initBarangSelect2('createBarangId', 'createModal', function (d) {
         if (d) {
             document.getElementById('createNamaDisplay').value     = d.nama     || '';
             document.getElementById('createCustomerDisplay').value = d.customer || '';
-            loadProcessNos(d.id, 'createProcessNoSelect');
         } else {
             document.getElementById('createNamaDisplay').value     = '';
             document.getElementById('createCustomerDisplay').value = '';
-            document.getElementById('createProcessNoSelect').innerHTML = '<option value="">— Pilih dulu Part No —</option>';
-            document.getElementById('createProcessNoInput').value  = '';
         }
     });
     initCreatedBySelect2();
     document.getElementById('createForm').onsubmit = async function (e) {
         e.preventDefault(); clearErrors();
-        const fd = new FormData(this); fd.set('process_no', getProcessNoValue('create'));
+        const fd = new FormData(this); // ⬅️ diubah — process_no sudah ikut terkirim otomatis dari input manual (name="process_no")
         try {
             const res  = await fetch('/request-repairs', { method: 'POST', headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content, 'Accept': 'application/json' }, body: fd });
             const data = await res.json();
@@ -1130,9 +1110,7 @@ async function openEditModal(id) {
         document.getElementById('editKekuatanStockFg').value = r.kekuatan_stock_fg ?? '';
         document.getElementById('editDetailProyek').value    = r.detail_proyek || '';
         document.getElementById('editStatusBadge').innerHTML = statusBadge(r.status, r.is_paused, r.pause_reason);
-        document.getElementById('editProcessNoInput').classList.add('hidden');
-        document.getElementById('editProcessNoSelect').classList.remove('hidden');
-        document.getElementById('editProcessNoToggleBtn').textContent = 'Manual';
+        // ⬅️ diubah — Process No sekarang input manual langsung, tidak ada select/toggle lagi
         document.getElementById('editProcessNoInput').value = r.process_no || '';
 
         // Durasi On Process → On Trial — cuma muncul kalau status On Trial & role admin
@@ -1174,14 +1152,13 @@ async function openEditModal(id) {
                 placeholder: 'Cari kode / nama part...', allowClear: true, width: '100%', minimumInputLength: 0, dropdownParent: $('#editModal'),
                 ajax: { url: '/request-repairs/search-barang', dataType: 'json', delay: 250, data: function (p) { return { q: p.term || '' }; }, processResults: function (d) { return { results: d.results }; }, cache: true },
             })
-            .on('select2:select', function (e) { const d = e.params.data; document.getElementById('editNamaDisplay').value = d.nama || ''; document.getElementById('editCustomerDisplay').value = d.customer || ''; loadProcessNos(d.id, 'editProcessNoSelect'); })
-            .on('select2:clear', function () { document.getElementById('editNamaDisplay').value = ''; document.getElementById('editCustomerDisplay').value = ''; document.getElementById('editProcessNoSelect').innerHTML = '<option value="">— Pilih dulu Part No —</option>'; document.getElementById('editProcessNoInput').value = ''; });
+            .on('select2:select', function (e) { const d = e.params.data; document.getElementById('editNamaDisplay').value = d.nama || ''; document.getElementById('editCustomerDisplay').value = d.customer || ''; })
+            .on('select2:clear', function () { document.getElementById('editNamaDisplay').value = ''; document.getElementById('editCustomerDisplay').value = ''; });
         });
-        await loadProcessNos(r.barang_id, 'editProcessNoSelect', r.process_no || '');
         clearErrors();
         document.getElementById('editForm').onsubmit = async function (e) {
             e.preventDefault(); clearErrors();
-            const fd = new FormData(this); fd.append('_method', 'PUT'); fd.set('process_no', getProcessNoValue('edit'));
+            const fd = new FormData(this); fd.append('_method', 'PUT'); // ⬅️ diubah — process_no sudah ikut terkirim otomatis dari input manual (name="process_no")
 
             const editDurasiSection = document.getElementById('editDurasiSection');
             if (!editDurasiSection.classList.contains('hidden')) {
@@ -1236,7 +1213,7 @@ async function openDetailModal(id) {
         document.getElementById('detailNama').textContent       = r.process_no  || '-';
         document.getElementById('detailProcessNo').textContent  = r.process_no  || '-';
         document.getElementById('detailCustomer').textContent   = r.customer    || '-';
-        document.getElementById('detailKekuatanStockFg').textContent = r.kekuatan_stock_fg ?? '-';
+        document.getElementById('detailKekuatanStockFg').textContent = formatStockFgJam(r.kekuatan_stock_fg);
         document.getElementById('detailProyek').textContent     = r.detail_proyek || '-';
         document.getElementById('detailStatus').innerHTML       = statusBadge(r.status, r.is_paused, r.pause_reason);
         document.getElementById('detailJenis').innerHTML        = '<span class="inline-flex px-2.5 py-1 rounded-full text-xs font-medium ' + (JENIS_BADGE[r.jenis] || 'bg-gray-100 text-gray-700') + '">' + esc(r.jenis) + '</span>';
