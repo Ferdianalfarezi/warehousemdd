@@ -563,56 +563,55 @@
             }
         }
 
-        // Auto Refresh
-        let refreshCountdown = 10;
-        let countdownInterval;
+        // Live update — ambil ulang halaman di background lalu tukar elemen [data-live]
+        // yang isinya berubah saja. Tidak ada reload halaman, jadi layar tidak berkedip.
+        const LIVE_INTERVAL_MS = 10000;
+        const liveCache = {};
+        let liveBusy = false;
 
-        function startRefreshCountdown() {
-            refreshCountdown = 10;
-            
-            if (countdownInterval) {
-                clearInterval(countdownInterval);
+        async function refreshLive() {
+            if (liveBusy) return;
+            liveBusy = true;
+
+            try {
+                const response = await fetch(location.href, { cache: 'no-store' });
+                if (!response.ok) return;
+
+                const doc = new DOMParser().parseFromString(await response.text(), 'text/html');
+                let changed = false;
+
+                doc.querySelectorAll('[data-live]').forEach(function (fresh) {
+                    const key = fresh.dataset.live;
+                    const current = document.querySelector(`[data-live="${key}"]`);
+                    if (!current || liveCache[key] === fresh.innerHTML) return;
+
+                    liveCache[key] = fresh.innerHTML;
+                    current.innerHTML = fresh.innerHTML;
+                    changed = true;
+                });
+
+                // Biar counter durasi langsung keisi, tidak sempat tampil placeholder
+                if (changed) document.dispatchEvent(new Event('andon:updated'));
+            } catch (e) {
+                // Server/jaringan putus: tampilan lama tetap, coba lagi di interval berikutnya
+                console.warn('Andon live update gagal:', e);
+            } finally {
+                liveBusy = false;
             }
-            
-            countdownInterval = setInterval(() => {
-                refreshCountdown--;
-                const countdownElement = document.getElementById('refreshCountdown');
-                if (countdownElement) {
-                    countdownElement.textContent = refreshCountdown;
-                }
-                
-                if (refreshCountdown <= 0) {
-                    location.reload();
-                }
-            }, 1000);
         }
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             updateDateTime();
             setInterval(updateDateTime, 1000);
-            
-            // Auto refresh every 10 seconds
-            startRefreshCountdown();
-        });
 
-        // Pause auto-refresh on user interaction
-        document.addEventListener('click', function() {
-            startRefreshCountdown();
-        });
+            // Simpan HTML awal biar update pertama tidak menukar isi yang sama
+            document.querySelectorAll('[data-live]').forEach(function (el) {
+                liveCache[el.dataset.live] = el.innerHTML;
+            });
+            setInterval(refreshLive, LIVE_INTERVAL_MS);
 
-        document.addEventListener('keydown', function() {
-            startRefreshCountdown();
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            updateDateTime();
-            setInterval(updateDateTime, 1000);
-            
-            // Auto refresh every 10 seconds
-            startRefreshCountdown();
-
-            // Sinkronisasi running text biar ga reset tiap auto refresh
+            // Sinkronisasi running text (kalau halaman dibuka ulang manual)
             syncMarqueeAnimation();
         });
 

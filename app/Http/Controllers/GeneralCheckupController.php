@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Barang;
 use App\Models\GeneralCheckup;
 use App\Models\Schedule;
 use App\Models\CheckIndicatorStandard;
@@ -12,6 +13,7 @@ use App\Models\HistoryCheckupDetail;
 use App\Models\HistoryCheckupPartReplacement;
 use App\Models\InhouseRequest;
 use App\Models\OuthouseRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -28,7 +30,7 @@ class GeneralCheckupController extends Controller
     {
         $perPage = max(1, (int) ($request->per_page ?: 20));
 
-        $checkups = GeneralCheckup::with(['barang', 'schedule'])
+        $checkups = GeneralCheckup::with(['barang', 'schedule', 'starter:id,nama'])
             ->whereIn('status', self::ACTIVE_STATUS)
             ->when($request->filled('search'), function ($q) use ($request) {
                 $search = $request->search;
@@ -38,6 +40,7 @@ class GeneralCheckupController extends Controller
                 });
             })
             ->when($request->filled('line'), fn ($q) => $q->where('line', $request->line))
+            ->when($request->filled('customer'), fn ($q) => $q->whereHas('barang', fn ($b) => $b->where('cust', $request->customer)))
             ->when(
                 in_array($request->status, self::ACTIVE_STATUS, true),
                 fn ($q) => $q->where('status', $request->status)
@@ -70,7 +73,21 @@ class GeneralCheckupController extends Controller
             ->orderBy('line')
             ->pluck('line');
 
-        return view('general-checkups.index', compact('checkups', 'stats', 'lines'));
+        // Customer dari barang yang punya checkup aktif (sama seperti filter customer di Request Repair)
+        $customers = Barang::whereIn('id', GeneralCheckup::whereIn('status', self::ACTIVE_STATUS)->select('barang_id'))
+            ->whereNotNull('cust')
+            ->where('cust', '!=', '')
+            ->distinct()
+            ->orderBy('cust')
+            ->pluck('cust');
+
+        // Pilihan PIC di modal edit (semua user aktif selain operator)
+        $pics = User::where('role_id', '!=', 4)
+            ->where('status', 'aktif')
+            ->orderBy('nama')
+            ->get(['id', 'nama']);
+
+        return view('general-checkups.index', compact('checkups', 'stats', 'lines', 'customers', 'pics'));
     }
 
     /**
@@ -118,10 +135,60 @@ class GeneralCheckupController extends Controller
      */
     public function update(Request $request, GeneralCheckup $generalCheckup)
     {
-        return response()->json([
-            'success' => false,
-            'message' => 'Update not allowed'
-        ], 400);
+        if (!in_array($generalCheckup->status, self::ACTIVE_STATUS, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Checkup yang sudah selesai tidak bisa diedit!'
+            ], 400);
+        }
+
+        $isOnProcess = $generalCheckup->status === 'on_process';
+
+        // Mulai perbaikan & PIC hanya bisa diedit kalau checkup sudah on process
+        $rules = ['tanggal_terjadwal' => 'required|date'];
+        if ($isOnProcess) {
+            $rules['mulai_perbaikan'] = 'required|date|before_or_equal:now';
+            $rules['started_by']      = 'required|exists:users,id';
+        }
+
+        $validator = Validator::make($request->all(), $rules, [
+            'tanggal_terjadwal.required'      => 'Tanggal terjadwal wajib diisi.',
+            'mulai_perbaikan.required'        => 'Mulai perbaikan wajib diisi.',
+            'mulai_perbaikan.before_or_equal' => 'Mulai perbaikan tidak boleh lebih dari waktu sekarang.',
+            'started_by.required'             => 'PIC wajib dipilih.',
+            'started_by.exists'               => 'PIC tidak ditemukan.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => $validator->errors()->first(),
+                'errors'  => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $generalCheckup->tanggal_terjadwal = $request->tanggal_terjadwal;
+
+            if ($isOnProcess) {
+                $generalCheckup->mulai_perbaikan = $request->mulai_perbaikan;
+                $generalCheckup->tanggal_checkup = $generalCheckup->mulai_perbaikan->toDateString();
+                $generalCheckup->started_by      = $request->started_by;
+            }
+
+            $generalCheckup->save();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Checkup berhasil diupdate!'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Update Checkup Error: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal mengupdate checkup!'
+            ], 500);
+        }
     }
 
     /**

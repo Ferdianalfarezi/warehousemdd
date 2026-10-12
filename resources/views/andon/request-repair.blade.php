@@ -152,7 +152,7 @@ tr[data-stock-level="warning"] {
     }
 @endphp
 
-<div class="summary-cards mt-2 mb-2 mr-2">
+<div data-live="summary" class="summary-cards mt-2 mb-2 mr-2">
     <div class="summary-card summary-open">
         <div class="summary-icon">
             <svg fill="none" stroke="white" viewBox="0 0 24 24" stroke-width="2.5">
@@ -210,7 +210,7 @@ tr[data-stock-level="warning"] {
                 <th style="width: 90px; padding: 1px 1px; font-size: 1rem;">On Trial</th>
             </tr>
         </thead>
-        <tbody class="table-dark-custom text-center" id="tableBody" style="font-size: 1.15rem;">
+        <tbody data-live="table" class="table-dark-custom text-center" id="tableBody" style="font-size: 1.15rem;">
             @forelse($requestRepairs as $rr)
                 @php
                     // ⬅️ diubah — pakai hasil hitung dari AndonRequestRepairController
@@ -305,11 +305,6 @@ tr[data-stock-level="warning"] {
 
 @push('scripts')
 <script>
-// Auto refresh setiap 30 detik untuk monitoring real-time
-setInterval(function() {
-    location.reload();
-}, 30000);
-
 // Format durasi: HH.MM.SS, kalau lebih dari 1 hari jadi XH.HH.MM.SS
 function formatDurasiJS(seconds) {
     const days  = Math.floor(seconds / 86400);
@@ -353,6 +348,12 @@ setInterval(function () {
     updateDurasiLive();
     updateDurasiTrialLive();
 }, 1000);
+
+// Data tabel & summary di-update otomatis oleh layout andon (tanpa reload)
+document.addEventListener('andon:updated', function () {
+    updateDurasiLive();
+    updateDurasiTrialLive();
+});
 
 // Debug: Log current request repairs count
 console.log('Total request repairs displayed: {{ $requestRepairs->count() }}');

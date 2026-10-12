@@ -14,7 +14,6 @@
     letter-spacing: 0.025em;
     min-width: 100px;
     text-align: center;
-    animation: fadeIn 0.3s ease-in;
 }
 
 .status-pending {
@@ -39,17 +38,6 @@
     background: linear-gradient(135deg, #10b981 0%, #059669 100%);
     color: white;
     box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
 }
 
 /* Row highlight */
@@ -107,7 +95,7 @@ tr.row-overdue td {
                 <th style="width: 150px;">Status</th>
             </tr>
         </thead>
-        <tbody class="table-dark-custom text-center" id="tableBody" style="font-size: 1.25rem;">
+        <tbody data-live="table" class="table-dark-custom text-center" id="tableBody" style="font-size: 1.25rem;">
             @if($checkups->isEmpty() && $upcomings->isEmpty())
                 <tr>
                     <td colspan="7">
@@ -209,10 +197,8 @@ function updateCounters() {
 updateCounters();
 setInterval(updateCounters, 1000);
 
-// Auto refresh setiap 30 detik untuk monitoring real-time
-setInterval(function() {
-    location.reload();
-}, 30000);
+// Data tabel di-update otomatis oleh layout andon (tanpa reload)
+document.addEventListener('andon:updated', updateCounters);
 
 console.log('On process: {{ $checkups->count() }}, Upcoming: {{ $upcomings->count() }}');
 </script>

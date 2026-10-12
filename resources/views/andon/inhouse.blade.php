@@ -25,21 +25,6 @@
     color: white;
     box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
 }
-
-.status-badge {
-    animation: fadeIn 0.3s ease-in;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
 </style>
 
 <div style="overflow-x: auto; margin-top:10px;">
@@ -54,7 +39,7 @@
                 <th>Status</th>
             </tr>
         </thead>
-        <tbody class="table-dark-custom text-center" id="tableBody" style="font-size: 1.25rem;">
+        <tbody data-live="table" class="table-dark-custom text-center" id="tableBody" style="font-size: 1.25rem;">
             @forelse($requests as $request)
                 <tr data-status="{{ $request->status }}">
                     <td style="font-weight: bold;">{{ $request->generalCheckup->nama }}</td>
@@ -92,11 +77,3 @@
 </div>
 @endsection
 
-@push('scripts')
-<script>
-// Auto refresh setiap 30 detik untuk monitoring real-time
-setInterval(function() {
-    location.reload();
-}, 30000);
-</script>
-@endpush
