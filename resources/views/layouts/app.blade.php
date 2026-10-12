@@ -27,14 +27,37 @@
 
     {{-- ✅ FIX 4: Preload sidebar state SEBELUM Alpine init (inline, tidak butuh network) --}}
     <script>
-        // Jalankan sync sebelum apapun — tidak ada network request, cuma baca localStorage
+        // Jalankan sync sebelum halaman digambar — tidak ada network request, cuma baca localStorage.
+        // State awal sidebar langsung dipasang sebagai class di <html> supaya CSS bisa menampilkan
+        // submenu yang terbuka SEBELUM Alpine (defer, dari CDN) jalan. Tanpa ini submenu tampil
+        // tertutup dulu lalu beranimasi terbuka setiap pindah halaman.
         (function() {
+            let saved = null;
             try {
-                const saved = localStorage.getItem('sidebar_menu_state');
-                window.__PRELOADED_MENU_STATE__ = saved ? JSON.parse(saved) : null;
-            } catch(e) {
-                window.__PRELOADED_MENU_STATE__ = null;
-            }
+                const raw = localStorage.getItem('sidebar_menu_state');
+                saved = raw ? JSON.parse(raw) : null;
+            } catch(e) {}
+            saved = saved || {};
+
+            const path = window.location.pathname;
+            const byPath = {
+                master:      ['/parts', '/barangs', '/schedules', '/check-indicators', '/suppliers', '/users'],
+                transaction: ['/request-parts', '/general-checkups'],
+                approval:    ['/pdd/confirm', '/subcont/confirm'],
+                andon:       ['/andon/'],
+                history:     ['/history-checkups', '/history-request-parts'],
+            };
+
+            const state = {};
+            const html = document.documentElement;
+            html.classList.add('sb-preload'); // matikan transisi selama load awal
+
+            Object.keys(byPath).forEach(function (menu) {
+                state[menu] = byPath[menu].some(p => path.includes(p)) || !!saved[menu];
+                if (state[menu]) html.classList.add('sb-open-' + menu);
+            });
+
+            window.__INITIAL_MENU_STATE__ = state;
         })();
     </script>
 </head>
@@ -129,6 +152,28 @@
         overflow: hidden;
     }
     .submenu-container.open { grid-template-rows: 1fr; }
+
+    /* State awal sidebar sebelum Alpine siap (class di-set oleh script di <head>) */
+    html.sb-preload .submenu-container,
+    html.sb-preload .chevron-icon,
+    html.sb-preload .menu-group-header,
+    html.sb-preload .sidebar-aside,
+    html.sb-preload .main-wrapper { transition: none !important; }
+    html.sb-open-master      .submenu-container[data-menu="master"],
+    html.sb-open-transaction .submenu-container[data-menu="transaction"],
+    html.sb-open-approval    .submenu-container[data-menu="approval"],
+    html.sb-open-andon       .submenu-container[data-menu="andon"],
+    html.sb-open-history     .submenu-container[data-menu="history"] { grid-template-rows: 1fr; }
+    html.sb-open-master      .chevron-icon[data-menu="master"],
+    html.sb-open-transaction .chevron-icon[data-menu="transaction"],
+    html.sb-open-approval    .chevron-icon[data-menu="approval"],
+    html.sb-open-andon       .chevron-icon[data-menu="andon"],
+    html.sb-open-history     .chevron-icon[data-menu="history"] { transform: rotate(180deg); }
+    html.sb-open-master      .menu-group-header[data-menu="master"],
+    html.sb-open-transaction .menu-group-header[data-menu="transaction"],
+    html.sb-open-approval    .menu-group-header[data-menu="approval"],
+    html.sb-open-andon       .menu-group-header[data-menu="andon"],
+    html.sb-open-history     .menu-group-header[data-menu="history"] { background: rgba(255,255,255,0.1); }
     .submenu-container > div { min-height: 0; overflow: visible; }
 
     .menu-item {
@@ -216,8 +261,8 @@
 
         <!-- Sidebar -->
         <aside
-            class="fixed inset-y-0 left-0 z-50 w-64 sidebar-gradient text-white transform transition-transform duration-300 ease-in-out shadow-2xl"
-            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+            class="sidebar-aside fixed inset-y-0 left-0 z-50 w-64 sidebar-gradient text-white transform translate-x-0 transition-transform duration-300 ease-in-out shadow-2xl"
+            :class="{ 'translate-x-0': sidebarOpen, '-translate-x-full': !sidebarOpen }"
         >
             <div class="logo-container flex items-center justify-center h-20 border-b border-gray-800 border-opacity-50 px-4">
                 <img src="{{ asset('images/logomdd.png') }}" alt="Logo" class="logo-image">
@@ -239,19 +284,19 @@
                     <div>
                         <button @click="toggleMenu('master')"
                                 class="menu-group-header w-full flex items-center justify-between"
-                                :class="openMenus.master ? 'active' : ''">
+                                data-menu="master" :class="openMenus.master ? 'active' : ''">
                             <div class="flex items-center">
                                 <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"/>
                                 </svg>
                                 <span class="font-semibold text-sm">Data Master</span>
                             </div>
-                            <svg class="w-4 h-4 chevron-icon" :class="openMenus.master ? 'open' : ''"
+                            <svg class="w-4 h-4 chevron-icon" data-menu="master" :class="openMenus.master ? 'open' : ''"
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
-                        <div class="submenu-container" :class="openMenus.master ? 'open' : ''">
+                        <div class="submenu-container" data-menu="master" :class="openMenus.master ? 'open' : ''">
                             <div class="ml-8 mt-1 space-y-1">
                                 <a href="{{ route('parts.index') }}"
                                 class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('parts.*') ? 'active' : '' }}">
@@ -313,7 +358,7 @@
                     <div>
                         <button @click="toggleMenu('transaction')"
                                 class="menu-group-header w-full flex items-center justify-between"
-                                :class="openMenus.transaction ? 'active' : ''">
+                                data-menu="transaction" :class="openMenus.transaction ? 'active' : ''">
                             <div class="flex items-center">
                                 <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
@@ -321,12 +366,12 @@
                                 <span class="font-semibold text-sm">Data Transaksi</span>
                                 <span id="totalTransactionBadge" class="ml-2 bg-orange-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display:none;">0</span>
                             </div>
-                            <svg class="w-4 h-4 chevron-icon" :class="openMenus.transaction ? 'open' : ''"
+                            <svg class="w-4 h-4 chevron-icon" data-menu="transaction" :class="openMenus.transaction ? 'open' : ''"
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
-                        <div class="submenu-container" :class="openMenus.transaction ? 'open' : ''">
+                        <div class="submenu-container" data-menu="transaction" :class="openMenus.transaction ? 'open' : ''">
                             <div class="ml-8 mt-1 space-y-1">
                                 <a href="{{ route('request-parts.index') }}"
                                 class="submenu-item flex items-center justify-between px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('request-parts.*') ? 'active' : '' }}">
@@ -368,7 +413,7 @@
                     <div>
                         <button @click="toggleMenu('approval')"
                                 class="menu-group-header w-full flex items-center justify-between"
-                                :class="openMenus.approval ? 'active' : ''">
+                                data-menu="approval" :class="openMenus.approval ? 'active' : ''">
                             <div class="flex items-center">
                                 <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -376,12 +421,12 @@
                                 <span class="font-semibold text-sm">Approval</span>
                                 <span id="totalApprovalBadge" class="ml-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full" style="display:none;">0</span>
                             </div>
-                            <svg class="w-4 h-4 chevron-icon" :class="openMenus.approval ? 'open' : ''"
+                            <svg class="w-4 h-4 chevron-icon" data-menu="approval" :class="openMenus.approval ? 'open' : ''"
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
-                        <div class="submenu-container" :class="openMenus.approval ? 'open' : ''">
+                        <div class="submenu-container" data-menu="approval" :class="openMenus.approval ? 'open' : ''">
                             <div class="ml-8 mt-1 space-y-1">
                                 <a href="{{ route('pdd.confirm.index') }}"
                                 class="submenu-item flex items-center justify-between px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('pdd.confirm.*') ? 'active' : '' }}">
@@ -411,19 +456,19 @@
                     <div>
                         <button @click="toggleMenu('andon')"
                                 class="menu-group-header w-full flex items-center justify-between"
-                                :class="openMenus.andon ? 'active' : ''">
+                                data-menu="andon" :class="openMenus.andon ? 'active' : ''">
                             <div class="flex items-center">
                                 <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                                 </svg>
                                 <span class="font-semibold text-sm">Andon</span>
                             </div>
-                            <svg class="w-4 h-4 chevron-icon" :class="openMenus.andon ? 'open' : ''"
+                            <svg class="w-4 h-4 chevron-icon" data-menu="andon" :class="openMenus.andon ? 'open' : ''"
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
-                        <div class="submenu-container" :class="openMenus.andon ? 'open' : ''">
+                        <div class="submenu-container" data-menu="andon" :class="openMenus.andon ? 'open' : ''">
                             <div class="ml-8 mt-1 space-y-1">
                                 <a href="{{ route('andon.inhouse.index') }}" target="_blank"
                                 class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300">
@@ -461,19 +506,19 @@
                     <div>
                         <button @click="toggleMenu('history')"
                                 class="menu-group-header w-full flex items-center justify-between"
-                                :class="openMenus.history ? 'active' : ''">
+                                data-menu="history" :class="openMenus.history ? 'active' : ''">
                             <div class="flex items-center">
                                 <svg class="w-5 h-5 mr-3 menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
                                 </svg>
                                 <span class="font-semibold text-sm">Data History</span>
                             </div>
-                            <svg class="w-4 h-4 chevron-icon" :class="openMenus.history ? 'open' : ''"
+                            <svg class="w-4 h-4 chevron-icon" data-menu="history" :class="openMenus.history ? 'open' : ''"
                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
                             </svg>
                         </button>
-                        <div class="submenu-container" :class="openMenus.history ? 'open' : ''">
+                        <div class="submenu-container" data-menu="history" :class="openMenus.history ? 'open' : ''">
                             <div class="ml-8 mt-1 space-y-1">
                                 <a href="{{ route('history-request-parts.index') }}"
                                 class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('history-request-parts.*') ? 'active' : '' }}">
@@ -525,9 +570,20 @@
                 <form id="logout-form" method="POST" action="{{ route('logout') }}" class="hidden">@csrf</form>
             </div>
         </aside>
+        <script>
+            // Pertahankan posisi scroll sidebar antar halaman (dijalankan sync sebelum halaman digambar)
+            (function () {
+                const nav = document.querySelector('.sidebar-nav-container');
+                if (!nav) return;
+                try { nav.scrollTop = parseInt(sessionStorage.getItem('sidebar_scroll') || '0', 10); } catch (e) {}
+                window.addEventListener('pagehide', function () {
+                    try { sessionStorage.setItem('sidebar_scroll', nav.scrollTop); } catch (e) {}
+                });
+            })();
+        </script>
 
         <!-- Main Content -->
-        <div class="flex-1 flex flex-col transition-all duration-300" :class="sidebarOpen ? 'ml-64' : 'ml-0'">
+        <div class="main-wrapper flex-1 flex flex-col transition-all duration-300 ml-64" :class="{ 'ml-64': sidebarOpen, 'ml-0': !sidebarOpen }">
             <header class="bg-white shadow-sm z-40 sticky top-0">
                 <div class="flex items-center justify-between px-6 py-4">
                     <button @click="sidebarOpen = !sidebarOpen"
@@ -604,31 +660,30 @@
     // ALPINE MENU STATE
     // ============================================
     function menuState() {
-        const currentPath = window.location.pathname;
-
-        const defaultState = {
-            master:      currentPath.includes('/parts') || currentPath.includes('/barangs') || currentPath.includes('/schedules') || currentPath.includes('/check-indicators') || currentPath.includes('/suppliers') || currentPath.includes('/users'),
-            transaction: currentPath.includes('/request-parts') || currentPath.includes('/general-checkups'),
-            approval:    currentPath.includes('/pdd/confirm') || currentPath.includes('/subcont/confirm'),
-            andon:       currentPath.includes('/andon/'),
-            history:     currentPath.includes('/history-checkups') || currentPath.includes('/history-request-parts'),
-        };
-
-        const saved = window.__PRELOADED_MENU_STATE__ || {};
+        // State awal dihitung di <head> (path aktif + localStorage), lihat __INITIAL_MENU_STATE__
+        const initial = window.__INITIAL_MENU_STATE__ || {};
 
         return {
             sidebarOpen: true,
             openMenus: {
-                master:      defaultState.master      || saved.master      || false,
-                transaction: defaultState.transaction || saved.transaction || false,
-                approval:    defaultState.approval    || saved.approval    || false,
-                andon:       defaultState.andon       || saved.andon       || false,
-                history:     defaultState.history     || saved.history     || false,
+                master:      !!initial.master,
+                transaction: !!initial.transaction,
+                approval:    !!initial.approval,
+                andon:       !!initial.andon,
+                history:     !!initial.history,
             },
             init() {
                 this.$watch('openMenus', val => {
                     try { localStorage.setItem('sidebar_menu_state', JSON.stringify(val)); } catch(e) {}
                 }, { deep: true });
+
+                // Alpine sudah pasang class .open/.active sendiri -> lepas class bantuan preload,
+                // lalu nyalakan lagi animasi setelah frame berikutnya (biar tidak ada animasi buka saat load)
+                this.$nextTick(() => {
+                    const html = document.documentElement;
+                    Object.keys(this.openMenus).forEach(m => html.classList.remove('sb-open-' + m));
+                    requestAnimationFrame(() => requestAnimationFrame(() => html.classList.remove('sb-preload')));
+                });
             },
             toggleMenu(menu) {
                 this.openMenus[menu] = !this.openMenus[menu];
