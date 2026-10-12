@@ -12,18 +12,95 @@ use Throwable;
 
 class ScheduleController extends Controller
 {
-    public function index()
+    /**
+     * Batas hari untuk status "segera".
+     * SAMAKAN dengan logika accessor status di model Schedule.
+     */
+    private const SEGERA_HARI = 7;
+
+    private const PER_PAGE_OPTIONS = [10, 20, 50, 100];
+
+    public function index(Request $request)
     {
-        $schedules = Schedule::with('barang')->latest()->get();
-        
+        $query = Schedule::query();
+        $this->applyFilters($query, $request);
+
+        $perPageInput = $request->input('per_page', 20);
+        if ($perPageInput === 'all') {
+            $perPage = max((clone $query)->count(), 1);
+        } else {
+            $perPage = in_array((int) $perPageInput, self::PER_PAGE_OPTIONS) ? (int) $perPageInput : 20;
+        }
+
+        $schedules = $query->latest()->paginate($perPage)->withQueryString();
+
+        // Kalau halaman kosong (misal habis delete data terakhir di halaman itu), lempar ke halaman terakhir
+        if ($schedules->isEmpty() && $schedules->currentPage() > 1) {
+            return redirect($schedules->url($schedules->lastPage()));
+        }
+
         $stats = [
-            'total' => $schedules->count(),
-            'segera' => $schedules->where('status', 'segera')->count(),
-            'hari_ini' => $schedules->where('status', 'hari_ini')->count(),
-            'terlambat' => $schedules->where('status', 'terlambat')->count(),
+            'total'     => Schedule::count(),
+            'segera'    => $this->applyStatus(Schedule::query(), 'segera')->count(),
+            'hari_ini'  => $this->applyStatus(Schedule::query(), 'hari_ini')->count(),
+            'terlambat' => $this->applyStatus(Schedule::query(), 'terlambat')->count(),
         ];
 
-        return view('schedules.index', compact('schedules', 'stats'));
+        $filters = [
+            'search'   => $request->input('search', ''),
+            'status'   => $request->input('status', 'all'),
+            'periode'  => $request->input('periode', 'all'),
+            'per_page' => $perPageInput === 'all' ? 'all' : (string) $perPage,
+        ];
+
+        return view('schedules.index', compact('schedules', 'stats', 'filters'));
+    }
+
+    private function applyFilters($query, Request $request)
+    {
+        $search = trim($request->input('search', ''));
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->where('kode_barang', 'like', "%{$search}%")
+                  ->orWhere('nama', 'like', "%{$search}%");
+            });
+        }
+
+        $periode = $request->input('periode');
+        if ($periode && $periode !== 'all') {
+            $query->where('periode', $periode);
+        }
+
+        $status = $request->input('status');
+        if ($status && $status !== 'all') {
+            $this->applyStatus($query, $status);
+        }
+
+        return $query;
+    }
+
+    private function applyStatus($query, $status)
+    {
+        $today = now()->toDateString();
+        $batasSegera = now()->addDays(self::SEGERA_HARI)->toDateString();
+
+        switch ($status) {
+            case 'terlambat':
+                $query->whereDate('service_berikutnya', '<', $today);
+                break;
+            case 'hari_ini':
+                $query->whereDate('service_berikutnya', '=', $today);
+                break;
+            case 'segera':
+                $query->whereDate('service_berikutnya', '>', $today)
+                      ->whereDate('service_berikutnya', '<=', $batasSegera);
+                break;
+            case 'terjadwal':
+                $query->whereDate('service_berikutnya', '>', $batasSegera);
+                break;
+        }
+
+        return $query;
     }
 
     public function create()
@@ -59,9 +136,9 @@ class ScheduleController extends Controller
             $schedule->mulai_service = $request->mulai_service;
             $schedule->periode = $request->periode;
             $schedule->interval_value = $request->interval_value;
-            
+
             $schedule->calculateNextService();
-            
+
             $schedule->save();
 
             DB::commit();
@@ -86,7 +163,7 @@ class ScheduleController extends Controller
     {
         try {
             $schedule = Schedule::with('barang')->findOrFail($id);
-            
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -133,7 +210,7 @@ class ScheduleController extends Controller
             $schedule->mulai_service = $request->mulai_service;
             $schedule->periode = $request->periode;
             $schedule->interval_value = $request->interval_value;
-            
+
             $schedule->calculateNextService();
             $schedule->save();
 
@@ -176,10 +253,18 @@ class ScheduleController extends Controller
         }
     }
 
+    /**
+     * Hanya kirim barang yang BELUM punya schedule
+     * (dulu disaring di JS pakai $schedules, sekarang tidak bisa karena sudah dipaginate)
+     */
     public function getBarangsForSchedule()
     {
         try {
-            $barangs = Barang::select('id', 'kode_barang', 'nama', 'gambar')->get();
+            $barangs = Barang::select('id', 'kode_barang', 'nama', 'gambar')
+                ->whereNotIn('id', Schedule::select('barang_id'))
+                ->orderBy('kode_barang')
+                ->get();
+
             return response()->json($barangs);
         } catch (\Exception $e) {
             Log::error('Error getting barangs: ' . $e->getMessage());

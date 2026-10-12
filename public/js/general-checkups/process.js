@@ -51,6 +51,11 @@ function setStatus(standardId, status) {
     // Show/hide NG actions
     const ngSection = document.querySelector(`div[data-ng-section="${standardId}"]`);
     if (status === 'ng') {
+        // Form NG belum dirender untuk standard ini -> clone dari template
+        if (ngSection.children.length === 0) {
+            const template = document.getElementById('ngActionTemplate');
+            ngSection.innerHTML = template.innerHTML.replaceAll('__SID__', standardId);
+        }
         ngSection.classList.remove('hidden');
     } else {
         ngSection.classList.add('hidden');

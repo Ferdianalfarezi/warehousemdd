@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Session\TokenMismatchException;
 use Illuminate\Auth\AuthenticationException;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -20,8 +21,14 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions) {
 
-        // CSRF token expired / mismatch (419) — form biasa maupun fetch/AJAX
-        $exceptions->render(function (TokenMismatchException $e, $request) {
+        // CSRF token expired / mismatch (419) — form biasa maupun fetch/AJAX.
+        // Laravel mengubah TokenMismatchException jadi HttpException(419) sebelum
+        // render callback dipanggil, jadi yang harus ditangkap adalah HttpException.
+        $exceptions->render(function (HttpException $e, $request) {
+            if ($e->getStatusCode() !== 419 && ! $e->getPrevious() instanceof TokenMismatchException) {
+                return null;
+            }
+
             if ($request->expectsJson() || $request->ajax()) {
                 return response()->json([
                     'success'  => false,

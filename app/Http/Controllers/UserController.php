@@ -18,10 +18,9 @@ class UserController extends Controller
      */
     public function index()
     {
-        $users = User::with(['role', 'lines'])->latest()->get();
+        $users = User::with(['role'])->latest()->get();
         $roles = Role::all();
-        $lines = Line::orderBy('nama_line')->get();
-        return view('users.index', compact('users', 'roles', 'lines'));
+        return view('users.index', compact('users', 'roles'));
     }
 
     /**
@@ -34,7 +33,7 @@ class UserController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $data = $request->except(['avatar', 'lines']);
+        $data = $request->except(['avatar']);
         $data = $this->applyOperatorRules($data, $request);
 
         if ($request->hasFile('avatar')) {
@@ -42,8 +41,7 @@ class UserController extends Controller
         }
 
         $user = User::create($data);
-        $this->syncLines($user, $request);
-        $user->load(['role', 'lines']);
+        $user->load(['role']);
 
         return response()->json(['success' => true, 'message' => 'User berhasil ditambahkan!', 'data' => $user]);
     }
@@ -53,7 +51,7 @@ class UserController extends Controller
      */
     public function show(User $user)
     {
-        $user->load(['role', 'lines']);
+        $user->load(['role']);
         return response()->json(['success' => true, 'data' => $user]);
     }
 
@@ -67,7 +65,7 @@ class UserController extends Controller
             return response()->json(['success' => false, 'errors' => $validator->errors()], 422);
         }
 
-        $data = $request->except(['avatar', 'lines']);
+        $data = $request->except(['avatar']);
         $data = $this->applyOperatorRules($data, $request);
 
         if ($request->hasFile('avatar')) {
@@ -76,8 +74,7 @@ class UserController extends Controller
         }
 
         $user->update($data);
-        $this->syncLines($user, $request);
-        $user->load(['role', 'lines']);
+        $user->load(['role']);
 
         return response()->json(['success' => true, 'message' => 'User berhasil diupdate!', 'data' => $user]);
     }
@@ -97,7 +94,6 @@ class UserController extends Controller
             }
 
             $this->deleteAvatar($user->avatar);
-            $user->lines()->detach();
             $user->delete();
 
             return response()->json(['success' => true, 'message' => 'User berhasil dihapus!']);
@@ -123,22 +119,10 @@ class UserController extends Controller
             'status'     => 'required|in:aktif,nonaktif',
             'avatar'     => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
 
-            // Jabatan & Line hanya wajib/valid kalau role_id = operator
+            // Jabatan hanya wajib/valid kalau role_id = operator
             'jabatan'    => $isOperator
                 ? 'required|in:' . implode(',', self::JABATAN_OPTIONS)
                 : 'nullable',
-            'lines'      => [
-                'nullable',
-                'array',
-                function ($attribute, $value, $fail) use ($request, $isOperator) {
-                    if (!$isOperator) return;
-                    $max = User::maxLinesForJabatan($request->jabatan);
-                    if ($max !== null && count($value ?? []) > $max) {
-                        $fail("Jabatan {$request->jabatan} maksimal {$max} line.");
-                    }
-                },
-            ],
-            'lines.*'    => 'exists:lines,id',
         ];
     }
 
@@ -151,19 +135,6 @@ class UserController extends Controller
             $data['jabatan'] = null;
         }
         return $data;
-    }
-
-    /**
-     * Sync relasi lines. Kalau bukan operator, lines otomatis dikosongkan.
-     */
-    private function syncLines(User $user, Request $request): void
-    {
-        if ((int) $request->role_id !== self::OPERATOR_ROLE_ID) {
-            $user->lines()->sync([]);
-            return;
-        }
-
-        $user->lines()->sync($request->lines ?? []);
     }
 
     private function storeAvatar($image): string

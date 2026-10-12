@@ -23,7 +23,7 @@
             <!-- Logo/Title -->
             <div class="text-center mb-8">
                 <img src="{{ asset('images/logomdd.png') }}" alt="Logo" class="logo-image">
-                <p class="text-white">Warehouse Management System</p>
+                <p class="text-white">Management System</p>
             </div>
 
             <!-- Login Card -->

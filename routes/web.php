@@ -240,8 +240,9 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('history-checkups')->name('history-checkups.')->group(function () {
         Route::get('/',         [HistoryCheckupController::class, 'index'])->name('index');
-        Route::get('stats/get', [HistoryCheckupController::class, 'getStats'])->name('stats');   // ⚠️ sebelum {id}
-        Route::get('{id}',      [HistoryCheckupController::class, 'show'])->name('show');
+        Route::get('data',      [HistoryCheckupController::class, 'data'])->name('data');           // ⚠️ sebelum {id}
+        Route::get('summary',   [HistoryCheckupController::class, 'summary'])->name('summary');     // ⚠️ sebelum {id}
+        Route::get('by-barang', [HistoryCheckupController::class, 'byBarang'])->name('by-barang');  // ⚠️ sebelum {id}
         Route::delete('{id}',   [HistoryCheckupController::class, 'destroy'])->name('destroy');
     });
 

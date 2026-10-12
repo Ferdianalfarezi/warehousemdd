@@ -75,8 +75,8 @@
                 </div>
             </div>
 
-            <!-- Jabatan & Line - hanya muncul kalau Role = Operator -->
-            <div id="createOperatorFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-gray-200 pt-4">
+            <!-- Jabatan - hanya muncul kalau Role = Operator -->
+            <div id="createOperatorFields" class="hidden border-t border-gray-200 pt-4">
                 <div>
                     <label class="block text-sm font-semibold text-gray-700 mb-2">Jabatan <span class="text-red-500">*</span></label>
                     <select id="createJabatan" name="jabatan"
@@ -86,44 +86,6 @@
                         <option value="Asst Leader">Asst Leader</option>
                     </select>
                     <span class="text-red-500 text-sm error-message" id="error-create-jabatan"></span>
-                </div>
-
-                <!-- Line: custom checkbox-dropdown (gak pakai select2) -->
-                <div class="relative" id="createLinesWrapper">
-                    <label class="block text-sm font-semibold text-gray-700 mb-2">
-                        Line <span class="text-red-500">*</span>
-                        <span class="text-xs font-normal text-gray-400" id="createLineHint"></span>
-                    </label>
-                    <button type="button" onclick="toggleLineDropdown('create')"
-                        class="w-full px-4 py-3 rounded-lg border border-gray-300 text-left flex items-center justify-between focus:border-black focus:ring-2 focus:ring-black transition bg-white">
-                        <span id="createLinesLabel" class="text-gray-400 truncate">Select Line</span>
-                        <svg class="w-4 h-4 text-gray-400 flex-shrink-0 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </button>
-                    <div id="createLinesDropdown"
-                        class="hidden absolute z-20 mt-1 w-full bg-white border border-gray-300 rounded-lg shadow-lg">
-                        <div class="p-2 border-b border-gray-100 sticky top-0 bg-white">
-                            <input type="text" oninput="filterLineOptions('create', this.value)"
-                                onclick="event.stopPropagation()"
-                                placeholder="Cari line..."
-                                class="w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md focus:ring-1 focus:ring-black focus:border-black">
-                        </div>
-                        <div id="createLinesOptionsList" class="max-h-48 overflow-y-auto">
-                            @forelse($lines as $line)
-                                <label class="create-line-option flex items-center px-4 py-2 hover:bg-gray-50 cursor-pointer text-sm"
-                                    data-search="{{ strtolower($line->nama_line . ' ' . $line->mesin) }}">
-                                    <input type="checkbox" name="lines[]" value="{{ $line->id }}"
-                                        class="create-line-checkbox mr-2" onchange="handleLineCheckboxChange('create', this)">
-                                    <span>{{ $line->nama_line }}{{ $line->mesin ? ' — ' . $line->mesin : '' }}</span>
-                                </label>
-                            @empty
-                                <p class="px-4 py-3 text-sm text-gray-400">Belum ada data Line</p>
-                            @endforelse
-                            <p id="createLinesNoMatch" class="hidden px-4 py-3 text-sm text-gray-400">Tidak ditemukan</p>
-                        </div>
-                    </div>
-                    <span class="text-red-500 text-sm error-message" id="error-create-lines"></span>
                 </div>
             </div>
 

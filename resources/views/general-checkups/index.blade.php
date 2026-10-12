@@ -24,219 +24,287 @@
 
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <!-- Total -->
-        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Checkups</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ $stats['total'] }}</p>
+            <!-- Total -->
+            <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Total Checkups</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ $stats['total'] }}</p>
+                    </div>
+                    <div class="bg-gray-100 p-3 rounded-lg">
+                        <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                        </svg>
+                    </div>
                 </div>
-                <div class="bg-gray-100 p-3 rounded-lg">
-                    <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                    </svg>
+            </div>
+
+            <!-- Pending -->
+            <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-orange-600 uppercase tracking-wider">Pending</p>
+                        <p class="text-2xl font-bold text-orange-900 mt-1">{{ $stats['pending'] }}</p>
+                    </div>
+                    <div class="bg-orange-100 p-3 rounded-lg">
+                        <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- On Process -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider">On Process</p>
+                        <p class="text-2xl font-bold text-blue-900 mt-1">{{ $stats['on_process'] }}</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-lg">
+                        <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Pending -->
-        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-orange-600 uppercase tracking-wider">Pending</p>
-                    <p class="text-2xl font-bold text-orange-900 mt-1">{{ $stats['pending'] }}</p>
+        <!-- Filters & Search (server-side, GET) -->
+        <form id="filterForm" method="GET" action="{{ route('general-checkups.index') }}"
+              class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-start md:space-x-4 space-y-3 md:space-y-0">
+
+                <!-- Search Box -->
+                <div class="w-full md:w-1/2 lg:w-1/3 relative">
+                    <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                        <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                        </svg>
+                    </div>
+                    <input 
+                        type="text" 
+                        id="searchInput"
+                        name="search"
+                        value="{{ request('search') }}"
+                        autocomplete="off"
+                        class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
+                        placeholder="Search by kode, nama barang..."
+                        oninput="debounceSubmit()"
+                    >
                 </div>
-                <div class="bg-orange-100 p-3 rounded-lg">
-                    <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
+
+                <!-- Status Filter -->
+                <div class="flex-shrink-0">
+                    <select 
+                        name="status"
+                        onchange="submitFilter()"
+                        class="px-7 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
+                    >
+                        <option value="">All Status</option>
+                        <option value="pending" @selected(request('status') === 'pending')>Pending</option>
+                        <option value="on_process" @selected(request('status') === 'on_process')>On Process</option>
+                    </select>
                 </div>
-            </div>
-        </div>
 
-        <!-- On Process -->
-        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider">On Process</p>
-                    <p class="text-2xl font-bold text-blue-900 mt-1">{{ $stats['on_process'] }}</p>
+                <!-- Line Filter -->
+                <div class="flex-shrink-0">
+                    <select 
+                        name="line"
+                        onchange="submitFilter()"
+                        class="px-7 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
+                    >
+                        <option value="">All Lines</option>
+                        @foreach($lines as $line)
+                            <option value="{{ $line }}" @selected(request('line') == $line)>Line {{ $line }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <div class="bg-blue-100 p-3 rounded-lg">
-                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                    </svg>
+
+                <!-- Per Page Selector -->
+                <div class="flex-shrink-0">
+                    <select 
+                        name="per_page"
+                        onchange="submitFilter()"
+                        class="px-5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
+                    >
+                        @foreach([10, 20, 50, 100] as $size)
+                            <option value="{{ $size }}" @selected((int) request('per_page', 20) === $size)>{{ $size }}</option>
+                        @endforeach
+                    </select>
                 </div>
+
+                @if(request()->hasAny(['search', 'status', 'line']))
+                    <div class="flex-shrink-0">
+                        <a href="{{ route('general-checkups.index') }}"
+                           class="text-sm text-gray-600 hover:text-black underline">
+                            Reset
+                        </a>
+                    </div>
+                @endif
+
             </div>
-        </div>
-    </div>
+        </form>
 
-    <!-- Filters & Search -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <div class="flex flex-col md:flex-row md:items-center md:justify-start md:space-x-4 space-y-3 md:space-y-0">
-
-            <!-- Search Box -->
-            <div class="w-full md:w-1/2 lg:w-1/3 relative">
-                <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                </div>
-                <input 
-                    type="text" 
-                    id="searchInput"
-                    class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                    placeholder="Search by kode, nama barang..."
-                    onkeyup="searchTable()"
-                >
-            </div>
-
-            <!-- Status Filter -->
-            <div class="flex-shrink-0">
-                <select 
-                    id="statusFilter" 
-                    onchange="filterTable()"
-                    class="px-7 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                >
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="on_process">On Process</option>
-                </select>
-            </div>
-
-            <!-- Line Filter -->
-            <div class="flex-shrink-0">
-                <select 
-                    id="lineFilter" 
-                    onchange="filterTable()"
-                    class="px-7 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                >
-                    <option value="all">All Lines</option>
-                    @foreach($lines as $line)
-                        <option value="{{ $line }}">Line {{ $line }}</option>
-                    @endforeach
-                </select>
-            </div>
-
-            <!-- Per Page Selector -->
-            <div class="flex-shrink-0">
-                <select 
-                    id="perPageSelect" 
-                    onchange="changePerPage()"
-                    class="px-5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                >
-                    <option value="10">10</option>
-                    <option value="20" selected>20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                    <option value="all">All</option>
-                </select>
-            </div>
-
-        </div>
-    </div>
-
-    <!-- Table Card -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full">
-                <thead class="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">No</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kode Barang</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Barang</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Line</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tgl Terjadwal</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Mulai Perbaikan</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                        <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-gray-200" id="checkupsTableBody">
-                    @forelse($checkups as $checkup)
-                        <tr class="hover:bg-gray-50 transition" data-status="{{ $checkup->status }}" data-line="{{ $checkup->line }}">
-                            <td class="px-6 py-4 text-sm text-gray-900">{{ $loop->iteration }}</td>
-                            <td class="px-6 py-4">
-                                @if($checkup->gambar)
-                                    <img src="{{ asset('storage/barangs/'.$checkup->gambar) }}" 
-                                        class="w-12 h-12 rounded-lg object-cover border border-gray-200">
-                                @else
-                                    <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                        </svg>
-                                    </div>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $checkup->kode_barang }}</td>
-                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $checkup->nama }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">{{ $checkup->line ?? '-' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">
-                                {{ $checkup->tanggal_terjadwal->format('d/m/Y') }}
-                            </td>
-                            
-                            <td class="px-6 py-4 text-sm text-gray-600">
-                                {{ $checkup->mulai_perbaikan ? $checkup->mulai_perbaikan->format('d/m/Y H:i') : '-' }}
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ $checkup->status_badge_class }}">
-                                    {{ $checkup->status_display }}
-                                </span>
-                            </td>
-
-                            <td class="px-6 py-4">
-                                <div class="flex items-center justify-center space-x-2">
-                                    <button onclick="openDetailModal({{ $checkup->id }})"
-                                            class="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-600 transition">
-                                        Detail
-                                    </button>
-                                    
-                                    @if($checkup->status === 'pending')
-                                        <button onclick="startRepair({{ $checkup->id }})"
-                                                class="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-600 transition">
-                                            Process
-                                        </button>
-                                    @elseif($checkup->status === 'on_process')
-                                        <a href="{{ route('general-checkups.process', $checkup->id) }}"
-                                                class="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-orange-600 transition inline-block">
-                                            Lanjutkan
-                                        </a>
-                                    @endif
-                                    
-                                    <button onclick="deleteCheckup({{ $checkup->id }})"
-                                            class="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition">
-                                        Hapus
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
+        <!-- Table Card -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
-                            <td colspan="11" class="px-6 py-16 text-center">
-                                <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                                </svg>
-                                <p class="mt-4 text-gray-600 font-semibold">No checkups found</p>
-                                <p class="text-gray-500 text-sm">Click "Auto Populate" to load checkups from schedules</p>
-                            </td>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">No</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kode Barang</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama Barang</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Line</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tgl Terjadwal</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Mulai Perbaikan</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
                         </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @forelse($checkups as $checkup)
+                            <tr class="hover:bg-gray-50 transition">
+                                <td class="px-6 py-4 text-sm text-gray-900">{{ $checkups->firstItem() + $loop->index }}</td>
+                                <td class="px-6 py-4">
+                                    @if($checkup->gambar)
+                                        <img src="{{ asset('storage/barangs/'.$checkup->gambar) }}" 
+                                             loading="lazy"
+                                             class="w-12 h-12 rounded-lg object-cover border border-gray-200">
+                                    @else
+                                        <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                            </svg>
+                                        </div>
+                                    @endif
+                                </td>
+                                <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $checkup->kode_barang }}</td>
+                                <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $checkup->nama }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">{{ $checkup->line ?? '-' }}</td>
+                                <td class="px-6 py-4 text-sm text-gray-600">
+                                    {{ optional($checkup->tanggal_terjadwal)->format('d/m/Y') ?? '-' }}
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-600">
+                                    {{ $checkup->mulai_perbaikan ? $checkup->mulai_perbaikan->format('d/m/Y H:i') : '-' }}
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span class="px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ $checkup->status_badge_class }}">
+                                        {{ $checkup->status_display }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center justify-center space-x-2">
+                                        <button onclick="openDetailModal({{ $checkup->id }})"
+                                                class="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-600 transition">
+                                            Detail
+                                        </button>
+                                        
+                                        @if($checkup->status === 'pending')
+                                            <button onclick="startRepair({{ $checkup->id }})"
+                                                    class="bg-blue-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-blue-600 transition">
+                                                Process
+                                            </button>
+                                        @elseif($checkup->status === 'on_process')
+                                            <a href="{{ route('general-checkups.process', $checkup->id) }}"
+                                               class="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-orange-600 transition inline-block">
+                                                Lanjutkan
+                                            </a>
+                                        @endif
+                                        
+                                        <button onclick="deleteCheckup({{ $checkup->id }})"
+                                                class="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition">
+                                            Hapus
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="px-6 py-16 text-center">
+                                    <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                                    </svg>
+                                    @if(request()->hasAny(['search', 'status', 'line']))
+                                        <p class="mt-4 text-gray-600 font-semibold">No checkups match your filters</p>
+                                    @else
+                                        <p class="mt-4 text-gray-600 font-semibold">No checkups found</p>
+                                        <p class="text-gray-500 text-sm">Click "Auto Populate" to load checkups from schedules</p>
+                                    @endif
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
 
-        <!-- Footer: Showing Entries -->
-        <div class="bg-gray-50 border-t border-gray-200 px-6 py-4">
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div class="text-sm text-gray-600">
-                    Showing <span id="showingFrom" class="font-medium">1</span> to 
-                    <span id="showingTo" class="font-medium">0</span> of 
-                    <span id="totalEntries" class="font-medium">0</span> entries
+            <!-- Footer: Showing Entries + Pagination -->
+            <div class="bg-gray-50 border-t border-gray-200 px-6 py-4">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div class="text-sm text-gray-600">
+                        Showing <span class="font-medium">{{ $checkups->firstItem() ?? 0 }}</span> to 
+                        <span class="font-medium">{{ $checkups->lastItem() ?? 0 }}</span> of 
+                        <span class="font-medium">{{ $checkups->total() }}</span> entries
+                    </div>
+
+                    @if($checkups->hasPages())
+                        @php
+                            $current = $checkups->currentPage();
+                            $last    = $checkups->lastPage();
+                            $start   = max(1, $current - 2);
+                            $end     = min($last, $current + 2);
+                            $btn     = 'px-3 py-1.5 rounded-lg text-sm border transition';
+                            $normal  = 'bg-white border-gray-300 text-gray-700 hover:bg-gray-100';
+                            $active  = 'bg-black border-black text-white';
+                            $disabled = 'bg-gray-100 border-gray-200 text-gray-400 cursor-not-allowed';
+                        @endphp
+
+                        <div class="flex items-center gap-1 flex-wrap">
+                            {{-- Prev --}}
+                            @if($checkups->onFirstPage())
+                                <span class="{{ $btn }} {{ $disabled }}">&laquo;</span>
+                            @else
+                                <a href="{{ $checkups->previousPageUrl() }}" class="{{ $btn }} {{ $normal }}">&laquo;</a>
+                            @endif
+
+                            {{-- First page --}}
+                            @if($start > 1)
+                                <a href="{{ $checkups->url(1) }}" class="{{ $btn }} {{ $normal }}">1</a>
+                                @if($start > 2)
+                                    <span class="px-2 text-gray-400">...</span>
+                                @endif
+                            @endif
+
+                            {{-- Window --}}
+                            @foreach($checkups->getUrlRange($start, $end) as $page => $url)
+                                @if($page == $current)
+                                    <span class="{{ $btn }} {{ $active }}">{{ $page }}</span>
+                                @else
+                                    <a href="{{ $url }}" class="{{ $btn }} {{ $normal }}">{{ $page }}</a>
+                                @endif
+                            @endforeach
+
+                            {{-- Last page --}}
+                            @if($end < $last)
+                                @if($end < $last - 1)
+                                    <span class="px-2 text-gray-400">...</span>
+                                @endif
+                                <a href="{{ $checkups->url($last) }}" class="{{ $btn }} {{ $normal }}">{{ $last }}</a>
+                            @endif
+
+                            {{-- Next --}}
+                            @if($checkups->hasMorePages())
+                                <a href="{{ $checkups->nextPageUrl() }}" class="{{ $btn }} {{ $normal }}">&raquo;</a>
+                            @else
+                                <span class="{{ $btn }} {{ $disabled }}">&raquo;</span>
+                            @endif
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
     </div>
-</div>
 
 <!-- Include Detail Modal -->
 @include('general-checkups.detail-modal')
@@ -245,82 +313,27 @@
 
 @push('scripts')
 <script>
-let allCheckups = [];
-let filteredCheckups = [];
-let currentPerPage = 20;
+// ===== Filter (server-side) =====
+let searchTimer = null;
 
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize table data
-    const rows = document.querySelectorAll('#checkupsTableBody tr');
-    rows.forEach((row, index) => {
-        if (!row.querySelector('td[colspan]')) {
-            allCheckups.push({
-                element: row.cloneNode(true),
-                searchText: row.textContent.toLowerCase(),
-                status: row.getAttribute('data-status'),
-                line: row.getAttribute('data-line')
-            });
-        }
-    });
-    
-    filteredCheckups = [...allCheckups];
-    updateTable();
-});
-
-function searchTable() {
-    filterTable();
+function submitFilter() {
+    document.getElementById('filterForm').submit();
 }
 
-function filterTable() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const statusFilter = document.getElementById('statusFilter').value;
-    const lineFilter = document.getElementById('lineFilter').value;
-    
-    filteredCheckups = allCheckups.filter(checkup => {
-        const matchesSearch = search === '' || checkup.searchText.includes(search);
-        const matchesStatus = statusFilter === 'all' || checkup.status === statusFilter;
-        const matchesLine = lineFilter === 'all' || checkup.line === lineFilter;
-        
-        return matchesSearch && matchesStatus && matchesLine;
-    });
-    
-    updateTable();
+function debounceSubmit() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(submitFilter, 500);
 }
 
-function changePerPage() {
-    const val = document.getElementById('perPageSelect').value;
-    currentPerPage = val === 'all' ? filteredCheckups.length : parseInt(val);
-    updateTable();
-}
-
-function updateTable() {
-    const tbody = document.getElementById('checkupsTableBody');
-    tbody.innerHTML = '';
-    
-    const total = filteredCheckups.length;
-    const display = currentPerPage > total ? total : currentPerPage;
-    
-    document.getElementById('showingFrom').textContent = total > 0 ? '1' : '0';
-    document.getElementById('showingTo').textContent = display;
-    document.getElementById('totalEntries').textContent = total;
-    
-    if (total === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="11" class="px-6 py-12 text-center text-gray-500">
-                    No checkups match your filters
-                </td>
-            </tr>
-        `;
-        return;
+// Fokus balik ke search box setelah reload (cursor di akhir teks)
+document.addEventListener('DOMContentLoaded', function () {
+    const input = document.getElementById('searchInput');
+    if (input && input.value) {
+        input.focus();
+        const len = input.value.length;
+        input.setSelectionRange(len, len);
     }
-    
-    filteredCheckups.slice(0, display).forEach((checkup, i) => {
-        const row = checkup.element.cloneNode(true);
-        row.querySelector('td:first-child').textContent = i + 1;
-        tbody.appendChild(row);
-    });
-}
+});
 
 // Auto Populate
 async function autoPopulate() {
@@ -419,7 +432,6 @@ async function openDetailModal(checkupId) {
         if (data.success) {
             const checkup = data.data;
             
-            // Populate modal with data
             document.getElementById('detailImage').src = checkup.gambar 
                 ? `/storage/barangs/${checkup.gambar}` 
                 : '/images/no-image.png';
@@ -439,7 +451,6 @@ async function openDetailModal(checkupId) {
             document.getElementById('detailStatus').textContent = checkup.status_display;
             document.getElementById('detailCatatan').textContent = checkup.catatan_umum || '-';
 
-            // Show modal
             const modal = document.getElementById('detailModal');
             modal.classList.remove('hidden');
             modal.classList.add('flex');

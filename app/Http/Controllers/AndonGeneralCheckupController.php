@@ -3,23 +3,38 @@
 namespace App\Http\Controllers;
 
 use App\Models\GeneralCheckup;
+use App\Models\Schedule;
 use Illuminate\Http\Request;
 
 class AndonGeneralCheckupController extends Controller
 {
     /**
      * Display general checkup monitoring (READ-ONLY)
-     * Shows ALL checkups regardless of status
+     * Menampilkan checkup yang sedang on process + 4 schedule upcoming terdekat
      */
     public function index()
     {
-        // Get all checkups ordered by scheduled date (newest first)
-        $checkups = GeneralCheckup::with(['barang', 'schedule'])
-            ->orderBy('tanggal_terjadwal', 'desc')
-            ->orderBy('created_at', 'desc')
+        // Semua yang sedang on process,
+        // urut dari durasi pengerjaan paling lama (mulai perbaikan paling awal)
+        $checkups = GeneralCheckup::with('starter:id,nama')
+            ->where('status', 'on_process')
+            ->orderByRaw('mulai_perbaikan IS NULL') // yang belum mulai taruh paling bawah
+            ->orderBy('mulai_perbaikan', 'asc')
             ->get();
 
-        return view('andon.general-checkup', compact('checkups'));
+        // Schedule yang sedang dikerjakan (biar tidak dobel tampil)
+        $onProcessScheduleIds = $checkups->pluck('schedule_id')->filter()->unique();
+
+        // 4 schedule terdekat (hari ini ke depan)
+        $upcomings = Schedule::whereDate('service_berikutnya', '>=', today())
+            ->when($onProcessScheduleIds->isNotEmpty(), function ($query) use ($onProcessScheduleIds) {
+                $query->whereNotIn('id', $onProcessScheduleIds);
+            })
+            ->orderBy('service_berikutnya', 'asc')
+            ->limit(4)
+            ->get();
+
+        return view('andon.general-checkup', compact('checkups', 'upcomings'));
     }
 
     /**

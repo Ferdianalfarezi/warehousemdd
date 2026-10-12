@@ -20,6 +20,7 @@ class GeneralCheckup extends Model
         'tanggal_terjadwal',
         'tanggal_checkup',
         'mulai_perbaikan',
+        'started_by',
         'waktu_selesai',
         'status',
         'catatan_umum',
@@ -53,6 +54,14 @@ class GeneralCheckup extends Model
     public function partReplacements()
     {
         return $this->hasMany(CheckupPartReplacement::class);
+    }
+
+    /**
+     * User (PIC) yang memulai perbaikan (pending -> on_process)
+     */
+    public function starter()
+    {
+        return $this->belongsTo(User::class, 'started_by');
     }
 
     /**

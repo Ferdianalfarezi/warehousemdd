@@ -16,7 +16,6 @@ class HistoryCheckup extends Model
         'kode_barang',
         'gambar',
         'nama',
-        'line',
         'tanggal_terjadwal',
         'tanggal_checkup',
         'mulai_perbaikan',
@@ -103,14 +102,6 @@ class HistoryCheckup extends Model
     public function scopeDateRange($query, $startDate, $endDate)
     {
         return $query->whereBetween('tanggal_checkup', [$startDate, $endDate]);
-    }
-
-    /**
-     * Scope for by line
-     */
-    public function scopeByLine($query, $line)
-    {
-        return $query->where('line', $line);
     }
 
     /**

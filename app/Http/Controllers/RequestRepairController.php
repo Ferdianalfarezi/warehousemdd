@@ -12,6 +12,7 @@ use App\Models\DiesDetail;
 use App\Models\Line;
 use App\Models\User;
 use App\Models\Supplier;
+use Carbon\Carbon; // ⬅️ baru
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -65,12 +66,30 @@ class RequestRepairController extends Controller
 
         $total = $query->count();
 
+        // ⬅️ baru — urutan prioritas:
+        // 1. Status: Open → On Process → On Trial
+        // 2. Yang kekuatan_stock_fg kosong taruh paling bawah di grupnya
+        // 3. Deadline stock habis paling dekat / sudah lewat di atas
+        //    (deadline = tanggal_pengajuan + kekuatan_stock_fg jam)
+        // 4. Tie-breaker: yang diajukan lebih dulu di atas
+        $query->orderByRaw("
+                CASE status
+                    WHEN 'open'       THEN 0
+                    WHEN 'on_process' THEN 1
+                    WHEN 'on_trial'   THEN 2
+                    ELSE 3
+                END
+            ")
+            ->orderByRaw('kekuatan_stock_fg IS NULL')
+            ->orderByRaw('DATE_ADD(tanggal_pengajuan, INTERVAL kekuatan_stock_fg HOUR) ASC')
+            ->orderBy('id', 'asc');
+
         if ($perPage === 'all') {
-            $items      = $query->latest()->get();
+            $items      = $query->get();
             $perPageInt = $total ?: 1;
         } else {
             $perPageInt = (int) $perPage;
-            $items      = $query->latest()->skip(($page - 1) * $perPageInt)->take($perPageInt)->get();
+            $items      = $query->skip(($page - 1) * $perPageInt)->take($perPageInt)->get();
         }
 
         $totalPages = $perPage === 'all' ? 1 : (int) ceil($total / max($perPageInt, 1));
@@ -81,6 +100,8 @@ class RequestRepairController extends Controller
         $userRoleId = $authUser->role_id ?? null;
 
         $data = $items->map(function ($rr, $idx) use ($page, $perPageInt, $userRoleId, $authUser) {
+            $urgensi = $this->hitungUrgensi($rr); // ⬅️ baru
+
             return [
                 'id'                => $rr->id,
                 'row_number'        => (($page - 1) * $perPageInt) + $idx + 1,
@@ -97,6 +118,8 @@ class RequestRepairController extends Controller
                 'customer'          => $rr->customer,
                 'jenis'             => $rr->jenis,
                 'kekuatan_stock_fg' => $rr->kekuatan_stock_fg,
+                'sisa_stock_jam'    => $urgensi['sisa_stock_jam'], // ⬅️ baru
+                'urgency'           => $urgensi['urgency'],        // ⬅️ baru (red / yellow / normal)
                 'kategori_problem'  => $rr->kategori_problem,
                 'detail_proyek'     => $rr->detail_proyek,
                 'gambar_url'        => $rr->gambar_url,
@@ -405,6 +428,34 @@ class RequestRepairController extends Controller
                 'sort_order' => ($maxSortOrder ?? 0) + 1,
             ]);
         }
+    }
+
+    // ── Helper: hitung urgensi berdasarkan sisa stock FG ─────
+    // ⬅️ baru
+    // Deadline = tanggal_pengajuan (jam 00:00) + kekuatan_stock_fg (jam)
+    // Sisa     = deadline - sekarang (negatif = sudah lewat)
+    //   sisa <= 24 jam (1 hari)       -> red
+    //   sisa >  24 s/d 72 jam (3 hari) -> yellow
+    //   sisa >  72 jam                 -> normal
+    private function hitungUrgensi(RequestRepair $rr): array
+    {
+        if ($rr->kekuatan_stock_fg === null || !$rr->tanggal_pengajuan) {
+            return ['sisa_stock_jam' => null, 'urgency' => 'normal'];
+        }
+
+        $deadline = Carbon::parse($rr->tanggal_pengajuan)
+            ->startOfDay()
+            ->addHours((int) $rr->kekuatan_stock_fg);
+
+        $sisaJam = (int) floor(now()->diffInMinutes($deadline, false) / 60);
+
+        $urgency = match (true) {
+            $sisaJam <= 24 => 'red',
+            $sisaJam <= 72 => 'yellow',
+            default        => 'normal',
+        };
+
+        return ['sisa_stock_jam' => $sisaJam, 'urgency' => $urgency];
     }
 
     // ── Store ───────────────────────────────────────────────
@@ -1093,7 +1144,7 @@ class RequestRepairController extends Controller
             $requestRepair->delete();
             return response()->json(['success' => true, 'message' => 'Request Repair berhasil dihapus!']);
         } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Gagal menghapus!'], 500);
+            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan: ' . $e->getMessage()], 500);
         }
     }
 }

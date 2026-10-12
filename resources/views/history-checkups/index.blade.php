@@ -4,23 +4,22 @@
 
 @section('content')
 <div class="space-y-6">
-    
-    <!-- Page Header -->
+
+    {{-- Page Header --}}
     <div class="flex items-center justify-between">
         <div>
             <h1 class="text-3xl font-bold text-gray-900">History Checkups</h1>
-            <p class="text-gray-600 mt-1">Completed maintenance checkup records</p>
+            <p class="text-gray-600 mt-1">Riwayat preventive maintenance yang telah selesai</p>
         </div>
     </div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
-        <!-- Total History -->
+    {{-- Stats Cards --}}
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-semibold text-gray-600 uppercase tracking-wider">Total History</p>
-                    <p class="text-2xl font-bold text-gray-900 mt-1">{{ $stats['total'] }}</p>
+                    <p id="statTotal" class="text-2xl font-bold text-gray-900 mt-1">-</p>
                 </div>
                 <div class="bg-gray-100 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -30,12 +29,11 @@
             </div>
         </div>
 
-        <!-- This Month -->
         <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-semibold text-blue-600 uppercase tracking-wider">This Month</p>
-                    <p class="text-2xl font-bold text-blue-900 mt-1">{{ $stats['this_month'] }}</p>
+                    <p id="statThisMonth" class="text-2xl font-bold text-blue-900 mt-1">-</p>
                 </div>
                 <div class="bg-blue-100 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -45,12 +43,11 @@
             </div>
         </div>
 
-        <!-- Avg Duration -->
         <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-semibold text-purple-600 uppercase tracking-wider">Avg Duration</p>
-                    <p class="text-2xl font-bold text-purple-900 mt-1">{{ $stats['avg_duration'] }}</p>
+                    <p id="statAvgDuration" class="text-2xl font-bold text-purple-900 mt-1">-</p>
                     <p class="text-xs text-purple-600 font-medium mt-1">minutes</p>
                 </div>
                 <div class="bg-purple-100 p-3 rounded-lg">
@@ -61,27 +58,11 @@
             </div>
         </div>
 
-        <!-- Total Parts Used -->
-        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <p class="text-xs font-semibold text-orange-600 uppercase tracking-wider">Parts Used</p>
-                    <p class="text-2xl font-bold text-orange-900 mt-1">{{ $stats['total_parts_used'] }}</p>
-                </div>
-                <div class="bg-orange-100 p-3 rounded-lg">
-                    <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                    </svg>
-                </div>
-            </div>
-        </div>
-
-        <!-- Success Rate -->
         <div class="bg-green-50 border border-green-200 rounded-lg p-4">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-semibold text-green-600 uppercase tracking-wider">Success Rate</p>
-                    <p class="text-2xl font-bold text-green-900 mt-1">{{ $stats['success_rate'] }}%</p>
+                    <p id="statSuccess" class="text-2xl font-bold text-green-900 mt-1">-</p>
                 </div>
                 <div class="bg-green-100 p-3 rounded-lg">
                     <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -92,466 +73,389 @@
         </div>
     </div>
 
-    <!-- Filters & Search -->
-    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-        <form method="GET" action="{{ route('history-checkups.index') }}" class="flex flex-col md:flex-row md:items-center md:justify-start md:space-x-4 space-y-3 md:space-y-0">
+    {{-- Ranking Cards --}}
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-            <!-- Search Box -->
-            <div class="w-full md:w-1/3 relative">
+        {{-- Top Preventive --}}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center gap-2 mb-4">
+                <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </div>
+                <p class="text-sm font-semibold text-gray-700">Dies Paling Sering Preventive</p>
+            </div>
+            <div id="summaryPreventive" class="space-y-2">
+                <div class="h-4 bg-gray-100 rounded animate-pulse"></div>
+                <div class="h-4 bg-gray-100 rounded animate-pulse"></div>
+                <div class="h-4 bg-gray-100 rounded animate-pulse"></div>
+            </div>
+        </div>
+
+        {{-- Top NG --}}
+        <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div class="flex items-center gap-2 mb-4">
+                <div class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                    </svg>
+                </div>
+                <p class="text-sm font-semibold text-gray-700">Dies Paling Banyak NG</p>
+            </div>
+            <div id="summaryNg" class="space-y-2">
+                <div class="h-4 bg-gray-100 rounded animate-pulse"></div>
+                <div class="h-4 bg-gray-100 rounded animate-pulse"></div>
+                <div class="h-4 bg-gray-100 rounded animate-pulse"></div>
+            </div>
+        </div>
+
+    </div>
+
+    {{-- Search & Filter Bar --}}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+        <div class="flex flex-col md:flex-row md:items-center md:flex-wrap gap-3">
+            <div class="w-full md:w-1/3 lg:w-1/4 relative">
                 <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                     </svg>
                 </div>
-                <input 
-                    type="text" 
-                    id="searchInput"
+                <input type="text" id="searchInput"
                     class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                    placeholder="Search by kode, nama barang..."
-                    onkeyup="searchTable()"
-                >
+                    placeholder="Cari kode, nama barang...">
             </div>
 
-            <!-- Date Range -->
-            <div class="flex-shrink-0">
-                <input 
-                    type="date"
-                    name="start_date"
-                    value="{{ request('start_date') }}"
-                    class="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                >
-            </div>
-            <span class="text-gray-500">to</span>
-            <div class="flex-shrink-0">
-                <input 
-                    type="date"
-                    name="end_date"
-                    value="{{ request('end_date') }}"
-                    class="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                >
+            {{-- Date Range Filter (Tgl Checkup) --}}
+            <div class="flex items-center gap-2">
+                <label for="dateFromInput" class="text-xs font-medium text-gray-500 whitespace-nowrap">Tgl Checkup</label>
+                <input type="date" id="dateFromInput"
+                    class="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition text-sm">
+                <span class="text-gray-400 text-sm">s/d</span>
+                <input type="date" id="dateToInput"
+                    class="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition text-sm">
+                <button id="clearDateBtn" type="button"
+                    class="hidden text-xs text-gray-500 hover:text-gray-800 underline whitespace-nowrap">
+                    Reset
+                </button>
             </div>
 
-            <!-- Line Filter -->
-            <div class="flex-shrink-0">
-                <select 
-                    name="line"
-                    class="px-7 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
-                >
-                    <option value="">All Lines</option>
-                    @foreach($lines as $line)
-                        <option value="{{ $line }}" {{ request('line') == $line ? 'selected' : '' }}>Line {{ $line }}</option>
-                    @endforeach
+            <div class="flex-shrink-0 md:ml-auto">
+                <select id="perPageSelect"
+                    class="px-5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition">
+                    <option value="20">20 per page</option>
+                    <option value="50">50 per page</option>
+                    <option value="100">100 per page</option>
+                    <option value="all">Semua</option>
                 </select>
             </div>
-
-            <!-- Filter Button -->
-            <button 
-                type="submit"
-                class="px-6 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition"
-            >
-                Filter
-            </button>
-
-            @if(request()->hasAny(['start_date', 'end_date', 'line', 'barang_id']))
-                <a 
-                    href="{{ route('history-checkups.index') }}"
-                    class="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition"
-                >
-                    Reset
-                </a>
-            @endif
-
-        </form>
+        </div>
     </div>
 
-    <!-- Table Card -->
+    {{-- Table --}}
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto relative">
+            <div id="loadingOverlay" class="hidden absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+                <div class="flex items-center space-x-3">
+                    <svg class="animate-spin h-8 w-8 text-black" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-gray-600 font-medium">Loading...</span>
+                </div>
+            </div>
             <table class="w-full">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">No</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kode</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Line</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tgl Checkup</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Mulai</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Selesai</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Durasi</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">OK</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">NG</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Parts</th>
-                        <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-10">No</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Image</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Kode</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tgl Checkup</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Mulai</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Selesai</th>
+                        <th class="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Durasi</th>
+                        <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Periode ke-</th>
+                        <th class="px-4 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200" id="historyTableBody">
-                    @forelse($histories as $history)
-                        <tr class="hover:bg-gray-50 transition">
-                            <td class="px-6 py-4 text-sm text-gray-900">{{ $loop->iteration }}</td>
-                            <td class="px-6 py-4">
-                                @if($history->gambar)
-                                    <img src="{{ asset('storage/barangs/'.$history->gambar) }}" 
-                                        class="w-12 h-12 rounded-lg object-cover border border-gray-200">
-                                @else
-                                    <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                                        <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                        </svg>
-                                    </div>
-                                @endif
-                            </td>
-                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $history->kode_barang }}</td>
-                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $history->nama }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">{{ $history->line ?? '-' }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">{{ $history->tanggal_checkup->format('d/m/Y') }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">{{ $history->mulai_perbaikan->format('H:i') }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">{{ $history->waktu_selesai->format('H:i') }}</td>
-                            <td class="px-6 py-4 text-sm text-gray-600">{{ $history->durasi_display }}</td>
-                            <td class="px-6 py-4">
-                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    {{ $history->total_ok }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                    {{ $history->total_ng }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                                    {{ $history->total_part_used }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <div class="flex items-center justify-center space-x-2">
-                                    <button onclick="openDetailHistoryModal({{ $history->id }})"
-                                            class="bg-gray-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-gray-600 transition">
-                                        Detail
-                                    </button>
-                                    <button onclick="deleteHistory({{ $history->id }})"
-                                            class="bg-red-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-red-600 transition">
-                                        Hapus
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="13" class="px-6 py-16 text-center">
-                                <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                                <p class="mt-4 text-gray-600 font-semibold">No history found</p>
-                                <p class="text-gray-500 text-sm">Complete some checkups to see history</p>
-                            </td>
-                        </tr>
-                    @endforelse
+                    <tr>
+                        <td colspan="10" class="px-6 py-16 text-center">
+                            <svg class="animate-spin h-8 w-8 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <p class="mt-4 text-gray-500">Loading data...</p>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
+        </div>
+        <div class="bg-gray-50 border-t border-gray-200 px-6 py-4">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div class="text-sm text-gray-600">
+                    Showing <span id="showingFrom" class="font-medium">0</span> to
+                    <span id="showingTo" class="font-medium">0</span> of
+                    <span id="totalEntries" class="font-medium">0</span> entries
+                </div>
+                <div id="paginationContainer" class="flex items-center space-x-2"></div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Include Detail Modal -->
 @include('history-checkups.detail-modal')
 
 @endsection
 
 @push('scripts')
 <script>
-function searchTable() {
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const rows = document.querySelectorAll('#historyTableBody tr');
-    
-    rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(search) ? '' : 'none';
+// ════════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════════
+let currentPage   = 1;
+let perPage       = 20;
+let searchQuery   = '';
+let dateFrom      = '';
+let dateTo        = '';
+let totalPages    = 1;
+let isLoading     = false;
+let searchTimeout = null;
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function () {
+    loadData();
+    loadSummary();
+
+    document.getElementById('searchInput').addEventListener('input', function () {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => { searchQuery = this.value; currentPage = 1; loadData(); }, 300);
     });
+
+    document.getElementById('perPageSelect').addEventListener('change', function () {
+        perPage = this.value === 'all' ? 'all' : parseInt(this.value);
+        currentPage = 1;
+        loadData();
+    });
+
+    document.getElementById('dateFromInput').addEventListener('change', function () {
+        dateFrom = this.value;
+        currentPage = 1;
+        toggleClearDateBtn();
+        loadData();
+    });
+
+    document.getElementById('dateToInput').addEventListener('change', function () {
+        dateTo = this.value;
+        currentPage = 1;
+        toggleClearDateBtn();
+        loadData();
+    });
+
+    document.getElementById('clearDateBtn').addEventListener('click', function () {
+        dateFrom = '';
+        dateTo   = '';
+        document.getElementById('dateFromInput').value = '';
+        document.getElementById('dateToInput').value   = '';
+        currentPage = 1;
+        toggleClearDateBtn();
+        loadData();
+    });
+});
+
+function toggleClearDateBtn() {
+    document.getElementById('clearDateBtn').classList.toggle('hidden', !dateFrom && !dateTo);
 }
 
-async function openDetailHistoryModal(historyId) {
+// ════════════════════════════════════════════════════════
+// LOAD SUMMARY (stats + ranking)
+// ════════════════════════════════════════════════════════
+async function loadSummary() {
     try {
-        const response = await fetch(`/history-checkups/${historyId}`);
-        const data = await response.json();
+        const res    = await fetch('/history-checkups/summary', { headers: { 'Accept': 'application/json' } });
+        const result = await res.json();
+        if (!result.success) return;
 
-        if (data.success) {
-            const history = data.data;
-                
-            // Basic Info
-            document.getElementById('historyDetailImage').src = history.gambar 
-                ? `/storage/barangs/${history.gambar}` 
-                : '/images/no-image.png';
-            document.getElementById('historyDetailKode').textContent = history.kode_barang;
-            document.getElementById('historyDetailNama').textContent = history.nama;
-            document.getElementById('historyDetailLine').textContent = history.line || '-';
-            document.getElementById('historyDetailTerjadwal').textContent = 
-                new Date(history.tanggal_terjadwal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-            
-            // Timeline Info
-            document.getElementById('historyDetailCheckup').textContent = 
-                new Date(history.tanggal_checkup).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-            document.getElementById('historyDetailMulai').textContent = 
-                new Date(history.mulai_perbaikan).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-            document.getElementById('historyDetailSelesai').textContent = 
-                new Date(history.waktu_selesai).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-            
-            // Calculate Duration (Fix untuk durasi kosong)
-            const mulai = new Date(history.mulai_perbaikan);
-            const selesai = new Date(history.waktu_selesai);
-            const diffMs = selesai - mulai;
-            const diffMins = Math.floor(diffMs / 60000);
-            const hours = Math.floor(diffMins / 60);
-            const mins = diffMins % 60;
-            
-            let durasiText = '';
-            if (hours > 0) {
-                durasiText = `${hours} jam ${mins} menit`;
-            } else {
-                durasiText = `${mins} menit`;
-            }
-            document.getElementById('historyDetailDurasi').textContent = durasiText;
-            
-            // Stats
-            document.getElementById('historyDetailOK').textContent = history.total_ok;
-            document.getElementById('historyDetailNG').textContent = history.total_ng;
-            document.getElementById('historyDetailParts').textContent = history.total_part_used;
-            document.getElementById('historyDetailCatatan').textContent = history.catatan_umum || 'Tidak ada catatan';
+        const s = result.stats;
+        document.getElementById('statTotal').textContent       = s.total;
+        document.getElementById('statThisMonth').textContent   = s.this_month;
+        document.getElementById('statAvgDuration').textContent = s.avg_duration;
+        document.getElementById('statSuccess').textContent     = s.success_rate + '%';
 
-            // Checkup Details
-            const detailsContainer = document.getElementById('historyCheckupDetails');
-            detailsContainer.innerHTML = '';
-            
-            if (history.details && history.details.length > 0) {
-                history.details.forEach((detail, index) => {
-                    const statusBadge = detail.status === 'ok' 
-                        ? '<span class="px-3 py-1 bg-green-500 text-white rounded-full text-xs font-bold">✓ OK</span>'
-                        : '<span class="px-3 py-1 bg-red-500 text-white rounded-full text-xs font-bold">✗ NG</span>';
-                    
-                    const bgColor = detail.status === 'ok' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200';
-                    
-                    // NG Action Badge
-                    let actionBadge = '';
-                    if (detail.status === 'ng' && detail.ng_action_type) {
-                        if (detail.ng_action_type === 'part') {
-                            actionBadge = '<span class="ml-2 px-2 py-1 bg-orange-500 text-white rounded text-xs font-semibold">🔧 Ganti Part</span>';
-                        } else if (detail.ng_action_type === 'inhouse') {
-                            actionBadge = '<span class="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs font-semibold">🏭 Inhouse</span>';
-                        } else if (detail.ng_action_type === 'outhouse') {
-                            actionBadge = '<span class="ml-2 px-2 py-1 bg-purple-500 text-white rounded text-xs font-semibold">🏢 Outhouse</span>';
-                        }
-                    }
-                    
-                    // Part Replacements for this detail
-                    let partReplacementsHTML = '';
-                    if (detail.part_replacements && detail.part_replacements.length > 0) {
-                        partReplacementsHTML = `
-                            <div class="mt-3 space-y-2 bg-white rounded-lg p-3 border border-orange-300 animate-fadeIn">
-                                <p class="text-xs font-bold text-orange-800 flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                    </svg>
-                                    Part yang Digunakan:
-                                </p>
-                                ${detail.part_replacements.map(part => `
-                                    <div class="bg-orange-50 rounded p-2 border border-orange-200">
-                                        <p class="text-xs font-semibold text-gray-900">${part.nama_part}</p>
-                                        <p class="text-xs text-gray-600">${part.kode_part} - Qty: ${part.quantity_used}</p>
-                                        ${part.catatan ? `<p class="text-xs text-gray-500 italic mt-1">${part.catatan}</p>` : ''}
-                                    </div>
-                                `).join('')}
-                            </div>
-                        `;
-                    }
+        renderTopList('summaryPreventive', result.by_preventive, 'x', 'blue');
+        renderTopList('summaryNg', result.by_ng, ' NG', 'red');
+    } catch (e) {
+        document.getElementById('summaryPreventive').innerHTML = '<p class="text-xs text-gray-400">Gagal memuat data</p>';
+        document.getElementById('summaryNg').innerHTML         = '<p class="text-xs text-gray-400">Gagal memuat data</p>';
+    }
+}
 
-                    // Inhouse/Outhouse Request Info
-                    let requestInfoHTML = '';
-                    if (detail.inhouse_request) {
-                        const req = detail.inhouse_request;
-                        requestInfoHTML = `
-                            <div class="mt-3 space-y-2 bg-white rounded-lg p-3 border border-blue-300 animate-fadeIn">
-                                <p class="text-xs font-bold text-blue-800 flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                                    </svg>
-                                    Inhouse Request:
-                                </p>
-                                <div class="bg-blue-50 rounded p-2 border border-blue-200 space-y-1">
-                                    <div class="grid grid-cols-2 gap-2 text-xs">
-                                        <div>
-                                            <span class="text-gray-600">Problem:</span>
-                                            <p class="font-semibold text-gray-900">${req.problem || '-'}</p>
-                                        </div>
-                                        <div>
-                                            <span class="text-gray-600">Mesin:</span>
-                                            <p class="font-semibold text-gray-900">${req.mesin || '-'}</p>
-                                        </div>
-                                    </div>
-                                    ${req.proses_dilakukan ? `
-                                        <div class="text-xs">
-                                            <span class="text-gray-600">Proses:</span>
-                                            <p class="font-semibold text-gray-900">${req.proses_dilakukan}</p>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        `;
-                    } else if (detail.outhouse_request) {
-                        const req = detail.outhouse_request;
-                        requestInfoHTML = `
-                            <div class="mt-3 space-y-2 bg-white rounded-lg p-3 border border-purple-300 animate-fadeIn">
-                                <p class="text-xs font-bold text-purple-800 flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
-                                    </svg>
-                                    Outhouse Request:
-                                </p>
-                                <div class="bg-purple-50 rounded p-2 border border-purple-200 space-y-1">
-                                    <div class="grid grid-cols-2 gap-2 text-xs">
-                                        <div>
-                                            <span class="text-gray-600">Problem:</span>
-                                            <p class="font-semibold text-gray-900">${req.problem || '-'}</p>
-                                        </div>
-                                        <div>
-                                            <span class="text-gray-600">Mesin:</span>
-                                            <p class="font-semibold text-gray-900">${req.mesin || '-'}</p>
-                                        </div>
-                                    </div>
-                                    ${req.supplier ? `
-                                        <div class="text-xs">
-                                            <span class="text-gray-600">Supplier:</span>
-                                            <p class="font-semibold text-gray-900">${req.supplier}</p>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        `;
-                    }
-                    
-                    detailsContainer.innerHTML += `
-                        <div class="border ${bgColor} rounded-lg p-4 hover:shadow-md transition-all duration-200 animate-slideIn" style="animation-delay: ${index * 50}ms">
-                            <div class="flex items-center justify-between mb-2">
-                                <div class="flex items-center space-x-3">
-                                    <span class="bg-gray-700 text-white px-3 py-1 rounded-full text-xs font-bold">
-                                        ${detail.poin}
-                                    </span>
-                                    <p class="text-sm font-bold text-gray-900">${detail.nama_bagian}</p>
-                                </div>
-                                <div class="flex items-center">
-                                    ${statusBadge}
-                                    ${actionBadge}
-                                </div>
-                            </div>
-                            ${detail.catatan ? `
-                                <div class="mt-2 pl-4 border-l-2 ${detail.status === 'ok' ? 'border-green-400' : 'border-red-400'}">
-                                    <p class="text-xs text-gray-600 italic">Catatan: ${detail.catatan}</p>
-                                </div>
-                            ` : ''}
-                            ${partReplacementsHTML}
-                            ${requestInfoHTML}
-                        </div>
-                    `;
-                });
-            } else {
-                detailsContainer.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Tidak ada detail checkup</p>';
-            }
+function renderTopList(elId, data, suffix, color) {
+    const el = document.getElementById(elId);
+    if (!data || !data.length) { el.innerHTML = '<p class="text-xs text-gray-400">Belum ada data</p>'; return; }
 
-            // Part Replacements (standalone)
-            const partsContainer = document.getElementById('historyPartReplacements');
-            const partsSection = document.getElementById('historyPartReplacementsSection');
-            partsContainer.innerHTML = '';
-            
-            const standaloneReplacements = history.part_replacements 
-                ? history.part_replacements.filter(part => !part.history_checkup_detail_id)
-                : [];
-            
-            if (standaloneReplacements.length > 0) {
-                partsSection.classList.remove('hidden');
-                standaloneReplacements.forEach(part => {
-                    partsContainer.innerHTML += `
-                        <div class="bg-orange-50 border border-orange-200 rounded-lg p-4 hover:shadow-md transition-all duration-200">
-                            <div class="flex items-start space-x-3">
-                                <div class="p-2 bg-orange-200 rounded-lg">
-                                    <svg class="w-6 h-6 text-orange-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                    </svg>
-                                </div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-bold text-gray-900">${part.nama_part}</p>
-                                    <p class="text-xs text-gray-600 mt-1">${part.kode_part}</p>
-                                    <div class="flex items-center mt-2">
-                                        <span class="px-2 py-1 bg-orange-200 text-orange-800 rounded text-xs font-semibold">
-                                            Qty: ${part.quantity_used}
-                                        </span>
-                                    </div>
-                                    ${part.catatan ? `
-                                        <p class="text-xs text-gray-500 italic mt-2 border-l-2 border-orange-400 pl-2">${part.catatan}</p>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                });
-            } else {
-                partsSection.classList.add('hidden');
-            }
+    const max  = Number(data[0].total);
+    const bars = color === 'red'
+        ? ['bg-red-500', 'bg-red-400', 'bg-red-300']
+        : ['bg-blue-500', 'bg-blue-400', 'bg-blue-300'];
 
-            // Show modal with animation
-            const modal = document.getElementById('historyDetailModal');
-            const modalContent = document.getElementById('historyModalContent');
+    el.innerHTML = data.map(function (item, idx) {
+        const total   = Number(item.total);
+        const pct     = max > 0 ? Math.round((total / max) * 100) : 0;
+        const rankCls = idx === 0 ? 'text-yellow-600 font-bold' : 'text-gray-400';
+        const barCls  = bars[Math.min(idx, 2)];
+        return '<div class="flex items-center gap-2 cursor-pointer hover:bg-gray-50 rounded px-1 -mx-1 py-0.5" onclick="openDetailModal(' + Number(item.barang_id) + ')" title="Lihat history ' + esc(item.nama) + '">'
+            + '<span class="text-xs w-4 text-center ' + rankCls + '">' + (idx + 1) + '</span>'
+            + '<div class="w-48 flex-shrink-0 min-w-0">'
+            +   '<p class="text-[11px] font-mono font-semibold text-gray-800 truncate">' + esc(item.kode_barang) + '</p>'
+            +   '<p class="text-[10px] text-gray-500 truncate">' + esc(item.nama) + '</p>'
+            + '</div>'
+            + '<div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden"><div class="' + barCls + ' h-2 rounded-full transition-all" style="width:' + pct + '%"></div></div>'
+            + '<span class="text-xs font-semibold text-gray-700 w-14 text-right whitespace-nowrap">' + total + suffix + '</span>'
+            + '</div>';
+    }).join('');
+}
 
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modal.classList.add('opacity-100');
-
-                modalContent.classList.remove('scale-95', 'opacity-0');
-                modalContent.classList.add('scale-100', 'opacity-100');
-            }, 10);
-
+// ════════════════════════════════════════════════════════
+// LOAD DATA
+// ════════════════════════════════════════════════════════
+async function loadData() {
+    if (isLoading) return;
+    isLoading = true;
+    showLoading(true);
+    try {
+        const params = new URLSearchParams({
+            page: currentPage,
+            per_page: perPage,
+            search: searchQuery,
+            date_from: dateFrom,
+            date_to: dateTo,
+        });
+        const res = await fetch('/history-checkups/data?' + params, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        });
+        const result = await res.json();
+        if (result.success) {
+            renderTable(result.data);
+            renderPagination(result.pagination);
+            updateShowingInfo(result.pagination);
         } else {
-            Swal.fire('Error!', 'Gagal memuat detail history', 'error');
+            showEmpty('Gagal memuat data');
         }
-    } catch (error) {
-        console.error('Error:', error);
-        Swal.fire('Error!', 'Gagal memuat detail history', 'error');
+    } catch (err) {
+        showEmpty('Error memuat data. Coba refresh halaman.');
+    } finally {
+        isLoading = false;
+        showLoading(false);
     }
 }
 
-function closeHistoryDetailModal() {
-    const modal = document.getElementById('historyDetailModal');
-    const modalContent = document.getElementById('historyModalContent');
-    
-    modalContent.classList.remove('scale-100', 'opacity-100');
-    modalContent.classList.add('scale-95', 'opacity-0');
+// ════════════════════════════════════════════════════════
+// RENDER TABLE
+// ════════════════════════════════════════════════════════
+function renderTable(items) {
+    const tbody = document.getElementById('historyTableBody');
+    if (!items || items.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="px-6 py-16 text-center">'
+            + '<p class="text-gray-600 font-semibold">Tidak ada data history</p>'
+            + '<p class="text-gray-500 text-sm">' + (searchQuery || dateFrom || dateTo ? 'Coba kata kunci / rentang tanggal lain' : 'Belum ada checkup yang selesai') + '</p>'
+            + '</td></tr>';
+        return;
+    }
 
-    modal.classList.remove('opacity-100');
-    modal.classList.add('opacity-0');
+    tbody.innerHTML = items.map(function (r) {
+        var img = r.gambar
+            ? '<img src="/storage/barangs/' + encodeURIComponent(r.gambar) + '" class="w-12 h-12 rounded-lg object-cover border border-gray-200">'
+            : '<div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">'
+              + '<svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>'
+              + '</div>';
 
-    setTimeout(() => {
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-    }, 300);
+        var periodeBadge = '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 whitespace-nowrap">Ke-' + r.periode_ke + '</span>';
+
+        var detailBtn = r.barang_id
+            ? '<button onclick="openDetailModal(' + Number(r.barang_id) + ')" title="Lihat History Barang"'
+              + ' class="bg-yellow-500 hover:bg-yellow-600 text-white w-8 h-8 rounded-lg transition flex items-center justify-center">'
+              + '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">'
+              +   '<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>'
+              +   '<path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>'
+              + '</svg></button>'
+            : '';
+
+        var deleteBtn = '<button onclick="deleteHistory(' + Number(r.id) + ')" title="Hapus"'
+              + ' class="bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-lg transition flex items-center justify-center">'
+              + '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>'
+              + '</button>';
+
+        return '<tr class="hover:bg-gray-50 transition">'
+             + '<td class="px-4 py-3 text-sm text-gray-500">' + r.row_number + '</td>'
+             + '<td class="px-4 py-3">' + img + '</td>'
+             + '<td class="px-4 py-3 text-sm font-mono font-semibold text-gray-900">' + esc(r.kode_barang) + '</td>'
+             + '<td class="px-4 py-3 text-sm font-semibold text-gray-900 max-w-xs truncate" title="' + esc(r.nama) + '">' + esc(r.nama) + '</td>'
+             + '<td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">' + (esc(r.tanggal_checkup) || '-') + '</td>'
+             + '<td class="px-4 py-3 text-sm text-gray-600">' + (esc(r.mulai) || '-') + '</td>'
+             + '<td class="px-4 py-3 text-sm text-gray-600">' + (esc(r.selesai) || '-') + '</td>'
+             + '<td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">' + esc(r.durasi) + '</td>'
+             + '<td class="px-4 py-3 text-center">' + periodeBadge + '</td>'
+             + '<td class="px-4 py-3"><div class="flex items-center justify-center gap-2">' + detailBtn + deleteBtn + '</div></td>'
+             + '</tr>';
+    }).join('');
 }
 
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeHistoryDetailModal();
-});
-
-
-// Keyboard shortcut
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeHistoryDetailModal();
+// ════════════════════════════════════════════════════════
+// PAGINATION
+// ════════════════════════════════════════════════════════
+function renderPagination(p) {
+    const container = document.getElementById('paginationContainer');
+    totalPages = p.total_pages;
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+    const b  = 'px-3 py-1.5 rounded-lg border text-xs transition';
+    const bA = 'bg-black text-white border-black font-semibold';
+    const bN = 'border-gray-300 text-gray-700 hover:bg-gray-50';
+    const bD = 'border-gray-200 text-gray-400 cursor-not-allowed';
+    const arL = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>';
+    const arR = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>';
+    let html = '<button onclick="goToPage(' + (currentPage - 1) + ')" ' + (currentPage === 1 ? 'disabled' : '') + ' class="' + b + ' ' + (currentPage === 1 ? bD : bN) + '">' + arL + '</button>';
+    const max = 5;
+    let start = Math.max(1, currentPage - Math.floor(max / 2));
+    let end   = Math.min(totalPages, start + max - 1);
+    if (end - start < max - 1) start = Math.max(1, end - max + 1);
+    if (start > 1) {
+        html += '<button onclick="goToPage(1)" class="' + b + ' ' + bN + '">1</button>';
+        if (start > 2) html += '<span class="px-1 text-gray-500 text-xs">...</span>';
     }
-});
+    for (let i = start; i <= end; i++) {
+        html += '<button onclick="goToPage(' + i + ')" class="' + b + ' ' + (i === currentPage ? bA : bN) + '">' + i + '</button>';
+    }
+    if (end < totalPages) {
+        if (end < totalPages - 1) html += '<span class="px-1 text-gray-500 text-xs">...</span>';
+        html += '<button onclick="goToPage(' + totalPages + ')" class="' + b + ' ' + bN + '">' + totalPages + '</button>';
+    }
+    html += '<button onclick="goToPage(' + (currentPage + 1) + ')" ' + (currentPage === totalPages ? 'disabled' : '') + ' class="' + b + ' ' + (currentPage === totalPages ? bD : bN) + '">' + arR + '</button>';
+    container.innerHTML = html;
+}
 
+function goToPage(page) {
+    if (page < 1 || page > totalPages || page === currentPage) return;
+    currentPage = page;
+    loadData();
+}
+
+function updateShowingInfo(p) {
+    document.getElementById('showingFrom').textContent  = p.from;
+    document.getElementById('showingTo').textContent    = p.to;
+    document.getElementById('totalEntries').textContent = p.total;
+}
+
+// ════════════════════════════════════════════════════════
+// DELETE
+// ════════════════════════════════════════════════════════
 async function deleteHistory(historyId) {
     const result = await Swal.fire({
         title: 'Yakin hapus?',
-        text: "History akan dihapus permanent!",
+        text: 'History akan dihapus permanent! Nomor periode setelahnya akan ikut bergeser.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#000',
@@ -560,33 +464,46 @@ async function deleteHistory(historyId) {
         cancelButtonText: 'Batal'
     });
 
-    if (result.isConfirmed) {
-        try {
-            const response = await fetch(`/history-checkups/${historyId}`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                }
-            });
+    if (!result.isConfirmed) return;
 
-            const data = await response.json();
-
-            if (data.success) {
-                await Swal.fire({
-                    icon: 'success',
-                    title: 'Terhapus!',
-                    text: data.message,
-                    showConfirmButton: false,
-                    timer: 1500
-                });
-                location.reload();
-            } else {
-                Swal.fire('Error!', data.message, 'error');
+    try {
+        const response = await fetch('/history-checkups/' + historyId, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
             }
-        } catch (error) {
-            Swal.fire('Error!', 'Gagal menghapus history!', 'error');
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            await Swal.fire({ icon: 'success', title: 'Terhapus!', text: data.message, showConfirmButton: false, timer: 1500 });
+            loadData();
+            loadSummary();
+        } else {
+            Swal.fire('Error!', data.message, 'error');
         }
+    } catch (error) {
+        Swal.fire('Error!', 'Gagal menghapus history!', 'error');
     }
 }
+
+// ════════════════════════════════════════════════════════
+// HELPERS
+// ════════════════════════════════════════════════════════
+function esc(str) {
+    if (!str && str !== 0) return '';
+    const d = document.createElement('div');
+    d.textContent = String(str);
+    return d.innerHTML;
+}
+function showLoading(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
+function showEmpty(msg) {
+    document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="10" class="px-6 py-12 text-center text-gray-500">' + msg + '</td></tr>';
+}
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closeDetailModal();
+});
 </script>
 @endpush

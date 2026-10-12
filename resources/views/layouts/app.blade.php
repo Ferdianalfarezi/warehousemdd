@@ -161,6 +161,20 @@
     .chevron-icon { transition: transform 0.3s cubic-bezier(0.4,0,0.2,1); }
     .chevron-icon.open { transform: rotate(180deg); }
 
+    /* ✅ Badge tidak boleh menyusut / patah ke baris baru */
+    [id$="Badge"] {
+        white-space: nowrap;
+        flex-shrink: 0;
+        min-width: 1.5rem;
+        text-align: center;
+    }
+
+    /* ✅ Teks menu tetap satu baris */
+    .menu-group-header span.font-semibold,
+    .submenu-item > div {
+        white-space: nowrap;
+    }
+
     .logout-btn {
         background: linear-gradient(135deg, rgba(220,38,38,0.1) 0%, rgba(153,27,27,0.1) 100%);
         border: 1px solid rgba(220,38,38,0.2); transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
@@ -207,7 +221,7 @@
         >
             <div class="logo-container flex items-center justify-center h-20 border-b border-gray-800 border-opacity-50 px-4">
                 <img src="{{ asset('images/logomdd.png') }}" alt="Logo" class="logo-image">
-                <h1 class="text-xl tracking-wider mt-2"><i>Warehouse</i></h1>
+                <h1 class="text-xl tracking-wider mt-2"><i>System</i></h1>
             </div>
 
             <div class="sidebar-nav-container px-3 space-y-1">
@@ -373,7 +387,7 @@
                                 class="submenu-item flex items-center justify-between px-3 py-2.5 text-sm text-gray-300 {{ request()->routeIs('pdd.confirm.*') ? 'active' : '' }}">
                                     <div class="flex items-center">
                                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.030 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                                         </svg>
                                         Inhouse
                                     </div>
@@ -662,10 +676,16 @@
     let previousCounts = { inhouse: 0, outhouse: 0 };
     let isFirstLoad = true;
 
+    // ✅ Batasi angka badge biar tidak melebar
+    function formatBadge(count) {
+        return count > 99 ? '99+' : count;
+    }
+
     function setBadge(id, count) {
         const el = document.getElementById(id);
         if (!el) return;
-        el.textContent = count;
+        el.textContent = formatBadge(count);
+        el.title = count + ' item';   // angka asli muncul saat hover
         el.style.display = count > 0 ? 'inline-block' : 'none';
     }
 
@@ -729,7 +749,7 @@
                 <div class="notification-message">Ada ${count} permintaan yang perlu di-approve</div>
                 <div class="notification-time">Baru saja</div>
             </div>
-            <div class="notification-badge">${count}</div>`;
+            <div class="notification-badge">${formatBadge(count)}</div>`;
         el.addEventListener('click', () => {
             window.location.href = type === 'inhouse' ? '{{ route("pdd.confirm.index") }}' : '{{ route("subcont.confirm.index") }}';
         });

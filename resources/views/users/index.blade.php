@@ -70,7 +70,6 @@
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nama</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">NIK</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Role</th>
-                        <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Jabatan / Line</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                         <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Last Login</th>
                         <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
@@ -102,16 +101,8 @@
                                     {{ $user->role->nama === 'superadmin' ? 'bg-purple-100 text-purple-800' : '' }}
                                     {{ $user->role->nama === 'admin' ? 'bg-blue-100 text-blue-800' : '' }}
                                     {{ !in_array($user->role->nama, ['superadmin', 'admin']) ? 'bg-gray-100 text-gray-800' : '' }}">
-                                    {{ ucfirst($user->role->nama) }}
+                                    {{ ucfirst($user->role->nama) }}{{ $user->jabatan ? ' - ' . $user->jabatan : '' }}
                                 </span>
-                            </td>
-                            <td class="px-6 py-4 text-sm text-gray-600">
-                                @if($user->jabatan)
-                                    <p class="font-medium text-gray-900">{{ $user->jabatan }}</p>
-                                    <p class="text-xs text-gray-500">{{ $user->lines->pluck('nama_line')->join(', ') ?: '-' }}</p>
-                                @else
-                                    <span class="text-xs text-gray-400">-</span>
-                                @endif
                             </td>
                             <td class="px-6 py-4">
                                 <span class="px-3 py-1 rounded-full text-xs font-medium
@@ -139,7 +130,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="px-6 py-16 text-center">
+                            <td colspan="8" class="px-6 py-16 text-center">
                                 <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
                                 </svg>
@@ -207,7 +198,6 @@
 @push('scripts')
 <script>
 const OPERATOR_ROLE_ID = 4;
-const JABATAN_MAX = { 'Leader': 5, 'Asst Leader': 3 };
 
 let allUsers = [];
 let filteredUsers = [];
@@ -234,24 +224,12 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeCreateForm();
     initializeEditForm();
     bindOperatorFieldEvents();
-
-    // Klik di luar dropdown Line -> tutup
-    document.addEventListener('click', function (e) {
-        ['create', 'edit'].forEach(prefix => {
-            const wrapper = document.getElementById(`${prefix}LinesWrapper`);
-            if (wrapper && !wrapper.contains(e.target)) {
-                document.getElementById(`${prefix}LinesDropdown`).classList.add('hidden');
-            }
-        });
-    });
 });
 
-// ==================== JABATAN / LINE TOGGLE (operator only) ====================
+// ==================== JABATAN TOGGLE (operator only) ====================
 function bindOperatorFieldEvents() {
     document.getElementById('createRoleId').addEventListener('change', () => toggleOperatorFields('create'));
     document.getElementById('editRoleId').addEventListener('change', () => toggleOperatorFields('edit'));
-    document.getElementById('createJabatan').addEventListener('change', () => handleJabatanChange('create'));
-    document.getElementById('editJabatan').addEventListener('change', () => handleJabatanChange('edit'));
 }
 
 function toggleOperatorFields(prefix) {
@@ -265,113 +243,7 @@ function toggleOperatorFields(prefix) {
 
     if (!isOperator) {
         jabatanEl.value = '';
-        uncheckAllLines(prefix);
-        document.getElementById(`${prefix}LineHint`).textContent = '';
     }
-}
-
-function handleJabatanChange(prefix) {
-    const jabatan = document.getElementById(`${prefix}Jabatan`).value;
-    const max     = JABATAN_MAX[jabatan] || null;
-    const hintEl  = document.getElementById(`${prefix}LineHint`);
-
-    hintEl.textContent = max ? `(maks. ${max} line)` : '';
-
-    // Kalau jabatan berubah ke batas yang lebih kecil, uncheck kelebihannya
-    if (max) {
-        const checked = Array.from(document.querySelectorAll(`.${prefix}-line-checkbox:checked`));
-        checked.slice(max).forEach(cb => cb.checked = false);
-    }
-
-    enforceLineMax(prefix);
-    updateLineLabel(prefix);
-}
-
-// ==================== LINE DROPDOWN (custom, tanpa select2) ====================
-function toggleLineDropdown(prefix) {
-    const dropdown = document.getElementById(`${prefix}LinesDropdown`);
-    const willOpen = dropdown.classList.contains('hidden');
-    dropdown.classList.toggle('hidden');
-
-    if (willOpen) {
-        const searchInput = dropdown.querySelector('input[type="text"]');
-        if (searchInput) {
-            searchInput.value = '';
-            filterLineOptions(prefix, '');
-            setTimeout(() => searchInput.focus(), 50);
-        }
-    }
-}
-
-function filterLineOptions(prefix, keyword) {
-    const kw = keyword.trim().toLowerCase();
-    const options = document.querySelectorAll(`.${prefix}-line-option`);
-    let anyVisible = false;
-
-    options.forEach(opt => {
-        const match = opt.dataset.search.includes(kw);
-        opt.classList.toggle('hidden', !match);
-        if (match) anyVisible = true;
-    });
-
-    const noMatchEl = document.getElementById(`${prefix}LinesNoMatch`);
-    if (noMatchEl) noMatchEl.classList.toggle('hidden', anyVisible || options.length === 0);
-}
-
-function handleLineCheckboxChange(prefix, checkbox) {
-    const jabatan = document.getElementById(`${prefix}Jabatan`).value;
-    const max     = JABATAN_MAX[jabatan] || null;
-    const checkedCount = document.querySelectorAll(`.${prefix}-line-checkbox:checked`).length;
-
-    if (max && checkedCount > max) {
-        checkbox.checked = false;
-        Swal.fire({ icon: 'warning', title: 'Batas Tercapai', text: `Jabatan ini maksimal ${max} line.`, timer: 1800, showConfirmButton: false });
-        return;
-    }
-
-    updateLineLabel(prefix);
-    enforceLineMax(prefix);
-}
-
-function enforceLineMax(prefix) {
-    const jabatan = document.getElementById(`${prefix}Jabatan`).value;
-    const max     = JABATAN_MAX[jabatan] || null;
-    const checkboxes  = document.querySelectorAll(`.${prefix}-line-checkbox`);
-    const checkedCount = document.querySelectorAll(`.${prefix}-line-checkbox:checked`).length;
-
-    checkboxes.forEach(cb => {
-        cb.disabled = !!(max && !cb.checked && checkedCount >= max);
-    });
-}
-
-function updateLineLabel(prefix) {
-    const checked = Array.from(document.querySelectorAll(`.${prefix}-line-checkbox:checked`));
-    const label   = document.getElementById(`${prefix}LinesLabel`);
-
-    if (checked.length === 0) {
-        label.textContent = 'Select Line';
-        label.classList.add('text-gray-400');
-    } else {
-        label.textContent = checked.map(cb => cb.closest('label').querySelector('span').textContent.trim()).join(', ');
-        label.classList.remove('text-gray-400');
-    }
-}
-
-function uncheckAllLines(prefix) {
-    document.querySelectorAll(`.${prefix}-line-checkbox`).forEach(cb => {
-        cb.checked  = false;
-        cb.disabled = false;
-    });
-    updateLineLabel(prefix);
-}
-
-function setCheckedLines(prefix, ids) {
-    const idSet = new Set(ids.map(String));
-    document.querySelectorAll(`.${prefix}-line-checkbox`).forEach(cb => {
-        cb.checked = idSet.has(cb.value);
-    });
-    updateLineLabel(prefix);
-    enforceLineMax(prefix);
 }
 
 // ==================== CREATE FORM ====================
@@ -499,10 +371,6 @@ function openCreateModal() {
     document.getElementById('createPreviewContainer').classList.add('hidden');
     document.getElementById('createOperatorFields').classList.add('hidden');
     document.getElementById('createJabatan').required = false;
-    document.getElementById('createLineHint').textContent = '';
-    document.getElementById('createLinesDropdown').classList.add('hidden');
-    filterLineOptions('create', '');
-    uncheckAllLines('create');
     clearErrors();
     
     modal.classList.remove('hidden');
@@ -545,19 +413,11 @@ async function openEditModal(id) {
                 noImageText.style.display = 'block';
             }
 
-            // Jabatan & Line
+            // Jabatan
             const isOperator = parseInt(user.role_id) === OPERATOR_ROLE_ID;
             document.getElementById('editOperatorFields').classList.toggle('hidden', !isOperator);
             document.getElementById('editJabatan').value = user.jabatan || '';
             document.getElementById('editJabatan').required = isOperator;
-            document.getElementById('editLinesDropdown').classList.add('hidden');
-            filterLineOptions('edit', '');
-
-            const max = JABATAN_MAX[user.jabatan] || null;
-            document.getElementById('editLineHint').textContent = (isOperator && max) ? `(maks. ${max} line)` : '';
-
-            const selectedLineIds = (user.lines || []).map(l => l.id);
-            setCheckedLines('edit', selectedLineIds);
             
             clearErrors();
             
@@ -720,7 +580,7 @@ function updateTable() {
     if (total === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="9" class="px-6 py-12 text-center text-gray-500">
+                <td colspan="8" class="px-6 py-12 text-center text-gray-500">
                     No results found
                 </td>
             </tr>

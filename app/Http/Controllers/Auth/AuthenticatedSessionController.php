@@ -28,6 +28,8 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
 
+        $request->user()->update(['last_login' => now()]);
+
         if ($request->user()->role_id == 4) {
             return redirect()->route('request-repairs.index');
         }

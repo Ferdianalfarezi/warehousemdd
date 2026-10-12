@@ -174,115 +174,10 @@
                         <div class="ng-actions mt-3 {{ $currentStatus === 'ng' ? '' : 'hidden' }}" data-ng-section="{{ $standard->id }}">
                             
                             @if(!$existingActionType)
-                                <!-- Dropdown untuk pilih action type -->
-                                <div class="mb-3">
-                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tindakan:</label>
-                                    <select 
-                                        id="actionTypeSelect-{{ $standard->id }}"
-                                        onchange="showActionForm({{ $standard->id }})"
-                                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
-                                    >
-                                        <option value="">-- Pilih Tindakan --</option>
-                                        <option value="part">Ganti Part</option>
-                                        <option value="inhouse">Proses Inhouse</option>
-                                        <option value="outhouse">Proses Outhouse</option>
-                                    </select>
-                                </div>
-
-                                <!-- Form Ganti Part -->
-                                <div id="partForm-{{ $standard->id }}" class="hidden">
-                                    <button 
-                                        type="button"
-                                        onclick="openAddPartModal({{ $checkup->id }}, {{ $standard->id }})"
-                                        class="inline-flex items-center px-3 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 transition"
-                                    >
-                                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
-                                        </svg>
-                                        Tambah Part
-                                    </button>
-
-                                    <!-- Part List -->
-                                    <div class="mt-3 space-y-2" id="partList-{{ $standard->id }}">
-                                        <!-- Will be populated dynamically -->
-                                    </div>
-                                </div>
-
-                                <!-- Form Inhouse -->
-                                <div id="inhouseForm-{{ $standard->id }}" class="hidden space-y-3">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Problem:</label>
-                                        <textarea 
-                                            id="inhouseProblem-{{ $standard->id }}"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black resize-none"
-                                            rows="2"
-                                            placeholder="Jelaskan masalah yang terjadi..."
-                                        ></textarea>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Proses yang Dilakukan:</label>
-                                        <textarea 
-                                            id="inhouseProses-{{ $standard->id }}"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black resize-none"
-                                            rows="2"
-                                            placeholder="Jelaskan proses perbaikan yang akan dilakukan..."
-                                        ></textarea>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Mesin:</label>
-                                        <input 
-                                            type="text"
-                                            id="inhouseMesin-{{ $standard->id }}"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
-                                            placeholder="Nama mesin yang akan diperbaiki..."
-                                        >
-                                    </div>
-                                    <button 
-                                        type="button"
-                                        onclick="submitInhouseRequest({{ $checkup->id }}, {{ $standard->id }})"
-                                        class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg font-medium hover:bg-blue-600 transition"
-                                    >
-                                        Submit Permintaan Inhouse
-                                    </button>
-                                </div>
-
-                                <!-- Form Outhouse -->
-                                <div id="outhouseForm-{{ $standard->id }}" class="hidden space-y-3">
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Problem:</label>
-                                        <textarea 
-                                            id="outhouseProblem-{{ $standard->id }}"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black resize-none"
-                                            rows="2"
-                                            placeholder="Jelaskan masalah yang terjadi..."
-                                        ></textarea>
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Mesin:</label>
-                                        <input 
-                                            type="text"
-                                            id="outhouseMesin-{{ $standard->id }}"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
-                                            placeholder="Nama mesin yang akan diperbaiki..."
-                                        >
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700 mb-1">Supplier:</label>
-                                        <input 
-                                            type="text"
-                                            id="outhouseSupplier-{{ $standard->id }}"
-                                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
-                                            placeholder="Nama supplier..."
-                                        >
-                                    </div>
-                                    <button 
-                                        type="button"
-                                        onclick="submitOuthouseRequest({{ $checkup->id }}, {{ $standard->id }})"
-                                        class="w-full px-4 py-2 bg-purple-500 text-white rounded-lg font-medium hover:bg-purple-600 transition"
-                                    >
-                                        Submit Permintaan Outhouse
-                                    </button>
-                                </div>
+                                {{-- Form NG hanya dirender kalau sudah NG; sisanya di-clone dari #ngActionTemplate saat klik NG --}}
+                                @if($currentStatus === 'ng')
+                                    @include('general-checkups.partials.ng-action-form', ['sid' => $standard->id, 'cid' => $checkup->id])
+                                @endif
                             @else
                                 <!-- Show existing action status -->
                                 <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg">
@@ -482,13 +377,18 @@
     </form>
 </div>
 
+<!-- Template form NG, di-clone per standard oleh setStatus() (__SID__ diganti standard id) -->
+<template id="ngActionTemplate">
+    @include('general-checkups.partials.ng-action-form', ['sid' => '__SID__', 'cid' => $checkup->id])
+</template>
+
 <!-- Add Part Modal -->
 @include('general-checkups.add-part-modal')
 
 @endsection
 
 @push('scripts')
-<script src="{{ asset('js/general-checkups/process.js') }}"></script>
+<script src="{{ asset('js/general-checkups/process.js') }}?v={{ filemtime(public_path('js/general-checkups/process.js')) }}"></script>
 <script>
     // Set global checkup ID
     window.checkupId = {{ $checkup->id }};

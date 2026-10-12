@@ -4,46 +4,71 @@ namespace App\Http\Controllers;
 
 use App\Models\GeneralCheckup;
 use App\Models\Schedule;
-use App\Models\Barang;
+use App\Models\CheckIndicatorStandard;
 use App\Models\CheckupDetail;
 use App\Models\CheckupPartReplacement;
 use App\Models\HistoryCheckup;
 use App\Models\HistoryCheckupDetail;
 use App\Models\HistoryCheckupPartReplacement;
-use Illuminate\Http\Request;
 use App\Models\InhouseRequest;
 use App\Models\OuthouseRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
+use Illuminate\Support\Facades\Validator;
 
 class GeneralCheckupController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
-    public function index()
-    {
-        // Only show pending and on_process checkups (exclude finish)
-        $checkups = GeneralCheckup::with(['barang', 'schedule'])
-            ->whereIn('status', ['pending', 'on_process']) // ✅ Filter hanya pending & on_process
-            ->orderBy('tanggal_terjadwal', 'asc')
-            ->get();
+    private const ACTIVE_STATUS = ['pending', 'on_process'];
 
-        // Stats
+    /**
+     * Display a listing of the resource (paginated)
+     */
+    public function index(Request $request)
+    {
+        $perPage = max(1, (int) ($request->per_page ?: 20));
+
+        $checkups = GeneralCheckup::with(['barang', 'schedule'])
+            ->whereIn('status', self::ACTIVE_STATUS)
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = $request->search;
+                $q->where(function ($q2) use ($search) {
+                    $q2->where('kode_barang', 'like', "%{$search}%")
+                       ->orWhere('nama', 'like', "%{$search}%");
+                });
+            })
+            ->when($request->filled('line'), fn ($q) => $q->where('line', $request->line))
+            ->when(
+                in_array($request->status, self::ACTIVE_STATUS, true),
+                fn ($q) => $q->where('status', $request->status)
+            )
+            ->orderBy('tanggal_terjadwal', 'asc')
+            ->orderBy('id', 'asc')
+            ->paginate($perPage)
+            ->withQueryString();
+
+        // Stats: 1 query, dihitung dari semua data aktif (bukan per halaman)
+        $agg = GeneralCheckup::whereIn('status', self::ACTIVE_STATUS)
+            ->selectRaw("
+                COUNT(*) as total,
+                COALESCE(SUM(status = 'pending'), 0) as pending,
+                COALESCE(SUM(status = 'on_process'), 0) as on_process,
+                COALESCE(SUM(DATE(tanggal_terjadwal) = ?), 0) as today
+            ", [today()->toDateString()])
+            ->first();
+
         $stats = [
-            'total' => $checkups->count(),
-            'pending' => $checkups->where('status', 'pending')->count(),
-            'on_process' => $checkups->where('status', 'on_process')->count(),
-            'today' => $checkups->where('tanggal_terjadwal', Carbon::today())->count(),
+            'total'      => (int) $agg->total,
+            'pending'    => (int) $agg->pending,
+            'on_process' => (int) $agg->on_process,
+            'today'      => (int) $agg->today,
         ];
 
-        $lines = GeneralCheckup::whereIn('status', ['pending', 'on_process'])
-        ->whereNotNull('line')
-        ->distinct()
-        ->pluck('line')
-        ->sort()
-        ->values();
+        $lines = GeneralCheckup::whereIn('status', self::ACTIVE_STATUS)
+            ->whereNotNull('line')
+            ->distinct()
+            ->orderBy('line')
+            ->pluck('line');
 
         return view('general-checkups.index', compact('checkups', 'stats', 'lines'));
     }
@@ -61,7 +86,6 @@ class GeneralCheckupController extends Controller
      */
     public function store(Request $request)
     {
-        // This will be used by auto-populate
         return response()->json([
             'success' => false,
             'message' => 'Use auto-populate endpoint'
@@ -94,7 +118,6 @@ class GeneralCheckupController extends Controller
      */
     public function update(Request $request, GeneralCheckup $generalCheckup)
     {
-        // Not used for now
         return response()->json([
             'success' => false,
             'message' => 'Update not allowed'
@@ -108,7 +131,6 @@ class GeneralCheckupController extends Controller
     {
         DB::beginTransaction();
         try {
-            // Delete related data first
             $generalCheckup->details()->delete();
             $generalCheckup->partReplacements()->delete();
             $generalCheckup->delete();
@@ -119,7 +141,6 @@ class GeneralCheckupController extends Controller
                 'success' => true,
                 'message' => 'Checkup berhasil dihapus!'
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Delete Checkup Error: ' . $e->getMessage());
@@ -130,38 +151,43 @@ class GeneralCheckupController extends Controller
         }
     }
 
+    /**
+     * Auto populate dari schedule hari_ini / terlambat
+     */
     public function autoPopulate()
     {
         DB::beginTransaction();
         try {
-            // Ambil schedule yang statusnya "hari_ini" ATAU "terlambat"
-            $schedules = Schedule::with('barang')
+            $schedules = Schedule::with('barang.line')
                 ->whereIn('status', ['hari_ini', 'terlambat'])
                 ->get();
+
+            // Cek existing sekali query, bukan per schedule
+            $existing = GeneralCheckup::whereIn('schedule_id', $schedules->pluck('id'))
+                ->whereIn('status', self::ACTIVE_STATUS)
+                ->pluck('schedule_id')
+                ->flip();
 
             $created = 0;
             $skipped = 0;
 
             foreach ($schedules as $schedule) {
-                $exists = GeneralCheckup::where('schedule_id', $schedule->id)
-                    ->whereIn('status', ['pending', 'on_process'])
-                    ->exists();
-
-                if (!$exists) {
-                    GeneralCheckup::create([
-                        'schedule_id' => $schedule->id,
-                        'barang_id' => $schedule->barang_id,
-                        'kode_barang' => $schedule->kode_barang,
-                        'gambar' => $schedule->gambar,
-                        'nama' => $schedule->nama,
-                        'line' => $schedule->barang->line->nama_line ?? null,
-                        'tanggal_terjadwal' => $schedule->service_berikutnya,
-                        'status' => 'pending',
-                    ]);
-                    $created++;
-                } else {
+                if (isset($existing[$schedule->id])) {
                     $skipped++;
+                    continue;
                 }
+
+                GeneralCheckup::create([
+                    'schedule_id'       => $schedule->id,
+                    'barang_id'         => $schedule->barang_id,
+                    'kode_barang'       => $schedule->kode_barang,
+                    'gambar'            => $schedule->gambar,
+                    'nama'              => $schedule->nama,
+                    'line'              => $schedule->barang->line->nama_line ?? null,
+                    'tanggal_terjadwal' => $schedule->service_berikutnya,
+                    'status'            => 'pending',
+                ]);
+                $created++;
             }
 
             DB::commit();
@@ -172,7 +198,6 @@ class GeneralCheckupController extends Controller
                 'created' => $created,
                 'skipped' => $skipped
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Auto Populate Error: ' . $e->getMessage());
@@ -192,16 +217,16 @@ class GeneralCheckupController extends Controller
         try {
             $checkup = GeneralCheckup::findOrFail($id);
 
-            // Validation
             if ($checkup->mulai_perbaikan) {
+                DB::rollBack();
                 return response()->json([
                     'success' => false,
                     'message' => 'Perbaikan sudah dimulai sebelumnya!'
                 ], 400);
             }
 
-            // Set start time
             $checkup->mulai_perbaikan = now();
+            $checkup->started_by = auth()->id(); // PIC yang memulai perbaikan
             $checkup->tanggal_checkup = $checkup->tanggal_checkup ?? today();
             $checkup->status = 'on_process';
             $checkup->save();
@@ -213,7 +238,6 @@ class GeneralCheckupController extends Controller
                 'message' => 'Perbaikan dimulai!',
                 'redirect' => route('general-checkups.process', $id)
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Start Repair Error: ' . $e->getMessage());
@@ -239,15 +263,14 @@ class GeneralCheckupController extends Controller
         // Auto-start repair if not started yet (safety check)
         if (!$checkup->mulai_perbaikan) {
             $checkup->mulai_perbaikan = now();
+            $checkup->started_by = auth()->id(); // PIC yang memulai perbaikan
             $checkup->tanggal_checkup = today();
             $checkup->status = 'on_process';
             $checkup->save();
         }
 
-        // Get all check indicators for this barang
-        $indicators = $checkup->barang->checkIndicators()
-            ->with('standards')
-            ->get();
+        // Pakai relasi yang sudah di-eager load, tanpa query ulang
+        $indicators = $checkup->barang->checkIndicators;
 
         return view('general-checkups.process', compact('checkup', 'indicators'));
     }
@@ -257,13 +280,7 @@ class GeneralCheckupController extends Controller
      */
     public function saveCheckup(Request $request, $id)
     {
-        $validator = \Validator::make($request->all(), [
-            'details' => 'required|array',
-            'details.*.check_indicator_standard_id' => 'required|exists:check_indicator_standards,id',
-            'details.*.status' => 'required|in:ok,ng',
-            'details.*.catatan' => 'nullable|string',
-            'catatan_umum' => 'nullable|string',
-        ]);
+        $validator = $this->makeDetailValidator($request);
 
         if ($validator->fails()) {
             return response()->json([
@@ -275,29 +292,9 @@ class GeneralCheckupController extends Controller
         DB::beginTransaction();
         try {
             $checkup = GeneralCheckup::findOrFail($id);
-            $detailId = null;
 
-            // Update or create details
-            foreach ($request->details as $detailData) {
-                $standard = \App\Models\CheckIndicatorStandard::findOrFail($detailData['check_indicator_standard_id']);
-                
-                $detail = CheckupDetail::updateOrCreate(
-                    [
-                        'general_checkup_id' => $checkup->id,
-                        'check_indicator_standard_id' => $detailData['check_indicator_standard_id']
-                    ],
-                    [
-                        'check_indicator_id' => $standard->check_indicator_id,
-                        'status' => $detailData['status'],
-                        'catatan' => $detailData['catatan'] ?? null,
-                    ]
-                );
+            $detailId = $this->saveDetails($checkup, $request->details ?? []);
 
-                // Store the detail_id to return (for the last one or you can modify logic)
-                $detailId = $detail->id;
-            }
-
-            // Update catatan umum
             $checkup->catatan_umum = $request->catatan_umum;
             $checkup->status = 'on_process';
             $checkup->save();
@@ -309,7 +306,6 @@ class GeneralCheckupController extends Controller
                 'message' => 'Checkup berhasil disimpan sementara!',
                 'detail_id' => $detailId
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Save Checkup Error: ' . $e->getMessage());
@@ -325,13 +321,7 @@ class GeneralCheckupController extends Controller
      */
     public function finishCheckup(Request $request, $id)
     {
-        $validator = \Validator::make($request->all(), [
-            'details' => 'required|array',
-            'details.*.check_indicator_standard_id' => 'required|exists:check_indicator_standards,id',
-            'details.*.status' => 'required|in:ok,ng',
-            'details.*.catatan' => 'nullable|string',
-            'catatan_umum' => 'nullable|string',
-        ]);
+        $validator = $this->makeDetailValidator($request);
 
         if ($validator->fails()) {
             return response()->json([
@@ -342,34 +332,16 @@ class GeneralCheckupController extends Controller
 
         DB::beginTransaction();
         try {
-            $checkup = GeneralCheckup::with(['details', 'partReplacements'])->findOrFail($id);
+            $checkup = GeneralCheckup::findOrFail($id);
 
-            // Update or create details
-            foreach ($request->details as $detailData) {
-                $standard = \App\Models\CheckIndicatorStandard::findOrFail($detailData['check_indicator_standard_id']);
-                
-                CheckupDetail::updateOrCreate(
-                    [
-                        'general_checkup_id' => $checkup->id,
-                        'check_indicator_standard_id' => $detailData['check_indicator_standard_id']
-                    ],
-                    [
-                        'check_indicator_id' => $standard->check_indicator_id,
-                        'status' => $detailData['status'],
-                        'catatan' => $detailData['catatan'] ?? null,
-                    ]
-                );
-            }
+            $this->saveDetails($checkup, $request->details ?? []);
 
-            // Reload checkup details after update
-            $checkup->load('details');
-
-            // Check if there's any NG that is NOT closed yet
+            // Masih ada NG yang belum closed?
             $hasNGNotClosed = $checkup->details()
                 ->where('status', 'ng')
-                ->where(function($query) {
+                ->where(function ($query) {
                     $query->whereNull('ng_action_status')
-                          ->orWhereNotIn('ng_action_status', ['closed']);
+                          ->orWhere('ng_action_status', '!=', 'closed');
                 })
                 ->exists();
 
@@ -381,17 +353,16 @@ class GeneralCheckupController extends Controller
                 ], 400);
             }
 
-            // ✅ COMMIT SEMUA PARTS - KURANGI STOCK
-            $allParts = CheckupPartReplacement::where('general_checkup_id', $checkup->id)
+            // Commit semua part - kurangi stock (save per model biar boot method jalan)
+            $uncommittedParts = CheckupPartReplacement::where('general_checkup_id', $checkup->id)
                 ->where('is_committed', false)
                 ->get();
 
-            foreach ($allParts as $part) {
+            foreach ($uncommittedParts as $part) {
                 $part->is_committed = true;
-                $part->save(); // Ini akan trigger boot method untuk kurangi stock
+                $part->save();
             }
 
-            // Set finish time and ensure all timestamps are filled
             $checkup->tanggal_checkup = $checkup->tanggal_checkup ?? today();
             $checkup->mulai_perbaikan = $checkup->mulai_perbaikan ?? now();
             $checkup->waktu_selesai = now();
@@ -399,10 +370,13 @@ class GeneralCheckupController extends Controller
             $checkup->catatan_umum = $request->catatan_umum;
             $checkup->save();
 
-            // Reload to get updated details
-            $checkup->load(['details', 'partReplacements']);
+            // Load sekali semua yang dibutuhkan moveToHistory
+            $checkup->load([
+                'details.checkIndicator',
+                'details.checkIndicatorStandard',
+                'partReplacements.part',
+            ]);
 
-            // Move to history
             $this->moveToHistory($checkup);
 
             DB::commit();
@@ -412,7 +386,6 @@ class GeneralCheckupController extends Controller
                 'message' => 'Checkup selesai! Stock part telah dikurangi dan dipindahkan ke history.',
                 'redirect' => route('general-checkups.index')
             ]);
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Finish Checkup Error: ' . $e->getMessage());
@@ -424,114 +397,140 @@ class GeneralCheckupController extends Controller
     }
 
     /**
+     * Validator untuk save & finish (details boleh kosong)
+     */
+    private function makeDetailValidator(Request $request)
+    {
+        return Validator::make($request->all(), [
+            'details' => 'nullable|array',
+            'details.*.check_indicator_standard_id' => 'required_with:details|exists:check_indicator_standards,id',
+            'details.*.status' => 'required_with:details|in:ok,ng',
+            'details.*.catatan' => 'nullable|string',
+            'catatan_umum' => 'nullable|string',
+        ]);
+    }
+
+    /**
+     * Update or create details, return id detail terakhir
+     */
+    private function saveDetails(GeneralCheckup $checkup, array $details): ?int
+    {
+        if (empty($details)) {
+            return null;
+        }
+
+        // Ambil semua standard sekaligus: [standard_id => check_indicator_id]
+        $standardMap = CheckIndicatorStandard::whereIn('id', array_column($details, 'check_indicator_standard_id'))
+            ->pluck('check_indicator_id', 'id');
+
+        $detailId = null;
+
+        foreach ($details as $detailData) {
+            $standardId = $detailData['check_indicator_standard_id'];
+
+            $detail = CheckupDetail::updateOrCreate(
+                [
+                    'general_checkup_id' => $checkup->id,
+                    'check_indicator_standard_id' => $standardId,
+                ],
+                [
+                    'check_indicator_id' => $standardMap[$standardId] ?? null,
+                    'status' => $detailData['status'],
+                    'catatan' => $detailData['catatan'] ?? null,
+                ]
+            );
+
+            $detailId = $detail->id;
+        }
+
+        return $detailId;
+    }
+
+    /**
      * Move checkup to history
+     * Butuh: details.checkIndicator, details.checkIndicatorStandard, partReplacements.part sudah di-load
      */
     private function moveToHistory(GeneralCheckup $checkup)
     {
         Log::info('Moving to history, checkup ID: ' . $checkup->id);
-        
-        // Create history checkup
+
         $history = HistoryCheckup::create([
-            'schedule_id' => $checkup->schedule_id,
-            'barang_id' => $checkup->barang_id,
-            'kode_barang' => $checkup->kode_barang,
-            'gambar' => $checkup->gambar,
-            'nama' => $checkup->nama,
-            'line' => $checkup->line,
+            'schedule_id'       => $checkup->schedule_id,
+            'barang_id'         => $checkup->barang_id,
+            'kode_barang'       => $checkup->kode_barang,
+            'gambar'            => $checkup->gambar,
+            'nama'              => $checkup->nama,
+            'line'              => $checkup->line,
             'tanggal_terjadwal' => $checkup->tanggal_terjadwal,
-            'tanggal_checkup' => $checkup->tanggal_checkup,
-            'mulai_perbaikan' => $checkup->mulai_perbaikan,
-            'waktu_selesai' => $checkup->waktu_selesai,
-            'durasi_perbaikan' => $checkup->calculateDuration(),
-            'status' => 'finish',
-            'catatan_umum' => $checkup->catatan_umum,
-            'total_ok' => $checkup->details->where('status', 'ok')->count(),
-            'total_ng' => $checkup->details->where('status', 'ng')->count(),
-            'total_part_used' => $checkup->partReplacements->sum('quantity_used'),
+            'tanggal_checkup'   => $checkup->tanggal_checkup,
+            'mulai_perbaikan'   => $checkup->mulai_perbaikan,
+            'waktu_selesai'     => $checkup->waktu_selesai,
+            'durasi_perbaikan'  => $checkup->calculateDuration(),
+            'status'            => 'finish',
+            'catatan_umum'      => $checkup->catatan_umum,
+            'total_ok'          => $checkup->details->where('status', 'ok')->count(),
+            'total_ng'          => $checkup->details->where('status', 'ng')->count(),
+            'total_part_used'   => $checkup->partReplacements->sum('quantity_used'),
         ]);
 
-        Log::info('History created, ID: ' . $history->id);
+        // Prefetch inhouse & outhouse sekali query, key by checkup_detail_id
+        $inhouseRequests = InhouseRequest::where('general_checkup_id', $checkup->id)
+            ->orderBy('id')
+            ->get()
+            ->unique('checkup_detail_id')
+            ->keyBy('checkup_detail_id');
 
-        // Copy details to history with NG action data
+        $outhouseRequests = OuthouseRequest::where('general_checkup_id', $checkup->id)
+            ->orderBy('id')
+            ->get()
+            ->unique('checkup_detail_id')
+            ->keyBy('checkup_detail_id');
+
+        $allParts = $checkup->partReplacements;
+
         foreach ($checkup->details as $detail) {
             $ngActionData = null;
 
-            // Get NG action data based on type by querying directly
-            if ($detail->ng_action_type === 'inhouse') {
-                $inhouseRequest = InhouseRequest::where('checkup_detail_id', $detail->id)
-                    ->where('general_checkup_id', $checkup->id)
-                    ->first();
-                
-                if ($inhouseRequest) {
-                    Log::info('Processing inhouse request for detail: ' . $detail->id);
-                    $ngActionData = [
-                        'problem' => $inhouseRequest->problem,
-                        'proses_dilakukan' => $inhouseRequest->proses_dilakukan,
-                        'mesin' => $inhouseRequest->mesin,
-                        'status' => $inhouseRequest->status,
-                    ];
-                }
-            } elseif ($detail->ng_action_type === 'outhouse') {
-                $outhouseRequest = OuthouseRequest::where('checkup_detail_id', $detail->id)
-                    ->where('general_checkup_id', $checkup->id)
-                    ->first();
-                
-                if ($outhouseRequest) {
-                    Log::info('Processing outhouse request for detail: ' . $detail->id);
-                    $ngActionData = [
-                        'problem' => $outhouseRequest->problem,
-                        'mesin' => $outhouseRequest->mesin,
-                        'supplier' => $outhouseRequest->supplier,
-                        'status' => $outhouseRequest->status,
-                    ];
-                }
+            if ($detail->ng_action_type === 'inhouse' && isset($inhouseRequests[$detail->id])) {
+                $req = $inhouseRequests[$detail->id];
+                $ngActionData = [
+                    'problem'          => $req->problem,
+                    'proses_dilakukan' => $req->proses_dilakukan,
+                    'mesin'            => $req->mesin,
+                    'status'           => $req->status,
+                ];
+            } elseif ($detail->ng_action_type === 'outhouse' && isset($outhouseRequests[$detail->id])) {
+                $req = $outhouseRequests[$detail->id];
+                $ngActionData = [
+                    'problem'  => $req->problem,
+                    'mesin'    => $req->mesin,
+                    'supplier' => $req->supplier,
+                    'status'   => $req->status,
+                ];
             }
 
             $historyDetail = HistoryCheckupDetail::create([
-                'history_checkup_id' => $history->id,
-                'check_indicator_id' => $detail->check_indicator_id,
+                'history_checkup_id'          => $history->id,
+                'check_indicator_id'          => $detail->check_indicator_id,
                 'check_indicator_standard_id' => $detail->check_indicator_standard_id,
-                'nama_bagian' => $detail->checkIndicator->nama_bagian ?? '-',
-                'poin' => $detail->checkIndicatorStandard->poin ?? '-',
-                'status' => $detail->status,
-                'catatan' => $detail->catatan,
-                'ng_action_type' => $detail->ng_action_type,
-                'ng_action_status' => $detail->ng_action_status,
-                'ng_action_data' => $ngActionData,
+                'nama_bagian'                 => $detail->checkIndicator->nama_bagian ?? '-',
+                'poin'                        => $detail->checkIndicatorStandard->poin ?? '-',
+                'status'                      => $detail->status,
+                'catatan'                     => $detail->catatan,
+                'ng_action_type'              => $detail->ng_action_type,
+                'ng_action_status'            => $detail->ng_action_status,
+                'ng_action_data'              => $ngActionData,
             ]);
 
-            Log::info('History detail created, ID: ' . $historyDetail->id . ', NG Action Type: ' . $detail->ng_action_type . ', NG Action Data: ' . json_encode($ngActionData));
-
-            // Copy part replacements linked to this detail
-            $detailParts = CheckupPartReplacement::where('checkup_detail_id', $detail->id)
-                ->where('general_checkup_id', $checkup->id)
-                ->get();
-                
-            foreach ($detailParts as $partReplacement) {
-                HistoryCheckupPartReplacement::create([
-                    'history_checkup_id' => $history->id,
-                    'history_checkup_detail_id' => $historyDetail->id,
-                    'part_id' => $partReplacement->part_id,
-                    'kode_part' => $partReplacement->part->kode_part ?? '-',
-                    'nama_part' => $partReplacement->part->nama ?? '-',
-                    'quantity_used' => $partReplacement->quantity_used,
-                    'catatan' => $partReplacement->catatan,
-                ]);
+            // Part yang terhubung ke detail ini (filter collection, tanpa query)
+            foreach ($allParts->where('checkup_detail_id', $detail->id) as $partReplacement) {
+                $this->createHistoryPart($history->id, $historyDetail->id, $partReplacement);
             }
         }
 
-        // Copy general part replacements (not linked to specific detail)
-        $generalParts = $checkup->partReplacements()->whereNull('checkup_detail_id')->get();
-        foreach ($generalParts as $partReplacement) {
-            HistoryCheckupPartReplacement::create([
-                'history_checkup_id' => $history->id,
-                'history_checkup_detail_id' => null,
-                'part_id' => $partReplacement->part_id,
-                'kode_part' => $partReplacement->part->kode_part ?? '-',
-                'nama_part' => $partReplacement->part->nama ?? '-',
-                'quantity_used' => $partReplacement->quantity_used,
-                'catatan' => $partReplacement->catatan,
-            ]);
+        // Part umum (tidak terhubung ke detail)
+        foreach ($allParts->whereNull('checkup_detail_id') as $partReplacement) {
+            $this->createHistoryPart($history->id, null, $partReplacement);
         }
 
         // Update schedule
@@ -542,23 +541,28 @@ class GeneralCheckupController extends Controller
             $schedule->save();
         }
 
-        Log::info('Deleting general checkup and related data');
-
-        // Delete inhouse and outhouse requests first
+        // Hapus data checkup aktif
         InhouseRequest::where('general_checkup_id', $checkup->id)->delete();
         OuthouseRequest::where('general_checkup_id', $checkup->id)->delete();
-        
-        // Delete checkup part replacements
         CheckupPartReplacement::where('general_checkup_id', $checkup->id)->delete();
-        
-        // Delete checkup details
         CheckupDetail::where('general_checkup_id', $checkup->id)->delete();
-        
-        // Finally delete the checkup
         $checkup->delete();
 
-        Log::info('Successfully moved to history');
+        Log::info('Successfully moved to history, history ID: ' . $history->id);
 
         return $history;
+    }
+
+    private function createHistoryPart(int $historyId, ?int $historyDetailId, $partReplacement): void
+    {
+        HistoryCheckupPartReplacement::create([
+            'history_checkup_id'        => $historyId,
+            'history_checkup_detail_id' => $historyDetailId,
+            'part_id'                   => $partReplacement->part_id,
+            'kode_part'                 => $partReplacement->part->kode_part ?? '-',
+            'nama_part'                 => $partReplacement->part->nama ?? '-',
+            'quantity_used'             => $partReplacement->quantity_used,
+            'catatan'                   => $partReplacement->catatan,
+        ]);
     }
 }

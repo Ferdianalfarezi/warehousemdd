@@ -178,6 +178,8 @@ class BarangController extends Controller
     {
         $request->validate(['excel_file' => 'required|file|mimes:xlsx,xls|max:10240']);
 
+        set_time_limit(300);
+
         try {
             $sheet = IOFactory::load($request->file('excel_file')->getRealPath())->getActiveSheet();
             $rows  = $sheet->toArray(null, true, true, false);
@@ -192,42 +194,54 @@ class BarangController extends Controller
                 return response()->json(['success' => false, 'message' => 'Kolom DELIVERY PART CODE tidak ditemukan!'], 422);
             }
 
-            $grouped  = $this->groupRows($rows, $headerIdx, $colMap);
-            $imported = 0;
-            $updated  = 0;
+            $grouped = $this->groupRows($rows, $headerIdx, $colMap);
+
+            // Ambil semua kode_barang yang sudah ada sekali query (dinormalisasi uppercase + trim)
+            $existing = Barang::pluck('kode_barang')
+                ->mapWithKeys(fn ($kode) => [strtoupper(trim($kode)) => true])
+                ->all();
+
+            $imported      = 0;
+            $skipped       = 0;
+            $detailsAdded  = 0;
 
             DB::beginTransaction();
             foreach ($grouped as $deliveryCode => $data) {
-                $barang = Barang::where('kode_barang', $deliveryCode)->first();
+                $key = strtoupper(trim($deliveryCode));
 
-                if (!$barang) {
-                    $barang = Barang::create([
-                        'kode_barang' => $deliveryCode,
-                        'nama'        => $data['part_name'] ?: '-',
-                        'cust'        => $data['cust'],
-                        'model'       => $data['model'],
-                        'supplier_id' => null,
-                    ]);
-                    $imported++;
-                } else {
-                    $barang->update([
-                        'cust'  => $data['cust']  ?: $barang->cust,
-                        'model' => $data['model'] ?: $barang->model,
-                    ]);
-                    $updated++;
+                // Sudah ada → skip, tidak diubah sama sekali
+                if (isset($existing[$key])) {
+                    $skipped++;
+                    continue;
                 }
 
-                DiesDetail::where('barang_id', $barang->id)->delete();
+                $barang = Barang::create([
+                    'kode_barang' => $deliveryCode,
+                    'nama'        => $data['part_name'] ?: '-',
+                    'cust'        => $data['cust'],
+                    'model'       => $data['model'],
+                    'supplier_id' => null,
+                ]);
+
                 foreach ($data['details'] as $detail) {
                     DiesDetail::create(['barang_id' => $barang->id] + $detail);
+                    $detailsAdded++;
                 }
+
+                $existing[$key] = true;
+                $imported++;
             }
             DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => "Import selesai! {$imported} barang baru, {$updated} barang diupdate.",
-                'stats'   => ['imported' => $imported, 'updated' => $updated, 'total' => count($grouped)],
+                'message' => "Import selesai! {$imported} barang baru ({$detailsAdded} dies detail), {$skipped} barang sudah ada dan di-skip.",
+                'stats'   => [
+                    'imported'      => $imported,
+                    'skipped'       => $skipped,
+                    'details_added' => $detailsAdded,
+                    'total'         => count($grouped),
+                ],
             ]);
         } catch (\Exception $e) {
             DB::rollBack();

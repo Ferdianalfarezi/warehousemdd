@@ -43,7 +43,8 @@ tr[data-status="on_trial"] {
     background: rgba(234, 179, 8, 0.05);
 }
 
-/* Row highlight berdasarkan sisa Stock FG (dihitung dalam Jam dari created_at) */
+/* Row highlight berdasarkan sisa Stock FG
+   (dihitung di controller: tanggal_pengajuan + kekuatan_stock_fg jam, dibanding sekarang) */
 tr[data-stock-level="critical"] {
     background: rgba(220, 38, 38, 0.25) !important;
 }
@@ -132,7 +133,7 @@ tr[data-stock-level="warning"] {
     $onProcessCount = $requestRepairs->where('status', 'on_process')->count();
     $onTrialCount = $requestRepairs->where('status', 'on_trial')->count();
 
-    // ⬅️ baru — konversi jam ke format Hari/Jam buat kolom Stock FG.
+    // Konversi jam ke format Hari/Jam buat kolom Stock FG.
     // < 24 jam tetep "X Jam". Pas 24 jam kelipatan -> "X Hari" (tanpa sisa jam).
     // Kalau ada sisa jam -> "X Hari Y Jam".
     function formatJamKeHari(?int $jam): string
@@ -212,20 +213,15 @@ tr[data-stock-level="warning"] {
         <tbody class="table-dark-custom text-center" id="tableBody" style="font-size: 1.15rem;">
             @forelse($requestRepairs as $rr)
                 @php
-                    // Stock FG satuan Jam. Elapsed dihitung dari created_at (timestamp asli),
-                    // BUKAN tanggal_pengajuan (kolom itu cast 'date', gak nyimpen jam).
-                    // Threshold critical <=4 jam, warning <=8 jam — asumsi, tinggal ganti kalau beda.
-                    $stockLevel = null;
-                    if (!is_null($rr->kekuatan_stock_fg)) {
-                        $hoursElapsed = (int) $rr->created_at->diffInHours(now());
-                        $sisaStockFg  = $rr->kekuatan_stock_fg - $hoursElapsed;
-
-                        if ($sisaStockFg <= 4) {
-                            $stockLevel = 'critical';
-                        } elseif ($sisaStockFg <= 8) {
-                            $stockLevel = 'warning';
-                        }
-                    }
+                    // ⬅️ diubah — pakai hasil hitung dari AndonRequestRepairController
+                    // (sisa = tanggal_pengajuan + kekuatan_stock_fg jam - sekarang)
+                    // red    -> sisa <= 1 hari (termasuk yang udah lewat)
+                    // yellow -> sisa > 1 hari s/d 3 hari
+                    $stockLevel = match ($rr->urgency ?? 'normal') {
+                        'red'    => 'critical',
+                        'yellow' => 'warning',
+                        default  => null,
+                    };
                 @endphp
                 <tr data-status="{{ $rr->status }}"
                     @if($stockLevel) data-stock-level="{{ $stockLevel }}" @endif
@@ -292,7 +288,7 @@ tr[data-stock-level="warning"] {
                 </tr>
             @empty
                 <tr>
-                    <td colspan="11">
+                    <td colspan="12">
                         <div class="empty-state" style="text-align: center; padding: 4rem 2rem; color: #666;">
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 120px; height: 120px; margin: 0 auto 1rem; opacity: 0.3;">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
