@@ -16,13 +16,68 @@ class CheckIndicatorController extends Controller
 {
     public function index()
     {
-        $checkIndicators = CheckIndicator::with(['barang', 'standards'])
-            ->latest()
-            ->get();
+        // Data tabel di-load via AJAX (getData), sama seperti Barangs index
+        return view('check-indicators.index');
+    }
 
-        $barangs = Barang::all();
+    // ── AJAX: table data ────────────────────────────────────
+    public function getData(Request $request)
+    {
+        $search  = $request->get('search', '');
+        $perPage = $request->get('per_page', 20);
+        $page    = max(1, (int) $request->get('page', 1));
 
-        return view('check-indicators.index', compact('checkIndicators', 'barangs'));
+        $query = CheckIndicator::with('barang:id,kode_barang,nama,gambar')
+            ->withCount('standards')
+            ->when($search, fn ($q) => $q->where(function ($q2) use ($search) {
+                $q2->where('nama_bagian', 'like', "%{$search}%")
+                   ->orWhereHas('barang', fn ($bq) => $bq->where('kode_barang', 'like', "%{$search}%")
+                                                        ->orWhere('nama', 'like', "%{$search}%"));
+            }));
+
+        $total = $query->count();
+
+        if ($perPage === 'all') {
+            $indicators = $query->latest()->get();
+            $perPageInt = $total ?: 1;
+        } else {
+            $perPageInt = max(1, (int) $perPage);
+            $indicators = $query->latest()->skip(($page - 1) * $perPageInt)->take($perPageInt)->get();
+        }
+
+        $totalPages = $perPage === 'all' ? 1 : (int) ceil($total / $perPageInt);
+
+        $data = $indicators->values()->map(fn ($ci, $i) => [
+            'id'              => $ci->id,
+            'row_number'      => (($page - 1) * $perPageInt) + $i + 1,
+            'nama_bagian'     => $ci->nama_bagian,
+            'standards_count' => $ci->standards_count,
+            'kode_barang'     => $ci->barang?->kode_barang,
+            'nama_barang'     => $ci->barang?->nama,
+            'gambar_url'      => $ci->barang?->gambar ? asset('storage/barangs/' . $ci->barang->gambar) : null,
+        ]);
+
+        return response()->json([
+            'success'    => true,
+            'data'       => $data,
+            'pagination' => [
+                'total'        => $total,
+                'per_page'     => $perPageInt,
+                'current_page' => $page,
+                'total_pages'  => $totalPages,
+                'from'         => $total ? (($page - 1) * $perPageInt) + 1 : 0,
+                'to'           => min($page * $perPageInt, $total),
+            ],
+        ]);
+    }
+
+    // ── AJAX: pilihan barang untuk dropdown Create/Edit (di-load sekali saat modal dibuka) ──
+    public function barangOptions()
+    {
+        return response()->json([
+            'success' => true,
+            'data'    => Barang::orderBy('kode_barang')->get(['id', 'kode_barang', 'nama']),
+        ]);
     }
 
     public function store(Request $request)
@@ -125,12 +180,10 @@ class CheckIndicatorController extends Controller
     public function edit(CheckIndicator $checkIndicator)
     {
         $checkIndicator->load(['barang', 'standards']);
-        $barangs = Barang::all();
 
         return response()->json([
             'success' => true,
             'data' => $checkIndicator,
-            'barangs' => $barangs,
         ]);
     }
 

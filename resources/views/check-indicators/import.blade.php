@@ -89,7 +89,7 @@
                     text: result.message,
                     showConfirmButton: false,
                     timer: 2000,
-                }).then(() => location.reload());
+                }).then(() => { closeImportModal(); loadIndicators(); });
             } else {
                 if (result.errors && result.errors.excel_file) {
                     document.getElementById('error-import-excel_file').textContent = result.errors.excel_file[0];

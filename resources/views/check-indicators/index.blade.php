@@ -48,7 +48,6 @@
                     id="searchInput"
                     class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
                     placeholder="Search by barang, bagian..."
-                    onkeyup="searchTable()"
                 >
             </div>
 
@@ -56,7 +55,6 @@
             <div class="flex-shrink-0">
                 <select 
                     id="perPageSelect" 
-                    onchange="changePerPage()"
                     class="px-5 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition"
                 >
                     <option value="20">20</option>
@@ -70,7 +68,16 @@
 
     <!-- Table Card -->
     <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto relative">
+            <div id="loadingOverlay" class="hidden absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center z-10">
+                <div class="flex items-center space-x-3">
+                    <svg class="animate-spin h-8 w-8 text-black" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span class="text-gray-600 font-medium">Loading...</span>
+                </div>
+            </div>
             <table class="w-full">
                 <thead class="bg-gray-50 border-b border-gray-200">
                     <tr>
@@ -81,96 +88,28 @@
                         <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Aksi</th>
                     </tr>
                 </thead>
-
                 <tbody class="divide-y divide-gray-200" id="checkIndicatorsTableBody">
-                    @forelse ($checkIndicators as $indicator)
-                        <tr class="hover:bg-gray-50 transition-colors">
-                            <!-- No -->
-                            <td class="px-6 py-4 text-sm text-gray-900">
-                                {{ $loop->iteration }}
-                            </td>
-
-                            <!-- Barang + Gambar -->
-                            <td class="px-6 py-4">
-                                <div class="flex items-center gap-3">
-                                    @if ($indicator->barang->gambar)
-                                        <img src="{{ asset('storage/barangs/' . $indicator->barang->gambar) }}"
-                                             alt="{{ $indicator->barang->nama }}"
-                                             class="w-12 h-12 rounded-lg object-cover border border-gray-200">
-                                    @else
-                                        <div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
-                                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                                            </svg>
-                                        </div>
-                                    @endif
-
-                                    <div>
-                                        <p class="text-sm font-semibold text-gray-900">{{ $indicator->barang->nama }}</p>
-                                        <p class="text-xs text-gray-500">{{ $indicator->barang->kode_barang }}</p>
-                                    </div>
-                                </div>
-                            </td>
-
-                            <!-- Nama Bagian -->
-                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">
-                                {{ $indicator->nama_bagian }}
-                            </td>
-
-                            <!-- Total Standards -->
-                            <td class="px-6 py-4">
-                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                    {{ $indicator->standards->count() }} Standards
-                                </span>
-                            </td>
-
-                            <!-- Aksi -->
-                            <td class="px-6 py-4 text-center">
-                                <div class="flex items-center justify-center gap-2">
-                                    <button onclick="viewDetails({{ $indicator->id }})"
-                                            class="bg-yellow-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition">
-                                        Detail
-                                    </button>
-
-                                    <button onclick="openEditModal({{ $indicator->id }})"
-                                            class="bg-orange-500 hover:bg-yellow-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition">
-                                        Edit
-                                    </button>
-
-                                    <button onclick="deleteCheckIndicator({{ $indicator->id }})"
-                                            class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium transition">
-                                        Delete
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="5" class="px-6 py-16 text-center">
-                                <div class="flex flex-col items-center">
-                                    <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
-                                    </svg>
-                                    <p class="mt-4 text-gray-600 font-semibold">No check indicators found</p>
-                                    <p class="text-sm text-gray-500">Click "Add Check Indicator" or "Import Excel" to create one</p>
-                                </div>
-                            </td>
-                        </tr>
-                    @endforelse
+                    <tr>
+                        <td colspan="5" class="px-6 py-16 text-center">
+                            <svg class="animate-spin h-8 w-8 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <p class="mt-4 text-gray-500">Loading data...</p>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
 
-        <!-- Footer Pagination Info -->
         <div class="bg-gray-50 border-t border-gray-200 px-6 py-4">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div class="text-sm text-gray-600">
-                    Showing <span id="showingFrom" class="font-medium">1</span> to
+                    Showing <span id="showingFrom" class="font-medium">0</span> to
                     <span id="showingTo" class="font-medium">0</span> of
                     <span id="totalEntries" class="font-medium">0</span> entries
                 </div>
+                <div id="paginationContainer" class="flex items-center space-x-2"></div>
             </div>
         </div>
     </div>
@@ -186,124 +125,266 @@
 
 @push('scripts')
 <script>
-    let allIndicators = [];
-    let filteredIndicators = [];
-    let currentPerPage = 20;
+// ============================================
+// STATE
+// ============================================
+let currentPage   = 1;
+let perPage       = 20;
+let searchQuery   = '';
+let totalPages    = 1;
+let isLoading     = false;
+let searchTimeout = null;
 
-    document.addEventListener('DOMContentLoaded', function() {
-        const rows = document.querySelectorAll('#checkIndicatorsTableBody tr');
-        rows.forEach((row, index) => {
-            if (!row.querySelector('td[colspan]')) {
-                allIndicators.push({
-                    element: row.cloneNode(true),
-                    searchText: row.textContent.toLowerCase()
-                });
-            }
-        });
-        
-        filteredIndicators = [...allIndicators];
-        updateTable();
+const BTN_PAGE          = 'px-3 py-1.5 rounded-lg border text-xs transition';
+const BTN_PAGE_ACTIVE   = 'bg-black text-white border-black font-semibold';
+const BTN_PAGE_NORMAL   = 'border-gray-300 text-gray-700 hover:bg-gray-50';
+const BTN_PAGE_DISABLED = 'border-gray-200 text-gray-400 cursor-not-allowed';
+
+// ============================================
+// INIT
+// ============================================
+document.addEventListener('DOMContentLoaded', function () {
+    loadIndicators();
+
+    document.getElementById('searchInput').addEventListener('input', function () {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchQuery = this.value;
+            currentPage = 1;
+            loadIndicators();
+        }, 300);
     });
 
-    function searchTable() {
-        const searchInput = document.getElementById('searchInput').value.toLowerCase();
-        
-        if (searchInput === '') {
-            filteredIndicators = [...allIndicators];
+    document.getElementById('perPageSelect').addEventListener('change', function () {
+        perPage     = this.value === 'all' ? 'all' : parseInt(this.value);
+        currentPage = 1;
+        loadIndicators();
+    });
+});
+
+// ============================================
+// LOAD DATA
+// ============================================
+async function loadIndicators() {
+    if (isLoading) return;
+    isLoading = true;
+    showLoading(true);
+    try {
+        const params = new URLSearchParams({ page: currentPage, per_page: perPage, search: searchQuery });
+        const res    = await fetch(`/check-indicators/data?${params}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
+        });
+        const result = await res.json();
+        if (result.success) {
+            renderTable(result.data);
+            renderPagination(result.pagination);
+            updateShowingInfo(result.pagination);
         } else {
-            filteredIndicators = allIndicators.filter(indicator => indicator.searchText.includes(searchInput));
+            showEmpty('Gagal memuat data');
         }
-        
-        updateTable();
+    } catch (err) {
+        showEmpty('Error memuat data. Coba refresh halaman.');
+    } finally {
+        isLoading = false;
+        showLoading(false);
     }
+}
 
-    function changePerPage() {
-        const perPage = document.getElementById('perPageSelect').value;
-        currentPerPage = perPage === 'all' ? filteredIndicators.length : parseInt(perPage);
-        updateTable();
+// ============================================
+// RENDER TABLE
+// ============================================
+function renderTable(rows) {
+    const tbody = document.getElementById('checkIndicatorsTableBody');
+    if (!rows || rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-16 text-center">
+            <p class="mt-4 text-gray-600 font-semibold">${searchQuery ? 'No results found' : 'No check indicators found'}</p>
+            <p class="text-sm text-gray-500">${searchQuery ? 'Coba kata kunci lain' : 'Click "Add Check Indicator" or "Import Excel" to create one'}</p>
+        </td></tr>`;
+        return;
     }
+    tbody.innerHTML = rows.map(r => `
+        <tr class="hover:bg-gray-50 transition-colors">
+            <td class="px-6 py-4 text-sm text-gray-900">${r.row_number}</td>
+            <td class="px-6 py-4">
+                <div class="flex items-center gap-3">
+                    ${imageCell(r)}
+                    <div>
+                        <p class="text-sm font-semibold text-gray-900">${esc(r.nama_barang) || '-'}</p>
+                        <p class="text-xs text-gray-500">${esc(r.kode_barang)}</p>
+                    </div>
+                </div>
+            </td>
+            <td class="px-6 py-4 text-sm font-semibold text-gray-900">${esc(r.nama_bagian)}</td>
+            <td class="px-6 py-4">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    ${r.standards_count} Standards
+                </span>
+            </td>
+            <td class="px-6 py-4">${actionButtons(r.id)}</td>
+        </tr>
+    `).join('');
+}
 
-    function updateTable() {
-        const tbody = document.getElementById('checkIndicatorsTableBody');
-        tbody.innerHTML = '';
-        
-        const totalEntries = filteredIndicators.length;
-        const displayCount = currentPerPage > totalEntries ? totalEntries : currentPerPage;
-        
-        document.getElementById('showingFrom').textContent = totalEntries > 0 ? '1' : '0';
-        document.getElementById('showingTo').textContent = displayCount;
-        document.getElementById('totalEntries').textContent = totalEntries;
-        
-        if (totalEntries === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="px-6 py-12 text-center">
-                        <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                        </svg>
-                        <p class="text-gray-600 mt-4 font-semibold">No results found</p>
-                    </td>
-                </tr>
-            `;
-            return;
-        }
-        
-        filteredIndicators.slice(0, displayCount).forEach((indicator, index) => {
-            const row = indicator.element.cloneNode(true);
-            const firstCell = row.querySelector('td:first-child');
-            if (firstCell) {
-                firstCell.textContent = index + 1;
-            }
-            tbody.appendChild(row);
-        });
+function imageCell(r) {
+    if (!r.gambar_url) {
+        return `<div class="w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+            </svg></div>`;
     }
+    return `<img src="${r.gambar_url}" alt="${esc(r.nama_barang)}" loading="lazy" class="w-12 h-12 rounded-lg object-cover border border-gray-200">`;
+}
 
-    async function deleteCheckIndicator(id) {
-        const result = await Swal.fire({
-            title: 'Are you sure?',
-            text: "This check indicator will be deleted!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#000',
-            cancelButtonColor: '#d33',
-            confirmButtonText: 'Yes, delete it!'
-        });
+// Tombol ikon, style inline (sama seperti Request Repair / General Checkup)
+function makeBtn(onclick, title, bgColor, bgHoverColor, svgPath) {
+    return '<button type="button" onclick="' + onclick + '" title="' + title + '"'
+         + ' style="background-color:' + bgColor + ';width:32px;height:32px;border-radius:8px;transition:background-color .15s;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:none;cursor:pointer;"'
+         + ' onmouseover="this.style.backgroundColor=\'' + bgHoverColor + '\'"'
+         + ' onmouseout="this.style.backgroundColor=\'' + bgColor + '\'">'
+         + '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">'
+         + svgPath
+         + '</svg></button>';
+}
 
-        if (result.isConfirmed) {
+function actionButtons(id) {
+    return '<div style="display:flex;align-items:center;justify-content:center;gap:4px;">'
+        + makeBtn('viewDetails(' + id + ')', 'Detail', '#eab308', '#ca8a04',
+            '<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>')
+        + makeBtn('openEditModal(' + id + ')', 'Edit', '#f97316', '#ea580c',
+            '<path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>')
+        + makeBtn('deleteCheckIndicator(' + id + ')', 'Hapus', '#ef4444', '#dc2626',
+            '<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>')
+        + '</div>';
+}
+
+// ============================================
+// PAGINATION
+// ============================================
+function renderPagination(pagination) {
+    const container = document.getElementById('paginationContainer');
+    totalPages = pagination.total_pages;
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+
+    const pageBtn = (label, page, extraClass, disabled = false) =>
+        `<button onclick="goToPage(${page})" ${disabled ? 'disabled' : ''} class="${BTN_PAGE} ${extraClass}">${label}</button>`;
+
+    const max = 5;
+    let start = Math.max(1, currentPage - Math.floor(max / 2));
+    let end   = Math.min(totalPages, start + max - 1);
+    if (end - start < max - 1) start = Math.max(1, end - max + 1);
+
+    let html = pageBtn('&laquo;', currentPage - 1, currentPage === 1 ? BTN_PAGE_DISABLED : BTN_PAGE_NORMAL, currentPage === 1);
+    if (start > 1) {
+        html += pageBtn(1, 1, BTN_PAGE_NORMAL);
+        if (start > 2) html += `<span class="px-1 text-gray-500 text-xs">...</span>`;
+    }
+    for (let i = start; i <= end; i++) {
+        html += pageBtn(i, i, i === currentPage ? BTN_PAGE_ACTIVE : BTN_PAGE_NORMAL);
+    }
+    if (end < totalPages) {
+        if (end < totalPages - 1) html += `<span class="px-1 text-gray-500 text-xs">...</span>`;
+        html += pageBtn(totalPages, totalPages, BTN_PAGE_NORMAL);
+    }
+    html += pageBtn('&raquo;', currentPage + 1, currentPage === totalPages ? BTN_PAGE_DISABLED : BTN_PAGE_NORMAL, currentPage === totalPages);
+
+    container.innerHTML = html;
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages || page === currentPage) return;
+    currentPage = page;
+    loadIndicators();
+}
+
+function updateShowingInfo(p) {
+    document.getElementById('showingFrom').textContent  = p.from;
+    document.getElementById('showingTo').textContent    = p.to;
+    document.getElementById('totalEntries').textContent = p.total;
+}
+
+// ============================================
+// HELPERS
+// ============================================
+function esc(str) {
+    if (!str) return '';
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+}
+function showLoading(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
+function showEmpty(msg) {
+    document.getElementById('checkIndicatorsTableBody').innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-500">${msg}</td></tr>`;
+}
+
+// ============================================
+// BARANG OPTIONS (dropdown Create/Edit) — di-load sekali saat modal pertama dibuka,
+// tidak lagi dirender di HTML (1700+ barang x 2 dropdown bikin halaman berat)
+// ============================================
+let barangOptionsPromise = null;
+
+function ensureBarangOptions() {
+    if (!barangOptionsPromise) {
+        barangOptionsPromise = (async () => {
+            const selects = ['createBarangId', 'editBarangId'].map(id => document.getElementById(id));
+            selects.forEach(s => { s.disabled = true; s.options[0].text = 'Loading barang...'; });
             try {
-                const response = await fetch(`/check-indicators/${id}`, {
-                    method: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                    }
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Deleted!',
-                        text: data.message,
-                        showConfirmButton: false,
-                        timer: 1500
-                    }).then(() => location.reload());
-                } else {
-                    Swal.fire('Error!', data.message, 'error');
-                }
-            } catch (error) {
-                Swal.fire('Error!', 'Failed to delete check indicator!', 'error');
+                const res    = await fetch('/check-indicators/barang-options', { headers: { 'Accept': 'application/json' } });
+                const result = await res.json();
+                const html   = result.data.map(b => `<option value="${b.id}">${esc(b.kode_barang)} - ${esc(b.nama)}</option>`).join('');
+                selects.forEach(s => s.insertAdjacentHTML('beforeend', html));
+            } catch (e) {
+                barangOptionsPromise = null; // biar bisa dicoba lagi saat modal dibuka ulang
+                Swal.fire('Error!', 'Gagal memuat daftar barang', 'error');
+            } finally {
+                selects.forEach(s => { s.disabled = false; s.options[0].text = '-- Select Barang --'; });
             }
-        }
+        })();
     }
+    return barangOptionsPromise;
+}
 
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeViewModal();
-            closeCreateModal();
-            closeEditModal();
-            closeImportModal();
-        }
+// ============================================
+// DELETE
+// ============================================
+async function deleteCheckIndicator(id) {
+    const result = await Swal.fire({
+        title: 'Are you sure?',
+        text: "This check indicator will be deleted!",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#000',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!'
     });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const response = await fetch(`/check-indicators/${id}`, {
+            method: 'DELETE',
+            headers: { 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            await Swal.fire({ icon: 'success', title: 'Deleted!', text: data.message, showConfirmButton: false, timer: 1500 });
+            loadIndicators();
+        } else {
+            Swal.fire('Error!', data.message, 'error');
+        }
+    } catch (error) {
+        Swal.fire('Error!', 'Failed to delete check indicator!', 'error');
+    }
+}
+
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+        closeViewModal();
+        closeCreateModal();
+        closeEditModal();
+        closeImportModal();
+    }
+});
 </script>
 @endpush

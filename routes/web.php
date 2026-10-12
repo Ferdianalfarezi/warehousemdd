@@ -115,6 +115,10 @@ Route::middleware('auth')->group(function () {
     // ── Check Indicators ───────────────────────────────────────────────────
     Route::post('/check-indicators/import', [CheckIndicatorController::class, 'importExcel'])
     ->name('check-indicators.import');
+    Route::get('/check-indicators/data', [CheckIndicatorController::class, 'getData'])
+    ->name('check-indicators.data');
+    Route::get('/check-indicators/barang-options', [CheckIndicatorController::class, 'barangOptions'])
+    ->name('check-indicators.barang-options');
     Route::resource('check-indicators', CheckIndicatorController::class);
 
     // ── Users ──────────────────────────────────────────────────────────────

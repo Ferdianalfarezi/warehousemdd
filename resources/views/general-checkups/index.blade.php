@@ -8,7 +8,7 @@
         <!-- Page Header -->
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-3xl font-bold text-gray-900">General Checkups</h1>
+                <h1 class="text-3xl font-bold text-gray-900">Preventive Checkups</h1>
                 <p class="text-gray-600 mt-1">Manage maintenance checkups for scheduled items</p>
             </div>
             <button 

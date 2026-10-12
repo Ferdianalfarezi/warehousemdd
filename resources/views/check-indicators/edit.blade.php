@@ -22,9 +22,6 @@
                 <select id="editBarangId" name="barang_id" required onchange="loadEditBarangDetails(this.value)"
                     class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition">
                     <option value="">-- Select Barang --</option>
-                    @foreach($barangs as $barang)
-                        <option value="{{ $barang->id }}">{{ $barang->kode_barang }} - {{ $barang->nama }}</option>
-                    @endforeach
                 </select>
                 <span class="text-red-500 text-sm error-message" id="error-edit-barang_id"></span>
             </div>
@@ -117,7 +114,11 @@
 
     async function openEditModal(id) {
         try {
-            const response = await fetch(`/check-indicators/${id}/edit`);
+            // Daftar barang harus sudah ada sebelum barang_id di-set ke dropdown
+            const [response] = await Promise.all([
+                fetch(`/check-indicators/${id}/edit`),
+                ensureBarangOptions(),
+            ]);
 
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}`);
@@ -337,7 +338,7 @@
                     text: result.message,
                     showConfirmButton: false,
                     timer: 1500
-                }).then(() => location.reload());
+                }).then(() => { closeEditModal(); loadIndicators(); });
             } else {
                 if (result.errors) {
                     Object.keys(result.errors).forEach(key => {

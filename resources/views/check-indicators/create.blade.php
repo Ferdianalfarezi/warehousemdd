@@ -21,9 +21,6 @@
                 <select id="createBarangId" name="barang_id" required onchange="loadBarangDetails(this.value)"
                     class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-black focus:ring-2 focus:ring-black transition">
                     <option value="">-- Select Barang --</option>
-                    @foreach($barangs as $barang)
-                        <option value="{{ $barang->id }}">{{ $barang->kode_barang }} - {{ $barang->nama }}</option>
-                    @endforeach
                 </select>
                 <span class="text-red-500 text-sm error-message" id="error-create-barang_id"></span>
             </div>
@@ -98,6 +95,9 @@
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         setTimeout(() => modal.classList.add('modal-fade-in'), 10);
+
+        // Daftar barang di-load sekali (lihat index.blade.php)
+        ensureBarangOptions();
     }
 
     function closeCreateModal() {
@@ -310,7 +310,7 @@
                     text: result.message,
                     showConfirmButton: false,
                     timer: 1500
-                }).then(() => location.reload());
+                }).then(() => { closeCreateModal(); loadIndicators(); });
             } else {
                 if (result.errors) {
                     Object.keys(result.errors).forEach(key => {
