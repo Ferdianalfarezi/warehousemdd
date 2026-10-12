@@ -456,7 +456,7 @@ document.addEventListener('DOMContentLoaded', function () {
 async function autoPopulate() {
     const result = await Swal.fire({
         title: 'Auto Populate Checkups?',
-        text: "Sistem akan mengambil data dari schedule yang statusnya 'Segera' atau 'Hari Ini'",
+        text: "Sistem akan mengambil data dari schedule yang sudah jatuh tempo (hari ini / terlambat). Ini juga berjalan otomatis setiap halaman dibuka.",
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#000',

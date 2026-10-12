@@ -15,6 +15,7 @@ use App\Models\InhouseRequest;
 use App\Models\OuthouseRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
@@ -28,6 +29,14 @@ class GeneralCheckupController extends Controller
      */
     public function index(Request $request)
     {
+        // Auto populate otomatis tiap halaman dibuka (tanpa harus klik tombol).
+        // Gagal populate tidak boleh bikin halaman error.
+        try {
+            $this->populateFromSchedules();
+        } catch (\Exception $e) {
+            Log::error('Auto Populate (index) Error: ' . $e->getMessage());
+        }
+
         $perPage = max(1, (int) ($request->per_page ?: 20));
 
         $checkups = GeneralCheckup::with(['barang', 'schedule', 'starter:id,nama'])
@@ -219,59 +228,78 @@ class GeneralCheckupController extends Controller
     }
 
     /**
-     * Auto populate dari schedule hari_ini / terlambat
+     * Auto populate dari schedule yang sudah jatuh tempo (tombol manual)
      */
     public function autoPopulate()
     {
-        DB::beginTransaction();
         try {
-            $schedules = Schedule::with('barang.line')
-                ->whereIn('status', ['hari_ini', 'terlambat'])
-                ->get();
-
-            // Cek existing sekali query, bukan per schedule
-            $existing = GeneralCheckup::whereIn('schedule_id', $schedules->pluck('id'))
-                ->whereIn('status', self::ACTIVE_STATUS)
-                ->pluck('schedule_id')
-                ->flip();
-
-            $created = 0;
-            $skipped = 0;
-
-            foreach ($schedules as $schedule) {
-                if (isset($existing[$schedule->id])) {
-                    $skipped++;
-                    continue;
-                }
-
-                GeneralCheckup::create([
-                    'schedule_id'       => $schedule->id,
-                    'barang_id'         => $schedule->barang_id,
-                    'kode_barang'       => $schedule->kode_barang,
-                    'gambar'            => $schedule->gambar,
-                    'nama'              => $schedule->nama,
-                    'line'              => $schedule->barang->line->nama_line ?? null,
-                    'tanggal_terjadwal' => $schedule->service_berikutnya,
-                    'status'            => 'pending',
-                ]);
-                $created++;
-            }
-
-            DB::commit();
+            $result = $this->populateFromSchedules();
 
             return response()->json([
                 'success' => true,
-                'message' => "Auto-populate selesai! Created: {$created}, Skipped: {$skipped}",
-                'created' => $created,
-                'skipped' => $skipped
+                'message' => "Auto-populate selesai! Created: {$result['created']}, Skipped: {$result['skipped']}",
+                'created' => $result['created'],
+                'skipped' => $result['skipped']
             ]);
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('Auto Populate Error: ' . $e->getMessage());
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal auto-populate checkup!'
             ], 500);
+        }
+    }
+
+    /**
+     * Buat checkup pending untuk schedule yang sudah jatuh tempo (hari ini / terlambat)
+     * dan belum punya checkup aktif. Dipanggil otomatis tiap index dibuka + tombol Auto Populate.
+     *
+     * Jatuh tempo dihitung dari tanggal service_berikutnya, bukan kolom status schedule
+     * (kolom status cuma di-update saat schedule di-save, jadi bisa basi).
+     */
+    private function populateFromSchedules(): array
+    {
+        // Lock biar 2 user yang buka bersamaan tidak bikin checkup dobel
+        $lock = Cache::lock('general-checkups:auto-populate', 30);
+        if (!$lock->get()) {
+            return ['created' => 0, 'skipped' => 0];
+        }
+
+        try {
+            $dueQuery = Schedule::whereDate('service_berikutnya', '<=', today());
+
+            $activeScheduleIds = GeneralCheckup::whereIn('status', self::ACTIVE_STATUS)
+                ->whereNotNull('schedule_id')
+                ->select('schedule_id');
+
+            $schedules = (clone $dueQuery)
+                ->whereNotIn('id', $activeScheduleIds)
+                ->with('barang.line')
+                ->get();
+
+            DB::transaction(function () use ($schedules) {
+                foreach ($schedules as $schedule) {
+                    GeneralCheckup::create([
+                        'schedule_id'       => $schedule->id,
+                        'barang_id'         => $schedule->barang_id,
+                        'kode_barang'       => $schedule->kode_barang,
+                        'gambar'            => $schedule->gambar,
+                        'nama'              => $schedule->nama,
+                        'line'              => $schedule->barang->line->nama_line ?? null,
+                        'tanggal_terjadwal' => $schedule->service_berikutnya,
+                        'status'            => 'pending',
+                    ]);
+                }
+            });
+
+            $created = $schedules->count();
+
+            return [
+                'created' => $created,
+                'skipped' => $dueQuery->count() - $created,
+            ];
+        } finally {
+            $lock->release();
         }
     }
 
