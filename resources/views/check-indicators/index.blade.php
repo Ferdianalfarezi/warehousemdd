@@ -89,7 +89,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200" id="checkIndicatorsTableBody">
-                    <tr>
+                    <tr id="initialLoadingRow">
                         <td colspan="5" class="px-6 py-16 text-center">
                             <svg class="animate-spin h-8 w-8 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -312,7 +312,11 @@ function esc(str) {
     d.textContent = str;
     return d.innerHTML;
 }
-function showLoading(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
+// Load pertama sudah ada baris "Loading data..." di tabel, jadi overlay tidak perlu ikut muncul (biar tidak ada 2 loading)
+function showLoading(show) {
+    if (show && document.getElementById('initialLoadingRow')) return;
+    document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+}
 function showEmpty(msg) {
     document.getElementById('checkIndicatorsTableBody').innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-gray-500">${msg}</td></tr>`;
 }
