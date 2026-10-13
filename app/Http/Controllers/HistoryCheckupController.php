@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Barang;
 use App\Models\HistoryCheckup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,15 @@ class HistoryCheckupController extends Controller
      */
     public function index()
     {
-        return view('history-checkups.index');
+        // Pilihan filter customer (history checkup tidak punya kolom customer -> ambil dari master barang)
+        $customers = Barang::whereIn('id', HistoryCheckup::whereNotNull('barang_id')->select('barang_id'))
+            ->whereNotNull('cust')
+            ->where('cust', '!=', '')
+            ->distinct()
+            ->orderBy('cust')
+            ->pluck('cust');
+
+        return view('history-checkups.index', compact('customers'));
     }
 
     /**
@@ -106,12 +115,15 @@ class HistoryCheckupController extends Controller
     }
 
     /**
-     * Stats + ranking barang
+     * Stats + data grafik Pareto (ikut filter yang sama dengan tabel)
      */
-    public function summary()
+    public function summary(Request $request)
     {
+        $base = HistoryCheckup::query();
+        $this->applyFilters($base, $request);
+
         // Gabung semua agregat jadi 1 query
-        $agg = HistoryCheckup::query()
+        $agg = (clone $base)
             ->selectRaw('
                 COUNT(*) as total,
                 COALESCE(SUM(total_ok), 0) as total_ok,
@@ -127,13 +139,15 @@ class HistoryCheckupController extends Controller
 
         $stats = [
             'total'            => (int) $agg->total,
-            'this_month'       => HistoryCheckup::thisMonth()->count(),
+            'this_month'       => (clone $base)->thisMonth()->count(),
             'avg_duration'     => (int) round($agg->avg_duration),
             'total_parts_used' => (int) $agg->total_parts_used,
             'success_rate'     => $totalCheck > 0 ? round(($totalOk / $totalCheck) * 100, 2) : 0,
         ];
 
-        $byPreventive = HistoryCheckup::query()
+        // Pareto Top 10 per dies. Total keseluruhan dikirim terpisah (total & total_ng)
+        // supaya % kumulatif dihitung dari semua data, bukan cuma Top 10.
+        $byPreventive = (clone $base)
             ->whereNotNull('barang_id')
             ->select(
                 'barang_id',
@@ -143,10 +157,10 @@ class HistoryCheckupController extends Controller
             )
             ->groupBy('barang_id')
             ->orderByDesc('total')
-            ->limit(5)
+            ->limit(10)
             ->get();
 
-        $byNg = HistoryCheckup::query()
+        $byNg = (clone $base)
             ->whereNotNull('barang_id')
             ->select(
                 'barang_id',
@@ -157,12 +171,13 @@ class HistoryCheckupController extends Controller
             ->groupBy('barang_id')
             ->havingRaw('SUM(total_ng) > 0')
             ->orderByDesc('total')
-            ->limit(5)
+            ->limit(10)
             ->get();
 
         return response()->json([
             'success'       => true,
             'stats'         => $stats,
+            'total_ng'      => $totalNg,
             'by_preventive' => $byPreventive,
             'by_ng'         => $byNg,
         ]);
@@ -184,13 +199,15 @@ class HistoryCheckupController extends Controller
 
         $histories = HistoryCheckup::with([
             'details.partReplacements',
-            'details.inhouseRequest',
-            'details.outhouseRequest',
             'partReplacements',
         ])
             ->where('barang_id', $barangId)
             ->orderBy('id')
             ->get();
+
+        // inhouse_request / outhouse_request di detail itu accessor (dari ng_action_data), bukan relasi,
+        // jadi tidak bisa di-eager-load. Ikutkan ke JSON lewat append() untuk dipakai modal detail.
+        $histories->each(fn ($h) => $h->details->each->append(['inhouse_request', 'outhouse_request']));
 
         if ($histories->isEmpty()) {
             return response()->json([
@@ -315,6 +332,12 @@ class HistoryCheckupController extends Controller
 
         if ($request->filled('date_to')) {
             $query->whereDate('history_checkups.tanggal_checkup', '<=', $request->date_to);
+        }
+
+        // Customer (bisa lebih dari 1) via master barang
+        $customers = array_filter((array) $request->input('customers', []), fn ($c) => $c !== null && $c !== '');
+        if ($customers) {
+            $query->whereIn('history_checkups.barang_id', Barang::whereIn('cust', $customers)->select('id'));
         }
     }
 

@@ -12,63 +12,90 @@ class HistoryRepairController extends Controller
     // ── Index view ──────────────────────────────────────────
     public function index()
     {
-        return view('history_repairs.index');
+        // Pilihan filter customer
+        $customers = RequestRepairHistory::whereNotNull('customer')
+            ->where('customer', '!=', '')
+            ->distinct()
+            ->orderBy('customer')
+            ->pluck('customer');
+
+        return view('history_repairs.index', compact('customers'));
     }
 
-    // ── AJAX: summary untuk cards di atas tabel ─────────────
-    public function getSummary()
+    // ── AJAX: data grafik Pareto (ikut filter yang sama dengan tabel) ──
+    public function getSummary(Request $request)
     {
-        $byKategori = RequestRepairHistory::selectRaw('kategori_problem, COUNT(*) as total')
-            ->groupBy('kategori_problem')
-            ->orderByDesc('total')
-            ->limit(5)
+        $base = RequestRepairHistory::query();
+        $this->applyFilters($base, $request);
+
+        // Pareto kategori: semua kategori (jumlahnya sedikit)
+        $byKategori = (clone $base)
+            ->selectRaw("COALESCE(NULLIF(kategori_problem, ''), '-') as label, COUNT(*) as value")
+            ->groupBy('label')
+            ->orderByDesc('value')
             ->get();
 
-        $byPartNo = RequestRepairHistory::selectRaw('part_no, nama, MAX(repair_count) as total')
-            ->groupBy('part_no', 'nama')
-            ->orderByDesc('total')
-            ->limit(5)
+        // Pareto part no: jumlah repair closed per part no, Top 10.
+        // total = semua repair (bukan cuma Top 10) supaya % kumulatif tetap benar.
+        $byPartNo = (clone $base)
+            ->selectRaw('part_no as label, MAX(nama) as title, COUNT(*) as value')
+            ->groupBy('part_no')
+            ->orderByDesc('value')
+            ->limit(10)
             ->get();
 
         return response()->json([
             'success'     => true,
+            'total'       => (clone $base)->count(),
             'by_kategori' => $byKategori,
             'by_part_no'  => $byPartNo,
         ]);
     }
 
+    // ── Filter bersama: search + tgl closed + customer (bisa lebih dari 1) ──
+    private function applyFilters($query, Request $request): void
+    {
+        $t = 'request_repair_histories.';
+
+        $search = $request->get('search', '');
+        if ($search !== '' && $search !== null) {
+            $query->where(function ($q2) use ($search, $t) {
+                $q2->where($t . 'no',                 'like', "%{$search}%")
+                   ->orWhere($t . 'part_no',          'like', "%{$search}%")
+                   ->orWhere($t . 'nama',             'like', "%{$search}%")
+                   ->orWhere($t . 'customer',         'like', "%{$search}%")
+                   ->orWhere($t . 'line_mesin',       'like', "%{$search}%")
+                   ->orWhere($t . 'process_no',       'like', "%{$search}%")
+                   ->orWhere($t . 'kategori_problem', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate($t . 'closed_at', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->whereDate($t . 'closed_at', '<=', $request->date_to);
+        }
+
+        $customers = array_filter((array) $request->input('customers', []), fn ($c) => $c !== null && $c !== '');
+        if ($customers) {
+            $query->whereIn($t . 'customer', $customers);
+        }
+    }
+
         // ── AJAX: table data ─────────────────────────────────────
     public function getData(Request $request)
     {
-        $search   = $request->get('search', '');
         $perPage  = $request->get('per_page', 20);
         $page     = (int) $request->get('page', 1);
-        $dateFrom = $request->get('date_from');
-        $dateTo   = $request->get('date_to');
 
         $latestIds = RequestRepairHistory::selectRaw('MAX(id) as id')
             ->groupBy('part_no');
 
         $query = RequestRepairHistory::joinSub($latestIds, 'latest', function ($join) {
                 $join->on('request_repair_histories.id', '=', 'latest.id');
-            })
-            ->when($search, function ($q) use ($search) {
-                $q->where(function ($q2) use ($search) {
-                    $q2->where('request_repair_histories.no',                 'like', "%{$search}%")
-                       ->orWhere('request_repair_histories.part_no',          'like', "%{$search}%")
-                       ->orWhere('request_repair_histories.nama',             'like', "%{$search}%")
-                       ->orWhere('request_repair_histories.customer',         'like', "%{$search}%")
-                       ->orWhere('request_repair_histories.line_mesin',       'like', "%{$search}%")
-                       ->orWhere('request_repair_histories.process_no',       'like', "%{$search}%")
-                       ->orWhere('request_repair_histories.kategori_problem', 'like', "%{$search}%");
-                });
-            })
-            ->when($dateFrom, function ($q) use ($dateFrom) {
-                $q->whereDate('request_repair_histories.closed_at', '>=', $dateFrom);
-            })
-            ->when($dateTo, function ($q) use ($dateTo) {
-                $q->whereDate('request_repair_histories.closed_at', '<=', $dateTo);
             });
+        $this->applyFilters($query, $request);
 
         $total = $query->count();
 

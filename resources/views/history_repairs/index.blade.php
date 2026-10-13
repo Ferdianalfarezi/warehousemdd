@@ -20,10 +20,10 @@
         </a>
     </div>
 
-    {{-- Summary Cards --}}
+    {{-- Grafik Pareto (ikut filter di bawah) --}}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-        {{-- Top Kategori --}}
+        {{-- Pareto Kategori --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div class="flex items-center gap-2 mb-4">
                 <div class="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
@@ -31,25 +31,15 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-5 5a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 10V5a2 2 0 012-2z"/>
                     </svg>
                 </div>
-                <p class="text-sm font-semibold text-gray-700">Kategori Terbanyak</p>
+                <p class="text-sm font-semibold text-gray-700">Pareto Kategori Problem</p>
             </div>
-            <div id="summaryKategori" class="space-y-2">
-                <div class="flex items-center gap-2">
-                    <div class="h-4 w-24 bg-gray-100 rounded animate-pulse"></div>
-                    <div class="h-4 flex-1 bg-gray-100 rounded animate-pulse"></div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="h-4 w-20 bg-gray-100 rounded animate-pulse"></div>
-                    <div class="h-4 flex-1 bg-gray-100 rounded animate-pulse"></div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="h-4 w-16 bg-gray-100 rounded animate-pulse"></div>
-                    <div class="h-4 flex-1 bg-gray-100 rounded animate-pulse"></div>
-                </div>
+            <div style="position:relative;height:280px;">
+                <canvas id="paretoKategori"></canvas>
+                <div id="paretoKategoriEmpty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;" class="text-xs text-gray-400">Belum ada data</div>
             </div>
         </div>
 
-        {{-- Top Part No --}}
+        {{-- Pareto Part No --}}
         <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div class="flex items-center gap-2 mb-4">
                 <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
@@ -57,21 +47,11 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
                     </svg>
                 </div>
-                <p class="text-sm font-semibold text-gray-700">Part No Terbanyak Repair</p>
+                <p class="text-sm font-semibold text-gray-700">Pareto Part No Terbanyak Repair <span class="text-xs font-normal text-gray-400">(Top 10)</span></p>
             </div>
-            <div id="summaryPartNo" class="space-y-2">
-                <div class="flex items-center gap-2">
-                    <div class="h-4 w-24 bg-gray-100 rounded animate-pulse"></div>
-                    <div class="h-4 flex-1 bg-gray-100 rounded animate-pulse"></div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="h-4 w-20 bg-gray-100 rounded animate-pulse"></div>
-                    <div class="h-4 flex-1 bg-gray-100 rounded animate-pulse"></div>
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="h-4 w-16 bg-gray-100 rounded animate-pulse"></div>
-                    <div class="h-4 flex-1 bg-gray-100 rounded animate-pulse"></div>
-                </div>
+            <div style="position:relative;height:280px;">
+                <canvas id="paretoPartNo"></canvas>
+                <div id="paretoPartNoEmpty" style="display:none;position:absolute;inset:0;align-items:center;justify-content:center;" class="text-xs text-gray-400">Belum ada data</div>
             </div>
         </div>
 
@@ -103,6 +83,15 @@
                     class="hidden text-xs text-gray-500 hover:text-gray-800 underline whitespace-nowrap">
                     Reset
                 </button>
+            </div>
+
+            {{-- Customer Filter (bisa pilih lebih dari 1) --}}
+            <div style="min-width:220px;max-width:360px;flex:1 1 220px;">
+                <select id="customerFilter" multiple style="width:100%;">
+                    @foreach($customers as $cust)
+                        <option value="{{ $cust }}">{{ $cust }}</option>
+                    @endforeach
+                </select>
             </div>
 
             <div class="flex-shrink-0 md:ml-auto">
@@ -144,7 +133,7 @@
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-gray-200" id="historyTableBody">
-                    <tr>
+                    <tr id="initialLoadingRow">
                         <td colspan="9" class="px-6 py-16 text-center">
                             <svg class="animate-spin h-8 w-8 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -174,6 +163,8 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script src="{{ asset('js/pareto-chart.js') }}?v={{ filemtime(public_path('js/pareto-chart.js')) }}"></script>
 <script>
 // ════════════════════════════════════════════════════════
 // STATE
@@ -183,6 +174,7 @@ let perPage       = 20;
 let searchQuery   = '';
 let dateFrom      = '';
 let dateTo        = '';
+let customers     = [];
 let totalPages    = 1;
 let isLoading     = false;
 let searchTimeout = null;
@@ -196,14 +188,6 @@ const KATEGORI_BADGE = {
     'Dimensi':     'bg-purple-100 text-purple-800',
     'Human Error': 'bg-red-100 text-red-800',
     'Accessories': 'bg-green-100 text-green-800',
-};
-
-const KATEGORI_BAR = {
-    'Dies':        'bg-blue-400',
-    'Burry':       'bg-yellow-400',
-    'Dimensi':     'bg-purple-400',
-    'Human Error': 'bg-red-400',
-    'Accessories': 'bg-green-400',
 };
 
 function okngBadge(val) {
@@ -223,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('searchInput').addEventListener('input', function () {
         clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => { searchQuery = this.value; currentPage = 1; loadData(); }, 300);
+        searchTimeout = setTimeout(() => { searchQuery = this.value; onFiltersChanged(); }, 300);
     });
 
     document.getElementById('perPageSelect').addEventListener('change', function () {
@@ -234,16 +218,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     document.getElementById('dateFromInput').addEventListener('change', function () {
         dateFrom = this.value;
-        currentPage = 1;
         toggleClearDateBtn();
-        loadData();
+        onFiltersChanged();
     });
 
     document.getElementById('dateToInput').addEventListener('change', function () {
         dateTo = this.value;
-        currentPage = 1;
         toggleClearDateBtn();
-        loadData();
+        onFiltersChanged();
     });
 
     document.getElementById('clearDateBtn').addEventListener('click', function () {
@@ -251,82 +233,108 @@ document.addEventListener('DOMContentLoaded', function () {
         dateTo = '';
         document.getElementById('dateFromInput').value = '';
         document.getElementById('dateToInput').value   = '';
-        currentPage = 1;
         toggleClearDateBtn();
-        loadData();
+        onFiltersChanged();
     });
+
+    initCustomerFilter();
 });
 
 function toggleClearDateBtn() {
     document.getElementById('clearDateBtn').classList.toggle('hidden', !dateFrom && !dateTo);
 }
 
+// Filter berubah -> tabel balik ke halaman 1 + grafik ikut di-update
+function onFiltersChanged() {
+    currentPage = 1;
+    loadData();
+    loadSummary();
+}
+
+// Query string filter yang sama untuk tabel & grafik
+function filterParams(extra) {
+    const params = new URLSearchParams(Object.assign({
+        search: searchQuery,
+        date_from: dateFrom,
+        date_to: dateTo,
+    }, extra || {}));
+    customers.forEach(c => params.append('customers[]', c));
+    return params;
+}
+
 // ════════════════════════════════════════════════════════
-// LOAD SUMMARY
+// CUSTOMER FILTER (select2 multiple, fallback ke select biasa)
 // ════════════════════════════════════════════════════════
+function initCustomerFilter() {
+    const select = document.getElementById('customerFilter');
+    const onChange = () => {
+        customers = Array.from(select.selectedOptions).map(o => o.value);
+        onFiltersChanged();
+    };
+
+    const start = Date.now();
+    (function tryInit() {
+        if (window.jQuery && jQuery.fn && jQuery.fn.select2) {
+            jQuery(select).select2({ placeholder: 'Semua Customer', allowClear: true, width: '100%', closeOnSelect: false })
+                .on('change', onChange);
+        } else if (Date.now() - start < 5000) {
+            setTimeout(tryInit, 50);
+        } else {
+            select.addEventListener('change', onChange);
+        }
+    })();
+}
+
+// ════════════════════════════════════════════════════════
+// LOAD SUMMARY (grafik Pareto, ikut filter)
+// ════════════════════════════════════════════════════════
+let summaryRequestId = 0;
+
 async function loadSummary() {
+    const requestId = ++summaryRequestId;
     try {
-        const res    = await fetch('/history-repairs/summary', { headers: { 'Accept': 'application/json' } });
+        const res    = await fetch('/history-repairs/summary?' + filterParams(), { headers: { 'Accept': 'application/json' } });
         const result = await res.json();
-        if (!result.success) return;
-        renderKategoriSummary(result.by_kategori);
-        renderPartNoSummary(result.by_part_no);
+        if (requestId !== summaryRequestId || !result.success) return; // ada request filter yang lebih baru
+
+        ['paretoKategoriEmpty', 'paretoPartNoEmpty'].forEach(id => { document.getElementById(id).textContent = 'Belum ada data'; });
+
+        renderPareto('paretoKategori', result.by_kategori.map(i => ({ label: i.label, value: i.value })), {
+            total: result.total,
+            barColor: '#8b5cf6',
+            valueLabel: 'Repair',
+            emptyId: 'paretoKategoriEmpty',
+        });
+
+        renderPareto('paretoPartNo', result.by_part_no.map(i => ({ label: i.label, title: i.title, value: i.value })), {
+            total: result.total,
+            barColor: '#3b82f6',
+            valueLabel: 'Repair',
+            emptyId: 'paretoPartNoEmpty',
+            onBarClick: item => openDetailModal(item.label),
+        });
     } catch (e) {
-        document.getElementById('summaryKategori').innerHTML = '<p class="text-xs text-gray-400">Gagal memuat data</p>';
-        document.getElementById('summaryPartNo').innerHTML   = '<p class="text-xs text-gray-400">Gagal memuat data</p>';
+        if (requestId !== summaryRequestId) return;
+        ['paretoKategoriEmpty', 'paretoPartNoEmpty'].forEach(id => {
+            const el = document.getElementById(id);
+            el.textContent = 'Gagal memuat data';
+            el.style.display = 'flex';
+        });
     }
-}
-
-function renderKategoriSummary(data) {
-    const el = document.getElementById('summaryKategori');
-    if (!data || !data.length) { el.innerHTML = '<p class="text-xs text-gray-400">Belum ada data</p>'; return; }
-    const max = data[0].total;
-    el.innerHTML = data.map(function (item, idx) {
-        const barCls   = KATEGORI_BAR[item.kategori_problem]   || 'bg-gray-400';
-        const badgeCls = KATEGORI_BADGE[item.kategori_problem] || 'bg-gray-100 text-gray-700';
-        const pct      = max > 0 ? Math.round((item.total / max) * 100) : 0;
-        const rankCls  = idx === 0 ? 'text-yellow-600 font-bold' : 'text-gray-400';
-        return '<div class="flex items-center gap-2">'
-            + '<span class="text-xs w-4 text-center ' + rankCls + '">' + (idx + 1) + '</span>'
-            + '<span class="inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ' + badgeCls + ' w-24 justify-center flex-shrink-0">' + esc(item.kategori_problem) + '</span>'
-            + '<div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden"><div class="' + barCls + ' h-2 rounded-full transition-all" style="width:' + pct + '%"></div></div>'
-            + '<span class="text-xs font-semibold text-gray-700 w-6 text-right">' + item.total + '</span>'
-            + '</div>';
-    }).join('');
-}
-
-function renderPartNoSummary(data) {
-    const el = document.getElementById('summaryPartNo');
-    if (!data || !data.length) { el.innerHTML = '<p class="text-xs text-gray-400">Belum ada data</p>'; return; }
-    const max = data[0].total;
-    el.innerHTML = data.map(function (item, idx) {
-        const pct     = max > 0 ? Math.round((item.total / max) * 100) : 0;
-        const rankCls = idx === 0 ? 'text-yellow-600 font-bold' : 'text-gray-400';
-        const barCls  = idx === 0 ? 'bg-red-400' : idx === 1 ? 'bg-orange-400' : 'bg-blue-300';
-        return '<div class="flex items-center gap-2">'
-            + '<span class="text-xs w-4 text-center ' + rankCls + '">' + (idx + 1) + '</span>'
-            + '<span class="text-[11px] font-mono text-gray-800 w-48 flex-shrink-0" title="' + esc(item.part_no) + '">' + esc(item.part_no) + '</span>'
-            + '<div class="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden"><div class="' + barCls + ' h-2 rounded-full transition-all" style="width:' + pct + '%"></div></div>'
-            + '<span class="text-xs font-semibold text-gray-700 w-12 text-right whitespace-nowrap">' + item.total + 'x repair</span>'
-            + '</div>';
-    }).join('');
 }
 
 // ════════════════════════════════════════════════════════
 // LOAD DATA
 // ════════════════════════════════════════════════════════
+let reloadQueued = false;
+
 async function loadData() {
-    if (isLoading) return;
+    // Filter diubah saat masih loading -> jalankan lagi setelah selesai (jangan dibuang)
+    if (isLoading) { reloadQueued = true; return; }
     isLoading = true;
     showLoading(true);
     try {
-        const params = new URLSearchParams({
-            page: currentPage,
-            per_page: perPage,
-            search: searchQuery,
-            date_from: dateFrom,
-            date_to: dateTo,
-        });
+        const params = filterParams({ page: currentPage, per_page: perPage });
         const res    = await fetch('/history-repairs/data?' + params, {
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }
         });
@@ -343,6 +351,7 @@ async function loadData() {
     } finally {
         isLoading = false;
         showLoading(false);
+        if (reloadQueued) { reloadQueued = false; loadData(); }
     }
 }
 
@@ -354,7 +363,7 @@ function renderTable(items) {
     if (!items || items.length === 0) {
         tbody.innerHTML = '<tr><td colspan="9" class="px-6 py-16 text-center">'
             + '<p class="text-gray-600 font-semibold">Tidak ada data history</p>'
-            + '<p class="text-gray-500 text-sm">' + (searchQuery || dateFrom || dateTo ? 'Coba kata kunci / rentang tanggal lain' : 'Belum ada repair yang closed') + '</p>'
+            + '<p class="text-gray-500 text-sm">' + (searchQuery || dateFrom || dateTo || customers.length ? 'Coba kata kunci / tanggal / customer lain' : 'Belum ada repair yang closed') + '</p>'
             + '</td></tr>';
         return;
     }
@@ -433,7 +442,11 @@ function esc(str) {
     d.textContent = String(str);
     return d.innerHTML;
 }
-function showLoading(show) { document.getElementById('loadingOverlay').classList.toggle('hidden', !show); }
+// Load pertama sudah ada baris "Loading data..." di tabel, jadi overlay tidak perlu ikut muncul (biar tidak ada 2 loading)
+function showLoading(show) {
+    if (show && document.getElementById('initialLoadingRow')) return;
+    document.getElementById('loadingOverlay').classList.toggle('hidden', !show);
+}
 function showEmpty(msg) {
     document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="9" class="px-6 py-12 text-center text-gray-500">' + msg + '</td></tr>';
 }

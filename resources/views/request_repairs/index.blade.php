@@ -1052,6 +1052,9 @@ function initCreatedBySelect2() {
 function openCreateModal() {
     modalShow('createModal');
     document.getElementById('createForm').reset();
+    // Tanggal pengajuan selalu hari ini (pakai tanggal lokal, bukan UTC). Halaman bisa saja dibuka sejak kemarin.
+    const now = new Date();
+    document.getElementById('createTanggal').value = [now.getFullYear(), String(now.getMonth() + 1).padStart(2, '0'), String(now.getDate()).padStart(2, '0')].join('-');
     document.getElementById('createNamaDisplay').value     = '';
     document.getElementById('createCustomerDisplay').value = '';
     // ⬅️ diubah — Process No sekarang input manual langsung, tidak ada select/toggle lagi

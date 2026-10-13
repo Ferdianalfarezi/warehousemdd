@@ -463,8 +463,8 @@ class RequestRepairController extends Controller
     {
         $authUser = auth()->user();
 
+        // tanggal_pengajuan tidak divalidasi dari input: selalu tanggal hari ini (lihat create di bawah)
         $validator = Validator::make($request->all(), [
-            'tanggal_pengajuan' => 'required|date',
             'group'             => 'required|in:A,B',
             'shift'             => 'required|in:Pagi,Malam',
             'jumlah_stroke'     => 'required|integer|min:0',
@@ -504,7 +504,7 @@ class RequestRepairController extends Controller
 
             $rr = RequestRepair::create([
                 'no'                => RequestRepair::generateNo(),
-                'tanggal_pengajuan' => $request->tanggal_pengajuan,
+                'tanggal_pengajuan' => today(), // fix hari ini, tidak bisa diatur dari form
                 'group'             => $request->group,
                 'shift'             => $request->shift,
                 'jumlah_stroke'     => $request->jumlah_stroke,

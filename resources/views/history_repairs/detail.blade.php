@@ -146,8 +146,7 @@
             {{-- Iframe --}}
             <iframe
                 id="printPreviewIframe"
-                style="display:none; width:100%; height:75vh; border:none;"
-                onload="onIframeLoaded()">
+                style="display:none; width:100%; height:75vh; border:none;">
             </iframe>
 
         </div>
@@ -191,6 +190,13 @@ function onIframeLoaded() {
     document.getElementById('printIframeLoading').style.display = 'none';
     document.getElementById('printPreviewIframe').style.display = 'block';
 }
+
+// Listener dipasang di sini (bukan onload="" inline) karena iframe kosong langsung memicu load
+// sebelum fungsi di atas terdefinisi. Load about:blank (awal halaman / saat modal ditutup) diabaikan.
+document.getElementById('printPreviewIframe').addEventListener('load', function () {
+    if (!this.src || this.src === 'about:blank') return;
+    onIframeLoaded();
+});
 
 function doPrint() {
     const iframe = document.getElementById('printPreviewIframe');

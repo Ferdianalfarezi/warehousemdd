@@ -22,9 +22,13 @@
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">
                             Tanggal Pengajuan <span class="text-red-500">*</span>
+                            <span style="display:inline-block;margin-left:4px;padding:1px 8px;border-radius:9999px;background-color:#dbeafe;color:#1e40af;font-size:11px;font-weight:600;vertical-align:middle;">Auto hari ini</span>
                         </label>
-                        <input type="date" name="tanggal_pengajuan" id="createTanggal"
-                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                        {{-- Fix tanggal hari ini, tidak bisa diubah (server juga selalu pakai tanggal hari ini) --}}
+                        <input type="date" name="tanggal_pengajuan" id="createTanggal" readonly tabindex="-1"
+                            value="{{ now()->toDateString() }}"
+                            style="background-color:#f3f4f6;cursor:not-allowed;pointer-events:none;"
+                            class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-600">
                         <p class="error-message text-xs text-red-500 mt-1" id="error-create-tanggal_pengajuan"></p>
                     </div>
                     <div>
