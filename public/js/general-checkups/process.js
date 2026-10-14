@@ -474,7 +474,10 @@ function openAddPartModal(checkupId, standardId) {
 function closeAddPartModal() {
     selectedStandardId = null;
     document.getElementById('addPartForm').reset();
-    
+    if (window.jQuery && jQuery('#partSelect').data('select2')) {
+        jQuery('#partSelect').val('').trigger('change');
+    }
+
     const modal = document.getElementById('addPartModal');
     modal.classList.add('hidden');
     modal.classList.remove('flex');
@@ -497,10 +500,32 @@ async function loadAvailableParts() {
                 option.dataset.stock = part.stock;
                 select.appendChild(option);
             });
+
+            initPartSearch();
         }
     } catch (error) {
         console.error('Error loading parts:', error);
     }
+}
+
+// Dropdown sparepart bisa di-search (select2). Kalau select2 belum/tidak ter-load, tetap pakai select biasa.
+function initPartSearch() {
+    if (!(window.jQuery && jQuery.fn && jQuery.fn.select2)) return;
+
+    const $select = jQuery('#partSelect');
+    if ($select.data('select2')) $select.select2('destroy');
+
+    $select.select2({
+        placeholder: 'Cari kode / nama part...',
+        width: '100%',
+        dropdownParent: jQuery('#addPartModal'), // biar search box bisa diketik di dalam modal
+    }).val('').trigger('change');
+
+    // select2 4.1 + jQuery 3.6 tidak auto-focus search box -> fokuskan manual biar bisa langsung ketik
+    $select.off('select2:open.focus').on('select2:open.focus', function () {
+        const field = document.querySelector('#addPartModal .select2-search__field');
+        if (field) field.focus();
+    });
 }
 
 // Add Part

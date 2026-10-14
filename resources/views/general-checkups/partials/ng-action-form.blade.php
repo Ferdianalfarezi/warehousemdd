@@ -1,21 +1,22 @@
 {{-- Form pilih tindakan NG. $sid = standard id, $cid = checkup id --}}
-<!-- Dropdown untuk pilih action type -->
-<div class="mb-3">
+<!-- Dropdown untuk pilih action type.
+     Inhouse & Outhouse sementara di-hide, tinggal Ganti Part -> dropdown disembunyikan & form Ganti Part langsung tampil.
+     Untuk mengaktifkan lagi: buka komentar opsi di bawah, hapus style display:none, dan kembalikan class "hidden" di #partForm. -->
+<div class="mb-3" style="display:none;">
     <label class="block text-sm font-medium text-gray-700 mb-2">Pilih Tindakan:</label>
-    <select 
+    <select
         id="actionTypeSelect-{{ $sid }}"
         onchange="showActionForm({{ $sid }})"
         class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black"
     >
-        <option value="">-- Pilih Tindakan --</option>
-        <option value="part">Ganti Part</option>
-        <option value="inhouse">Proses Inhouse</option>
-        <option value="outhouse">Proses Outhouse</option>
+        <option value="part" selected>Ganti Part</option>
+        {{-- <option value="inhouse">Proses Inhouse</option> --}}
+        {{-- <option value="outhouse">Proses Outhouse</option> --}}
     </select>
 </div>
 
 <!-- Form Ganti Part -->
-<div id="partForm-{{ $sid }}" class="hidden">
+<div id="partForm-{{ $sid }}">
     <button 
         type="button"
         onclick="openAddPartModal({{ $cid }}, {{ $sid }})"

@@ -409,6 +409,7 @@
                     </div>
 
                 @if(auth()->check() && auth()->user()->role_id != 4)
+                    {{-- Menu Approval (Inhouse / Outhouse) disembunyikan. Hapus pembungkus komentar ini untuk menampilkan lagi.
                     <!-- Approval -->
                     <div>
                         <button @click="toggleMenu('approval')"
@@ -451,6 +452,7 @@
                             </div>
                         </div>
                     </div>
+                    --}}
 
                     <!-- Andon -->
                     <div>
@@ -470,6 +472,7 @@
                         </button>
                         <div class="submenu-container" data-menu="andon" :class="openMenus.andon ? 'open' : ''">
                             <div class="ml-8 mt-1 space-y-1">
+                                {{-- Andon Inhouse & Outhouse disembunyikan. Hapus pembungkus komentar ini untuk menampilkan lagi.
                                 <a href="{{ route('andon.inhouse.index') }}" target="_blank"
                                 class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -484,6 +487,7 @@
                                     </svg>
                                     Outhouse
                                 </a>
+                                --}}
                                 <a href="{{ route('andon.general-checkup.index') }}" target="_blank"
                                 class="submenu-item flex items-center px-3 py-2.5 text-sm text-gray-300">
                                     <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -769,19 +773,23 @@
     }
 
     // ✅ Delay 3 detik — biar page render dulu, badge tidak urgent
+    // Menu Approval (Inhouse/Outhouse) sedang disembunyikan -> polling approval & toast notifikasinya ikut dimatikan.
+    // Set ke true kalau menu Approval ditampilkan lagi.
+    const APPROVAL_ENABLED = false;
+
     setTimeout(async () => {
-        await Promise.all([fetchApprovalCounts(), fetchTransactionCounts()]);
+        await Promise.all([APPROVAL_ENABLED ? fetchApprovalCounts() : null, fetchTransactionCounts()]);
         isFirstLoad = false;
 
         // Polling setiap 30 detik (bukan 10 — tidak perlu se-real-time itu)
-        setInterval(fetchApprovalCounts, 30000);
+        if (APPROVAL_ENABLED) setInterval(fetchApprovalCounts, 30000);
         setInterval(fetchTransactionCounts, 30000);
     }, 3000);
 
     // Update saat tab aktif kembali
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden && !isFirstLoad) {
-            fetchApprovalCounts();
+            if (APPROVAL_ENABLED) fetchApprovalCounts();
             fetchTransactionCounts();
         }
     });
