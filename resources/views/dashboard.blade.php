@@ -83,9 +83,39 @@
         </div>
     </div>
 
+    <!-- Resume Pareto (dari History Request Repair & History Checkups) -->
+    <div>
+        <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-bold text-gray-900">Resume Pareto</h2>
+            <p class="text-xs text-gray-500">Seluruh data history · garis oranye = % kumulatif, putus-putus = 80%</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            @foreach([
+                ['id' => 'dashParetoKategori',   'title' => 'Kategori Problem',         'source' => 'History Request Repair', 'url' => route('history-repairs.index')],
+                ['id' => 'dashParetoPartNo',     'title' => 'Part No Terbanyak Repair', 'source' => 'History Request Repair', 'url' => route('history-repairs.index')],
+                ['id' => 'dashParetoPreventive', 'title' => 'Dies Sering Preventive',   'source' => 'History Checkups',       'url' => route('history-checkups.index')],
+                ['id' => 'dashParetoNg',         'title' => 'Dies Paling Banyak NG',    'source' => 'History Checkups',       'url' => route('history-checkups.index')],
+            ] as $p)
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div class="flex items-start justify-between mb-2">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-800">{{ $p['title'] }}</p>
+                            <p class="text-xs text-gray-400">{{ $p['source'] }}</p>
+                        </div>
+                        <a href="{{ $p['url'] }}" class="text-xs text-gray-500 hover:text-gray-900 underline whitespace-nowrap">Lihat</a>
+                    </div>
+                    <div style="position:relative;height:240px;">
+                        <canvas id="{{ $p['id'] }}"></canvas>
+                        <div id="{{ $p['id'] }}Empty" style="display:flex;position:absolute;inset:0;align-items:center;justify-content:center;" class="text-xs text-gray-400">Memuat...</div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </div>
+
     <!-- Two Column Layout - Row 1 -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
+
         <!-- Low Stock Parts -->
         <div class="bg-white rounded-xl shadow-sm border border-gray-100">
             <div class="px-6 py-4 border-b border-gray-100">
@@ -339,6 +369,48 @@
 
 @push('scripts')
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ asset('js/pareto-chart.js') }}?v={{ filemtime(public_path('js/pareto-chart.js')) }}"></script>
+<script>
+// ============================================
+// RESUME PARETO — pakai endpoint summary yang sama dengan halaman History (tanpa filter)
+// ============================================
+document.addEventListener('DOMContentLoaded', async function () {
+    const empty = (ids, text) => ids.forEach(id => {
+        const el = document.getElementById(id + 'Empty');
+        el.textContent = text;
+        el.style.display = 'flex';
+    });
+
+    const getJson = url => fetch(url, { headers: { 'Accept': 'application/json' } }).then(r => r.json());
+
+    try {
+        const rr = await getJson('/history-repairs/summary');
+        ['dashParetoKategori', 'dashParetoPartNo'].forEach(id => { document.getElementById(id + 'Empty').textContent = 'Belum ada data'; });
+        renderPareto('dashParetoKategori', rr.by_kategori.map(i => ({ label: i.label, value: i.value })), {
+            total: rr.total, barColor: '#8b5cf6', valueLabel: 'Repair', emptyId: 'dashParetoKategoriEmpty',
+        });
+        renderPareto('dashParetoPartNo', rr.by_part_no.map(i => ({ label: i.label, title: i.title, value: i.value })), {
+            total: rr.total, barColor: '#3b82f6', valueLabel: 'Repair', emptyId: 'dashParetoPartNoEmpty',
+        });
+    } catch (e) {
+        empty(['dashParetoKategori', 'dashParetoPartNo'], 'Gagal memuat data');
+    }
+
+    try {
+        const hc = await getJson('/history-checkups/summary');
+        const toItems = rows => rows.map(r => ({ label: r.kode_barang, title: r.nama, value: Number(r.total) }));
+        ['dashParetoPreventive', 'dashParetoNg'].forEach(id => { document.getElementById(id + 'Empty').textContent = 'Belum ada data'; });
+        renderPareto('dashParetoPreventive', toItems(hc.by_preventive), {
+            total: hc.stats.total, barColor: '#3b82f6', valueLabel: 'Preventive', emptyId: 'dashParetoPreventiveEmpty',
+        });
+        renderPareto('dashParetoNg', toItems(hc.by_ng), {
+            total: hc.total_ng, barColor: '#ef4444', valueLabel: 'NG', emptyId: 'dashParetoNgEmpty',
+        });
+    } catch (e) {
+        empty(['dashParetoPreventive', 'dashParetoNg'], 'Gagal memuat data');
+    }
+});
+</script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Data dari backend untuk General Condition
