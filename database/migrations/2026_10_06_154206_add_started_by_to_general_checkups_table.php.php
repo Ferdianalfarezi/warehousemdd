@@ -8,6 +8,11 @@ return new class extends Migration
 {
     public function up(): void
     {
+        // Aman dijalankan ulang kalau kolom sudah ada di server
+        if (Schema::hasColumn('general_checkups', 'started_by')) {
+            return;
+        }
+
         Schema::table('general_checkups', function (Blueprint $table) {
             $table->foreignId('started_by')
                 ->nullable()
@@ -19,6 +24,10 @@ return new class extends Migration
 
     public function down(): void
     {
+        if (!Schema::hasColumn('general_checkups', 'started_by')) {
+            return;
+        }
+
         Schema::table('general_checkups', function (Blueprint $table) {
             $table->dropConstrainedForeignId('started_by');
         });
