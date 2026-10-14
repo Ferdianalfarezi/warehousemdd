@@ -158,6 +158,9 @@ class GeneralCheckupController extends Controller
         if ($isOnProcess) {
             $rules['mulai_perbaikan'] = 'required|date|before_or_equal:now';
             $rules['started_by']      = 'required|exists:users,id';
+            // Toggle durasi manual: aktif -> durasi preventive pakai input ini, bukan hitungan otomatis
+            $rules['durasi_manual_aktif'] = 'nullable|boolean';
+            $rules['durasi_manual_menit'] = 'nullable|required_if:durasi_manual_aktif,true,1|integer|min:1';
         }
 
         $validator = Validator::make($request->all(), $rules, [
@@ -166,6 +169,8 @@ class GeneralCheckupController extends Controller
             'mulai_perbaikan.before_or_equal' => 'Mulai perbaikan tidak boleh lebih dari waktu sekarang.',
             'started_by.required'             => 'PIC wajib dipilih.',
             'started_by.exists'               => 'PIC tidak ditemukan.',
+            'durasi_manual_menit.required_if' => 'Total durasi preventive wajib diisi kalau durasi manual aktif.',
+            'durasi_manual_menit.min'         => 'Total durasi preventive minimal 1 menit.',
         ]);
 
         if ($validator->fails()) {
@@ -183,6 +188,9 @@ class GeneralCheckupController extends Controller
                 $generalCheckup->mulai_perbaikan = $request->mulai_perbaikan;
                 $generalCheckup->tanggal_checkup = $generalCheckup->mulai_perbaikan->toDateString();
                 $generalCheckup->started_by      = $request->started_by;
+                $generalCheckup->durasi_manual_menit = $request->boolean('durasi_manual_aktif')
+                    ? (int) $request->durasi_manual_menit
+                    : null;
             }
 
             $generalCheckup->save();

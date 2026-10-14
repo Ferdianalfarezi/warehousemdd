@@ -22,6 +22,7 @@ class GeneralCheckup extends Model
         'mulai_perbaikan',
         'started_by',
         'waktu_selesai',
+        'durasi_manual_menit',
         'status',
         'catatan_umum',
     ];
@@ -69,6 +70,11 @@ class GeneralCheckup extends Model
      */
     public function calculateDuration()
     {
+        // Durasi manual (diset lewat modal Edit di index) menggantikan durasi otomatis
+        if ($this->durasi_manual_menit !== null) {
+            return (int) $this->durasi_manual_menit;
+        }
+
         if (!$this->mulai_perbaikan || !$this->waktu_selesai) {
             return null;
         }
@@ -76,7 +82,8 @@ class GeneralCheckup extends Model
         $mulai = Carbon::parse($this->mulai_perbaikan);
         $selesai = Carbon::parse($this->waktu_selesai);
 
-        return $mulai->diffInMinutes($selesai);
+        // Carbon 3 mengembalikan float -> bulatkan ke menit penuh
+        return (int) $mulai->diffInMinutes($selesai);
     }
 
     /**

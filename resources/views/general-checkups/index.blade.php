@@ -255,6 +255,7 @@
                                                 data-mulai-perbaikan="{{ optional($checkup->mulai_perbaikan)->format('Y-m-d\TH:i') }}"
                                                 data-started-by="{{ $checkup->started_by }}"
                                                 data-started-by-name="{{ $checkup->starter->nama ?? '' }}"
+                                                data-durasi-manual="{{ $checkup->durasi_manual_menit }}"
                                                 style="{{ $btnStyle }}background-color:#f97316;"
                                                 onmouseover="this.style.backgroundColor='#ea580c'" onmouseout="this.style.backgroundColor='#f97316'">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2">
@@ -364,7 +365,7 @@
 
 <!-- Edit Modal -->
 <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl">
+    <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl" style="max-height:90vh;overflow-y:auto;">
         <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between rounded-t-2xl">
             <div>
                 <h3 class="text-xl font-bold text-gray-900">Edit Checkup</h3>
@@ -409,6 +410,46 @@
                         @endforeach
                     </select>
                     <p id="editPicInfo" class="text-xs text-gray-500 mt-1"></p>
+                </div>
+
+                <!-- Total Durasi Preventive: otomatis (mulai -> selesai) atau manual lewat toggle -->
+                <div style="border:1px solid #fde68a;background-color:#fffbeb;border-radius:12px;padding:16px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                        <div>
+                            <p class="text-sm font-semibold text-gray-700">Total Durasi Preventive</p>
+                            <p class="text-xs text-gray-500" style="margin-top:2px;">
+                                Otomatis saat ini: <span id="editDurasiAutoLabel" class="font-semibold text-gray-700">-</span>
+                            </p>
+                        </div>
+                        <label for="editDurasiManualToggle" style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0;">
+                            <span id="editDurasiModeText" class="text-xs font-semibold text-gray-500">Otomatis</span>
+                            <input type="checkbox" id="editDurasiManualToggle" onchange="renderDurasiToggle()" style="position:absolute;opacity:0;width:1px;height:1px;">
+                            <span id="editDurasiTrack" style="position:relative;display:inline-block;width:44px;height:24px;border-radius:9999px;background-color:#d1d5db;transition:background-color .2s;">
+                                <span id="editDurasiKnob" style="position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:9999px;background-color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .2s;"></span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div id="editDurasiInputs" class="grid grid-cols-3 gap-3" style="margin-top:12px;">
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Hari</label>
+                            <input type="number" id="editDurasiHari" min="0" value="0"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Jam</label>
+                            <input type="number" id="editDurasiJam" min="0" max="23" value="0"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium text-gray-600 mb-1">Menit</label>
+                            <input type="number" id="editDurasiMenit" min="0" max="59" value="0"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500" style="margin-top:8px;">
+                        Kalau toggle aktif, durasi ini yang dipakai sebagai total durasi preventive (tersimpan ke History saat checkup selesai).
+                    </p>
                 </div>
             </div>
 
@@ -644,6 +685,14 @@ function openEditModal(btn) {
     document.getElementById('editMulaiPerbaikan').value = d.mulaiPerbaikan;
     setCurrentPic(d.startedBy, d.startedByName);
 
+    // Total durasi preventive: toggle aktif kalau sudah ada durasi manual.
+    // Input diisi durasi manual, atau durasi otomatis berjalan sebagai titik awal.
+    const manualMenit = d.durasiManual !== '' && d.durasiManual !== undefined ? parseInt(d.durasiManual, 10) : null;
+    document.getElementById('editDurasiManualToggle').checked = manualMenit !== null;
+    setDurasiInputs(manualMenit !== null ? manualMenit : autoDurasiMenit());
+    updateAutoDurasiLabel();
+    renderDurasiToggle();
+
     // #editModal punya style global di layouts/app (opacity 0 sampai ada class modal-fade-in)
     const modal = document.getElementById('editModal');
     modal.classList.remove('hidden');
@@ -675,6 +724,51 @@ function setCurrentPic(startedBy, startedByName) {
     info.textContent = `PIC saat ini: ${startedByName || 'User #' + startedBy}`;
 }
 
+// ===== Total Durasi Preventive (otomatis / manual) =====
+// Durasi otomatis = Mulai Perbaikan (field di modal) s/d sekarang, dalam menit
+function autoDurasiMenit() {
+    const mulai = document.getElementById('editMulaiPerbaikan').value;
+    if (!mulai) return 0;
+    return Math.max(0, Math.floor((Date.now() - new Date(mulai).getTime()) / 60000));
+}
+
+function formatDurasiMenit(total) {
+    const hari = Math.floor(total / 1440);
+    const jam = Math.floor((total % 1440) / 60);
+    const menit = total % 60;
+    return [hari ? hari + ' hari' : '', jam ? jam + ' jam' : '', menit + ' menit'].filter(Boolean).join(' ');
+}
+
+function updateAutoDurasiLabel() {
+    document.getElementById('editDurasiAutoLabel').textContent =
+        document.getElementById('editMulaiPerbaikan').value ? formatDurasiMenit(autoDurasiMenit()) + ' (berjalan)' : '-';
+}
+
+function setDurasiInputs(total) {
+    document.getElementById('editDurasiHari').value = Math.floor(total / 1440);
+    document.getElementById('editDurasiJam').value = Math.floor((total % 1440) / 60);
+    document.getElementById('editDurasiMenit').value = total % 60;
+}
+
+function getDurasiInputMenit() {
+    const val = id => Math.max(0, parseInt(document.getElementById(id).value, 10) || 0);
+    return val('editDurasiHari') * 1440 + val('editDurasiJam') * 60 + val('editDurasiMenit');
+}
+
+function renderDurasiToggle() {
+    const on = document.getElementById('editDurasiManualToggle').checked;
+    document.getElementById('editDurasiTrack').style.backgroundColor = on ? '#f59e0b' : '#d1d5db';
+    document.getElementById('editDurasiKnob').style.left = on ? '22px' : '2px';
+    document.getElementById('editDurasiModeText').textContent = on ? 'Manual' : 'Otomatis';
+    document.getElementById('editDurasiModeText').style.color = on ? '#b45309' : '';
+    document.getElementById('editDurasiInputs').style.opacity = on ? '1' : '0.5';
+    ['editDurasiHari', 'editDurasiJam', 'editDurasiMenit'].forEach(id => { document.getElementById(id).disabled = !on; });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('editMulaiPerbaikan').addEventListener('input', updateAutoDurasiLabel);
+});
+
 function closeEditModal() {
     const modal = document.getElementById('editModal');
     if (modal.classList.contains('hidden')) return;
@@ -695,6 +789,15 @@ async function submitEdit() {
     if (!document.getElementById('editOnProcessFields').classList.contains('hidden')) {
         payload.mulai_perbaikan = document.getElementById('editMulaiPerbaikan').value;
         payload.started_by = document.getElementById('editStartedBy').value;
+
+        payload.durasi_manual_aktif = document.getElementById('editDurasiManualToggle').checked;
+        if (payload.durasi_manual_aktif) {
+            payload.durasi_manual_menit = getDurasiInputMenit();
+            if (payload.durasi_manual_menit < 1) {
+                Swal.fire('Peringatan!', 'Total durasi preventive minimal 1 menit.', 'warning');
+                return;
+            }
+        }
     }
 
     const submitBtn = document.getElementById('editSubmitBtn');
