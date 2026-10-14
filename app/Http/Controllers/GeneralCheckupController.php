@@ -439,9 +439,12 @@ class GeneralCheckupController extends Controller
 
             $this->saveDetails($checkup, $request->details ?? []);
 
-            // Masih ada NG yang belum closed?
+            // NG tidak wajib ada tindakan (boleh selesai tanpa ganti part).
+            // Tapi kalau NG sudah punya tindakan (mis. part sudah ditambahkan), tindakan itu harus closed dulu
+            // -> part yang belum dipasang jangan sampai ikut memotong stock saat selesai.
             $hasNGNotClosed = $checkup->details()
                 ->where('status', 'ng')
+                ->whereNotNull('ng_action_type')
                 ->where(function ($query) {
                     $query->whereNull('ng_action_status')
                           ->orWhere('ng_action_status', '!=', 'closed');
@@ -452,7 +455,7 @@ class GeneralCheckupController extends Controller
                 DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => 'Masih ada status NG yang belum diselesaikan! Gunakan "Simpan Sementara" untuk menyimpan.'
+                    'message' => 'Masih ada part pengganti di item NG yang belum di-Close (dipasang)! Close part tersebut atau hapus kalau tidak jadi dipakai.'
                 ], 400);
             }
 

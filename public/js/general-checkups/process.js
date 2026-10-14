@@ -105,14 +105,9 @@ function updateActionButtons() {
             // Check action status from hidden input
             const actionStatusInput = document.querySelector(`input[data-ng-action-status="${standardId}"]`);
             
-            if (actionStatusInput) {
-                const actionStatus = actionStatusInput.value;
-                // If action status is NOT 'closed', then it's not complete yet
-                if (actionStatus !== 'closed') {
-                    hasNGNotClosed = true;
-                }
-            } else {
-                // No action selected/completed yet
+            // NG tanpa tindakan (tidak tambah part) boleh langsung selesai.
+            // Kalau sudah ada tindakan (part ditambahkan), tindakan itu harus closed dulu.
+            if (actionStatusInput && actionStatusInput.value !== 'closed') {
                 hasNGNotClosed = true;
             }
         }
@@ -123,7 +118,7 @@ function updateActionButtons() {
 
     // Show "Selesai" only if:
     // 1. All parameters are filled
-    // 2. No NG that is not closed yet
+    // 2. Tidak ada NG yang tindakannya (part) belum closed
     if (allFilled && !hasNGNotClosed) {
         saveTempBtn.classList.add('hidden');
         finishBtn.classList.remove('hidden');
