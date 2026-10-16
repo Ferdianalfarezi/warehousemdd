@@ -8,6 +8,8 @@ use App\Models\Part;
 use App\Models\Line;
 use App\Models\DetailBarang;
 use App\Models\DiesDetail;
+use App\Models\GeneralCheckup;
+use App\Models\Schedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
@@ -144,6 +146,15 @@ class BarangController extends Controller
             DetailBarang::where('barang_id', $barang->id)->delete();
             DiesDetail::where('barang_id', $barang->id)->delete();
             $this->savePartsAndDies($barang, $request);
+
+            // Schedule & checkup aktif menyimpan salinan kode/nama/gambar barang.
+            // Ikutkan perubahan supaya tetap bisa dicari dengan kode terbaru.
+            // Pakai query update (bukan save model) biar hook Schedule tidak menghitung ulang tanggal service.
+            $snapshot = ['kode_barang' => $barang->kode_barang, 'nama' => $barang->nama, 'gambar' => $barang->gambar];
+            Schedule::where('barang_id', $barang->id)->update($snapshot);
+            GeneralCheckup::where('barang_id', $barang->id)
+                ->whereIn('status', ['pending', 'on_process'])
+                ->update($snapshot);
 
             DB::commit();
             $barang->load(['supplier', 'line', 'parts', 'diesDetails']);

@@ -62,10 +62,14 @@ class ScheduleController extends Controller
         // Banyak nama barang mengandung spasi ganda (tampil sebagai 1 spasi di browser),
         // jadi pencarian frasa utuh "GUIDE RADIATOR" tidak akan ketemu "GUIDE  RADIATOR".
         $words = preg_split('/\s+/', trim($request->input('search', '')), -1, PREG_SPLIT_NO_EMPTY);
+        // Juga cari di master barang: kode/nama di schedule cuma salinan dan bisa ketinggalan
+        // kalau barang pernah diedit (mis. kode diganti setelah schedule dibuat).
         foreach ($words as $word) {
             $query->where(function ($q) use ($word) {
                 $q->where('kode_barang', 'like', "%{$word}%")
-                  ->orWhere('nama', 'like', "%{$word}%");
+                  ->orWhere('nama', 'like', "%{$word}%")
+                  ->orWhereHas('barang', fn ($b) => $b->where('kode_barang', 'like', "%{$word}%")
+                                                      ->orWhere('nama', 'like', "%{$word}%"));
             });
         }
 
