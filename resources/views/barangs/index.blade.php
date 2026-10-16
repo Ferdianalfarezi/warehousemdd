@@ -621,6 +621,13 @@ function openCreateModal() {
         try { $('#createLineId').select2('destroy'); } catch (e) {}
         $('#createSupplierId').select2({ placeholder: "Select Supplier", allowClear: false, width: '100%', dropdownParent: $('#createModal') });
         $('#createLineId').select2({ placeholder: "Select Line", allowClear: true, width: '100%', dropdownParent: $('#createModal') });
+
+        // Default supplier: Misumi (cari berdasarkan nama, karena id bisa beda antar server).
+        // Utamakan yang namanya persis "Misumi", kalau tidak ada pakai yang mengandung "misumi".
+        const supplierOpts = Array.from(document.querySelectorAll('#createSupplierId option')).filter(o => o.value);
+        const misumi = supplierOpts.find(o => o.textContent.trim().toLowerCase() === 'misumi')
+                    || supplierOpts.find(o => o.textContent.toLowerCase().includes('misumi'));
+        if (misumi) $('#createSupplierId').val(misumi.value).trigger('change');
     });
 
     document.getElementById('createForm').onsubmit = async function (e) {
