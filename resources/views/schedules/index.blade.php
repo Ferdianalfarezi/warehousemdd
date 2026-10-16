@@ -212,10 +212,16 @@
                 <tbody class="divide-y divide-gray-200" id="schedulesTableBody">
                     @forelse($schedules as $schedule)
                         <tr class="hover:bg-gray-50 transition" data-schedule-id="{{ $schedule->id }}">
+                            @php
+                                // Pakai data master barang terbaru; salinan di schedule cuma cadangan
+                                $kodeBarang = $schedule->barang->kode_barang ?? $schedule->kode_barang;
+                                $namaBarang = $schedule->barang->nama ?? $schedule->nama;
+                                $gambarBarang = $schedule->barang ? $schedule->barang->gambar : $schedule->gambar;
+                            @endphp
                             <td class="px-6 py-4 text-sm text-gray-900">{{ $schedules->firstItem() + $loop->index }}</td>
                             <td class="px-6 py-4">
-                                @if($schedule->gambar)
-                                    <img src="{{ asset('storage/barangs/'.$schedule->gambar) }}"
+                                @if($gambarBarang)
+                                    <img src="{{ asset('storage/barangs/'.$gambarBarang) }}"
                                         loading="lazy"
                                         class="w-12 h-12 rounded-lg object-cover border border-gray-200">
                                 @else
@@ -226,8 +232,8 @@
                                     </div>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $schedule->kode_barang }}</td>
-                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $schedule->nama }}</td>
+                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $kodeBarang }}</td>
+                            <td class="px-6 py-4 text-sm font-semibold text-gray-900">{{ $namaBarang }}</td>
                             <td class="px-6 py-4 text-sm text-gray-600">
                                 {{ \Carbon\Carbon::parse($schedule->mulai_service)->format('d/m/Y') }}
                             </td>

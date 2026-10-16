@@ -22,7 +22,8 @@ class ScheduleController extends Controller
 
     public function index(Request $request)
     {
-        $query = Schedule::query();
+        // Tabel menampilkan kode/nama/gambar dari master barang (salinan di schedule bisa ketinggalan)
+        $query = Schedule::with('barang:id,kode_barang,nama,gambar');
         $this->applyFilters($query, $request);
 
         $perPageInput = $request->input('per_page', 20);

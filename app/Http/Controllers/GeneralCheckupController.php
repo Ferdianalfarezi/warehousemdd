@@ -287,12 +287,13 @@ class GeneralCheckupController extends Controller
 
             DB::transaction(function () use ($schedules) {
                 foreach ($schedules as $schedule) {
+                    // Kode/nama/gambar dari master barang (salinan di schedule bisa ketinggalan)
                     GeneralCheckup::create([
                         'schedule_id'       => $schedule->id,
                         'barang_id'         => $schedule->barang_id,
-                        'kode_barang'       => $schedule->kode_barang,
-                        'gambar'            => $schedule->gambar,
-                        'nama'              => $schedule->nama,
+                        'kode_barang'       => $schedule->barang->kode_barang ?? $schedule->kode_barang,
+                        'gambar'            => $schedule->barang ? $schedule->barang->gambar : $schedule->gambar,
+                        'nama'              => $schedule->barang->nama ?? $schedule->nama,
                         'line'              => $schedule->barang->line->nama_line ?? null,
                         'tanggal_terjadwal' => $schedule->service_berikutnya,
                         'status'            => 'pending',
