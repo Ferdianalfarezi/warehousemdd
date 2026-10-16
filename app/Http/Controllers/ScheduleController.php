@@ -58,11 +58,14 @@ class ScheduleController extends Controller
 
     private function applyFilters($query, Request $request)
     {
-        $search = trim($request->input('search', ''));
-        if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->where('kode_barang', 'like', "%{$search}%")
-                  ->orWhere('nama', 'like', "%{$search}%");
+        // Cari per kata: tiap kata harus ada di kode atau nama.
+        // Banyak nama barang mengandung spasi ganda (tampil sebagai 1 spasi di browser),
+        // jadi pencarian frasa utuh "GUIDE RADIATOR" tidak akan ketemu "GUIDE  RADIATOR".
+        $words = preg_split('/\s+/', trim($request->input('search', '')), -1, PREG_SPLIT_NO_EMPTY);
+        foreach ($words as $word) {
+            $query->where(function ($q) use ($word) {
+                $q->where('kode_barang', 'like', "%{$word}%")
+                  ->orWhere('nama', 'like', "%{$word}%");
             });
         }
 

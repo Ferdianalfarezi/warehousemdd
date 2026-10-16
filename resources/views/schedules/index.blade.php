@@ -361,6 +361,13 @@ function select2Options() {
         allowClear: true,
         width: '100%',
         dropdownParent: $('#createModal'),
+        // Cari per kata & abaikan jumlah spasi (nama barang sering mengandung spasi ganda)
+        matcher: function (params, data) {
+            const term = (params.term || '').trim().toLowerCase();
+            if (!term) return data;
+            const text = (data.text || '').toLowerCase();
+            return term.split(/\s+/).every(word => text.includes(word)) ? data : null;
+        },
         language: {
             noResults: function() {
                 return "Barang tidak ditemukan";
