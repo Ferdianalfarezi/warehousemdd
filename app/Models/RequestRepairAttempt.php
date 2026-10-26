@@ -18,7 +18,7 @@ class RequestRepairAttempt extends Model
         'tanggal_cek', 'lot_prod', 'awal', 'tengah', 'akhir', 'qty',
         'remark_monitoring', 'judge_monitoring', 'plan_permanen', 'actual_permanen',
         'rootcause', 'recovery', 'assy_trial_check', 'judge_permanen',
-        'on_process_at', 'on_trial_at', 'ng_judged_at',
+        'on_process_at', 'finish_repair_at', 'on_trial_at', 'ng_judged_at',
         'durasi_on_process_seconds', 'durasi_on_trial_seconds', 'judged_by',
         'total_paused_seconds', // ⬅️ baru — sebelumnya dikirim controller tapi gak ke-fillable, ke-drop diem-diem
         'cycle_number',         // ⬅️ baru — sama kasusnya
@@ -27,6 +27,7 @@ class RequestRepairAttempt extends Model
     protected $casts = [
         'tanggal_cek'              => 'date',
         'on_process_at'            => 'datetime',
+        'finish_repair_at'         => 'datetime',
         'on_trial_at'              => 'datetime',
         'ng_judged_at'             => 'datetime',
         'sparepart_items'          => 'array',   // ⬅️ baru

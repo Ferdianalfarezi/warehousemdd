@@ -186,14 +186,14 @@
                     <p class="error-message text-xs text-red-500 mt-1" id="error-edit-gambar"></p>
                 </div>
 
-                {{-- Durasi On Process → On Trial — khusus admin, muncul kalau status sedang On Trial --}}
+                {{-- Durasi Repair (On Process → Finish Repair) — khusus admin, muncul kalau status sedang On Trial --}}
                 <div id="editDurasiSection" class="hidden rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <label class="block text-sm font-semibold text-gray-700 mb-1">
-                        Durasi On Process → On Trial
+                        Durasi Repair (On Process → Finish Repair)
                     </label>
                     <p class="text-xs text-gray-500 mb-3">
-                        Ubah durasi ini untuk menggeser waktu <span class="font-medium">On Trial</span> tercatat
-                        (dihitung mundur dari waktu mulai On Process). Biarkan seperti semula kalau tidak ingin mengubah.
+                        Ubah durasi ini untuk menggeser waktu <span class="font-medium">Finish Repair</span> tercatat
+                        (dihitung dari waktu mulai On Process, maksimal sampai waktu On Trial). Biarkan seperti semula kalau tidak ingin mengubah.
                     </p>
                     <div class="grid grid-cols-3 gap-3">
                         <div>

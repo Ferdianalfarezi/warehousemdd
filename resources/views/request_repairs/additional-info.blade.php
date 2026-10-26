@@ -26,7 +26,7 @@
                         </svg>
                     </div>
                     <div>
-                        <h3 class="text-xl font-bold tracking-tight text-white">Konfirmasi ke On Trial</h3>
+                        <h3 id="additionalInfoTitle" class="text-xl font-bold tracking-tight text-white">Konfirmasi ke On Trial</h3>
                         <p id="additionalInfoNo" class="mt-1 text-sm font-mono text-zinc-400"></p>
                     </div>
                 </div>
@@ -54,7 +54,7 @@
                         </div>
                         <div>
                             <p class="text-xs font-semibold uppercase tracking-wider text-zinc-600">Durasi Repair</p>
-                            <p class="text-xs text-zinc-500">Status: On Process</p>
+                            <p id="durasiStatusText" class="text-xs text-zinc-500">Status: On Process</p>
                         </div>
                     </div>
                     <div id="durasiLiveBadge" class="flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1">
@@ -74,7 +74,7 @@
                 </div>
 
                 {{-- Tombol Pause / Resume --}}
-                <div class="mt-4 flex items-center gap-2">
+                <div id="pauseControls" class="mt-4 flex items-center gap-2">
                     <button type="button" id="pauseBtn" onclick="togglePausePanel()"
                         class="flex items-center gap-2 rounded-xl border border-zinc-300 bg-white px-4 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100">
                         <svg class="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/></svg>
@@ -122,7 +122,7 @@
 
                 {{-- Mode Durasi (khusus role 1) — ⬅️ baru --}}
                 @if(auth()->user()->role_id === 1)
-                <div class="mt-4 border-t border-zinc-200 pt-4">
+                <div id="durasiModeSection" class="mt-4 border-t border-zinc-200 pt-4">
                     <p class="mb-2 text-xs font-semibold text-zinc-600">Mode Durasi (Admin):</p>
                     <div class="flex gap-2">
                         <button type="button" id="durasiModeAutoBtn" onclick="setDurasiMode('otomatis')"
@@ -154,6 +154,8 @@
                 @endif
             </div>
 
+            {{-- Form On Trial: tampil saat status Finish Repair, disembunyikan saat mode pause (On Process) --}}
+            <div id="additionalFormSections" class="space-y-6">
             {{-- ══════════════════════════════════════════════
                 SECTION 1: Tindakan Perbaikan
             ══════════════════════════════════════════════ --}}
@@ -375,6 +377,7 @@
                 </div>
             </div>
 
+            </div>
         </div>
 
         {{-- Footer --}}
@@ -516,6 +519,25 @@ function applyDurasiState(data) {
 
     // ⬅️ baru — kalau mode manual lagi aktif, state pause dari server diabaikan
     if (typeof window._durasiMode !== 'undefined' && window._durasiMode === 'manual') {
+        return;
+    }
+
+    // Sudah Finish Repair: durasi repair berhenti, tampilkan angka final (tanpa timer & tanpa pause)
+    if (data.is_stopped) {
+        stopDurasiTimer();
+        // Format sama dengan timer live ("1 jam 35 menit ...")
+        document.getElementById('durasiDisplay').textContent = typeof formatDurasiJS === 'function'
+            ? formatDurasiJS(data.seconds)
+            : data.durasi_formatted;
+        liveBadge.innerHTML = '<span class="h-2 w-2 rounded-full" style="background-color:#8b5cf6;"></span><span class="text-xs font-medium" style="color:#6d28d9;">Selesai</span>';
+        pauseBtn.classList.add('hidden');
+        resumeBtn.classList.add('hidden');
+        banner.classList.add('hidden');
+        if (pausedHint) pausedHint.classList.add('hidden');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
         return;
     }
 

@@ -30,13 +30,21 @@
     background: #2563eb;
 }
 
+.status-finish_repair {
+    background: #7c3aed;
+}
+
 .status-on_trial {
     background: #ea8202;
 }
 
-/* Row highlight untuk on_process & on_trial (default, dioverride oleh stock level kalau ada) */
+/* Row highlight untuk on_process, finish_repair & on_trial (default, dioverride oleh stock level kalau ada) */
 tr[data-status="on_process"] {
     background: rgba(59, 130, 246, 0.05);
+}
+
+tr[data-status="finish_repair"] {
+    background: rgba(124, 58, 237, 0.08);
 }
 
 tr[data-status="on_trial"] {
@@ -123,6 +131,10 @@ tr[data-stock-level="warning"] {
     background: #2563eb;
 }
 
+.summary-finish_repair {
+    background: #7c3aed;
+}
+
 .summary-on_trial {
     background: #ea8202;
 }
@@ -131,6 +143,7 @@ tr[data-stock-level="warning"] {
 @php
     $openCount = $requestRepairs->where('status', 'open')->count();
     $onProcessCount = $requestRepairs->where('status', 'on_process')->count();
+    $finishRepairCount = $requestRepairs->where('status', 'finish_repair')->count();
     $onTrialCount = $requestRepairs->where('status', 'on_trial')->count();
 
     // Konversi jam ke format Hari/Jam buat kolom Stock FG.
@@ -174,6 +187,17 @@ tr[data-stock-level="warning"] {
         <div class="summary-text">
             <div class="summary-label">On Process</div>
             <div class="summary-value">{{ $onProcessCount }}</div>
+        </div>
+    </div>
+    <div class="summary-card summary-finish_repair">
+        <div class="summary-icon">
+            <svg fill="none" stroke="white" viewBox="0 0 24 24" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+            </svg>
+        </div>
+        <div class="summary-text">
+            <div class="summary-label">Finish Repair</div>
+            <div class="summary-value">{{ $finishRepairCount }}</div>
         </div>
     </div>
     <div class="summary-card summary-on_trial">
@@ -251,8 +275,9 @@ tr[data-stock-level="warning"] {
                     <td>
                         @if($rr->status === 'on_process' && $rr->on_process_at)
                             <span class="durasi-live" data-durasi-start="{{ $rr->on_process_at->timestamp }}">-</span>
-                        @elseif($rr->status === 'on_trial' && $rr->on_trial_at && $rr->on_process_at)
-                            {{ \App\Models\RequestRepair::formatDurasi($rr->on_process_at->diffInSeconds($rr->on_trial_at)) }}
+                        @elseif(in_array($rr->status, ['finish_repair', 'on_trial']) && $rr->on_process_at && $rr->repairEndAt())
+                            {{-- Durasi repair final: On Process s/d Finish Repair (waktu pause tidak dihitung) --}}
+                            {{ \App\Models\RequestRepair::formatDurasi($rr->getDurasiOnProcessSeconds()) }}
                         @else
                             -
                         @endif
@@ -270,11 +295,13 @@ tr[data-stock-level="warning"] {
                             $statusClasses = [
                                 'open'       => 'status-open',
                                 'on_process' => 'status-on_process',
+                                'finish_repair' => 'status-finish_repair',
                                 'on_trial'   => 'status-on_trial',
                             ];
                             $statusLabels = [
                                 'open'       => 'Open',
                                 'on_process' => 'On Process',
+                                'finish_repair' => 'Finish Repair',
                                 'on_trial'   => 'On Trial',
                             ];
                             $statusClass = $statusClasses[$rr->status] ?? 'status-open';

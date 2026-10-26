@@ -160,6 +160,147 @@
 
 @include('history_repairs.detail')
 
+@can('superadmin-only')
+{{-- Modal Edit History Repair (khusus superadmin). z-index di atas modal detail (dibuka dari kartu repair) --}}
+<div id="repairEditModal" style="display:none;position:fixed;inset:0;z-index:80;background-color:rgba(0,0,0,0);transition:background-color .3s ease;align-items:center;justify-content:center;padding:16px;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full" style="max-width:760px;max-height:92vh;overflow-y:auto;opacity:0;transform:translateY(16px) scale(.95);transition:opacity .3s cubic-bezier(.4,0,.2,1),transform .3s cubic-bezier(.4,0,.2,1);">
+        <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between" style="position:sticky;top:0;background:#fff;z-index:1;">
+            <div>
+                <h3 class="text-xl font-bold text-gray-900">Edit History Request Repair</h3>
+                <p id="reTitle" class="text-sm text-gray-600 mt-1"></p>
+            </div>
+            <button type="button" onclick="closeRepairEdit()" class="text-gray-400 hover:text-gray-600 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="repairEditForm" onsubmit="event.preventDefault(); submitRepairEdit();" class="p-6 space-y-5">
+            <input type="hidden" id="reId">
+
+            {{-- Info pengajuan --}}
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Info Pengajuan</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Tgl Pengajuan <span class="text-red-500">*</span></label>
+                        <input type="date" id="reTanggalPengajuan" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Jumlah Stroke</label>
+                        <input type="number" id="reJumlahStroke" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Group</label>
+                        <select id="reGroup" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                            <option value="">-</option><option value="A">A</option><option value="B">B</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Shift</label>
+                        <select id="reShift" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                            <option value="">-</option><option value="Pagi">Pagi</option><option value="Malam">Malam</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Line / Mesin</label>
+                        <input type="text" id="reLineMesin" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Process No</label>
+                        <input type="text" id="reProcessNo" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Customer</label>
+                        <input type="text" id="reCustomer" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Jenis</label>
+                        <select id="reJenis" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                            <option value="">-</option><option value="Milik Sendiri">Milik Sendiri</option><option value="Eksternal">Eksternal</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Kategori Problem</label>
+                        <select id="reKategori" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                            <option value="">-</option>
+                            @foreach(['Dies', 'Burry', 'Dimensi', 'Human Error', 'Accessories'] as $kat)
+                                <option value="{{ $kat }}">{{ $kat }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top:12px;">
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Detail Proyek</label>
+                    <textarea id="reDetailProyek" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black resize-none"></textarea>
+                </div>
+            </div>
+
+            {{-- Waktu & durasi --}}
+            <div style="border:1px solid #fde68a;background-color:#fffbeb;border-radius:12px;padding:14px;">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Waktu & Durasi</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">On Process</label>
+                        <input type="datetime-local" id="reOnProcess" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Finish Repair</label>
+                        <input type="datetime-local" id="reFinishRepair" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">On Trial</label>
+                        <input type="datetime-local" id="reOnTrial" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Closed <span class="text-red-500">*</span></label>
+                        <input type="datetime-local" id="reClosed" required class="w-full px-2 py-2 border border-gray-300 rounded-lg text-sm">
+                    </div>
+                </div>
+                <p id="reDurasiPreview" class="text-xs text-gray-600" style="margin-top:10px;"></p>
+            </div>
+
+            {{-- Tindakan & PIC --}}
+            <div>
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Tindakan & PIC</p>
+                <div class="space-y-3">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">PIC</label>
+                        <input type="text" id="rePic" placeholder="Pisahkan dengan koma, mis. Mekanik 1, Mekanik 2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Analisa Penyebab</label>
+                            <textarea id="reAnalisa" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Tindakan Perbaikan</label>
+                            <textarea id="reTindakan" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Rootcause</label>
+                            <textarea id="reRootcause" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-1">Recovery</label>
+                            <textarea id="reRecovery" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black resize-none"></textarea>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-1">Catatan Penggantian Sparepart</label>
+                        <textarea id="reCatatanSparepart" rows="2" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black resize-none"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" onclick="closeRepairEdit()" class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition">Batal</button>
+                <button type="submit" id="reSubmitBtn" class="px-5 py-2.5 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endcan
+
 @endsection
 
 @push('scripts')
@@ -169,6 +310,10 @@
 // ════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════
+// Edit history hanya untuk superadmin (server juga menolak role lain).
+// Ditaruh di window karena tombol Edit dirender oleh script di history_repairs/detail.blade.php
+window.CAN_EDIT_HISTORY = @json(Gate::allows('superadmin-only'));
+
 let currentPage   = 1;
 let perPage       = 20;
 let searchQuery   = '';
@@ -289,6 +434,121 @@ function initCustomerFilter() {
 // LOAD SUMMARY (grafik Pareto, ikut filter)
 // ════════════════════════════════════════════════════════
 let summaryRequestId = 0;
+
+// ════════════════════════════════════════════════════════
+// EDIT HISTORY REPAIR (superadmin) — dibuka dari kartu repair di modal detail
+// ════════════════════════════════════════════════════════
+const RE_FIELDS = {
+    reTanggalPengajuan: 'tanggal_pengajuan', reJumlahStroke: 'jumlah_stroke', reGroup: 'group', reShift: 'shift',
+    reLineMesin: 'line_mesin', reProcessNo: 'process_no', reCustomer: 'customer', reJenis: 'jenis',
+    reKategori: 'kategori_problem', reDetailProyek: 'detail_proyek',
+    reOnProcess: 'on_process_at', reFinishRepair: 'finish_repair_at', reOnTrial: 'on_trial_at', reClosed: 'closed_at',
+    rePic: 'pic_names', reAnalisa: 'analisa_penyebab', reTindakan: 'tindakan_perbaikan',
+    reRootcause: 'rootcause', reRecovery: 'recovery', reCatatanSparepart: 'catatan_penggantian_sparepart',
+};
+let rePausedSeconds = 0;
+
+function reFormatDurasi(sec) {
+    if (sec === null || sec === undefined || sec < 0) return '-';
+    const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+    return [d ? d + ' hari' : '', h ? h + ' jam' : '', m + ' menit'].filter(Boolean).join(' ');
+}
+
+// Preview durasi (rumus sama dengan server: waktu pause tidak dihitung)
+function renderRepairDurasiPreview() {
+    const t = id => document.getElementById(id).value ? new Date(document.getElementById(id).value).getTime() / 1000 : null;
+    const p = t('reOnProcess'), fr = t('reFinishRepair'), tr = t('reOnTrial'), c = t('reClosed');
+    const repairEnd = fr !== null ? fr : tr; // durasi repair berakhir di Finish Repair (data lama: On Trial)
+    const onProcess = (p !== null && repairEnd !== null) ? Math.max(0, repairEnd - p - rePausedSeconds) : null;
+    const onTrial = (tr !== null && c !== null) ? c - tr : null;
+    const total = (p !== null && c !== null) ? Math.max(0, c - p - rePausedSeconds) : null;
+    document.getElementById('reDurasiPreview').innerHTML =
+        'Durasi dihitung ulang otomatis — Repair (On Process → Finish Repair): <b>' + reFormatDurasi(onProcess) + '</b> · On Trial: <b>' + reFormatDurasi(onTrial)
+        + '</b> · Total: <b>' + reFormatDurasi(total) + '</b>'
+        + (rePausedSeconds ? ' <span style="color:#6b7280;">(pause ' + reFormatDurasi(rePausedSeconds) + ' tidak dihitung)</span>' : '');
+}
+
+async function openRepairEdit(id) {
+    try {
+        const res = await fetch('/history-repairs/' + id + '/edit-data', { headers: { 'Accept': 'application/json' } });
+        const result = await res.json();
+        if (!result.success) throw new Error();
+        const d = result.data;
+
+        document.getElementById('reId').value = d.id;
+        document.getElementById('reTitle').textContent = d.no + ' · ' + d.part_no + ' · Repair ke-' + d.repair_count;
+        Object.entries(RE_FIELDS).forEach(([elId, key]) => { document.getElementById(elId).value = d[key] ?? ''; });
+        rePausedSeconds = Number(d.total_paused_seconds) || 0;
+        renderRepairDurasiPreview();
+
+        animateModal(document.getElementById('repairEditModal'), true);
+    } catch (e) {
+        Swal.fire('Error!', 'Gagal memuat data history', 'error');
+    }
+}
+
+// Animasi masuk/keluar modal edit (latar memudar + kartu membesar), sama seperti modal lain di aplikasi
+function animateModal(modal, show) {
+    const card = modal.firstElementChild;
+    clearTimeout(modal._hideTimer);
+    if (show) {
+        modal.style.display = 'flex';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            modal.style.backgroundColor = 'rgba(0,0,0,.5)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0) scale(1)';
+        }));
+    } else {
+        modal.style.backgroundColor = 'rgba(0,0,0,0)';
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(16px) scale(.95)';
+        modal._hideTimer = setTimeout(() => { modal.style.display = 'none'; }, 300);
+    }
+}
+
+function closeRepairEdit() {
+    const modal = document.getElementById('repairEditModal');
+    if (modal) animateModal(modal, false);
+}
+
+async function submitRepairEdit() {
+    const id = document.getElementById('reId').value;
+    const payload = {};
+    Object.entries(RE_FIELDS).forEach(([elId, key]) => { payload[key] = document.getElementById(elId).value || null; });
+
+    const btn = document.getElementById('reSubmitBtn');
+    btn.disabled = true;
+    try {
+        const res = await fetch('/history-repairs/' + id, {
+            method: 'PUT',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeRepairEdit();
+            await Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, showConfirmButton: false, timer: 1500 });
+            openDetailModal(data.part_no); // refresh isi modal detail
+            loadData();
+            loadSummary();
+        } else {
+            Swal.fire('Error!', data.message || 'Gagal menyimpan', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error!', 'Gagal menyimpan history!', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    if (!window.CAN_EDIT_HISTORY) return;
+    ['reOnProcess', 'reFinishRepair', 'reOnTrial', 'reClosed'].forEach(id => document.getElementById(id).addEventListener('input', renderRepairDurasiPreview));
+});
 
 async function loadSummary() {
     const requestId = ++summaryRequestId;
@@ -452,7 +712,10 @@ function showEmpty(msg) {
 }
 
 document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closeDetailModal();
+    if (e.key !== 'Escape') return;
+    const editModal = document.getElementById('repairEditModal');
+    if (editModal && editModal.style.display === 'flex') closeRepairEdit();
+    else closeDetailModal();
 });
 </script>
 @endpush

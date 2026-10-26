@@ -6,6 +6,7 @@ use App\Models\RequestRepairHistory;
 use App\Models\RequestRepairAttempt;
 use App\Models\RequestRepairPause;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 
 class HistoryRepairController extends Controller
 {
@@ -302,6 +303,110 @@ class HistoryRepairController extends Controller
             'summary' => $summary,
             'records' => $records,
         ]);
+    }
+
+    // ── AJAX: data 1 history untuk form edit (superadmin) ───
+    public function editData(RequestRepairHistory $historyRepair)
+    {
+        $h = $historyRepair;
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'id'                            => $h->id,
+                'no'                            => $h->no,
+                'part_no'                       => $h->part_no,
+                'repair_count'                  => $h->repair_count,
+                'total_paused_seconds'          => (int) $h->total_paused_seconds,
+                // Info pengajuan
+                'tanggal_pengajuan'             => $h->tanggal_pengajuan?->format('Y-m-d'),
+                'group'                         => $h->group,
+                'shift'                         => $h->shift,
+                'jumlah_stroke'                 => $h->jumlah_stroke,
+                'line_mesin'                    => $h->line_mesin,
+                'process_no'                    => $h->process_no,
+                'customer'                      => $h->customer,
+                'jenis'                         => $h->jenis,
+                'kategori_problem'              => $h->kategori_problem,
+                'detail_proyek'                 => $h->detail_proyek,
+                // Waktu
+                'on_process_at'                 => $h->on_process_at?->format('Y-m-d\TH:i'),
+                'finish_repair_at'              => $h->finish_repair_at?->format('Y-m-d\TH:i'),
+                'on_trial_at'                   => $h->on_trial_at?->format('Y-m-d\TH:i'),
+                'closed_at'                     => $h->closed_at?->format('Y-m-d\TH:i'),
+                // Tindakan & PIC
+                'analisa_penyebab'              => $h->analisa_penyebab,
+                'tindakan_perbaikan'            => $h->tindakan_perbaikan,
+                'catatan_penggantian_sparepart' => $h->catatan_penggantian_sparepart,
+                'pic_names'                     => $h->pic_names,
+                'rootcause'                     => $h->rootcause,
+                'recovery'                      => $h->recovery,
+            ],
+        ]);
+    }
+
+    // ── AJAX: update history (superadmin) ───────────────────
+    // Info pengajuan, waktu (durasi dihitung ulang), tindakan & PIC
+    public function update(Request $request, RequestRepairHistory $historyRepair)
+    {
+        $validator = Validator::make($request->all(), [
+            'tanggal_pengajuan'             => 'required|date',
+            'group'                         => 'nullable|in:A,B',
+            'shift'                         => 'nullable|in:Pagi,Malam',
+            'jumlah_stroke'                 => 'nullable|integer|min:0',
+            'line_mesin'                    => 'nullable|string|max:255',
+            'process_no'                    => 'nullable|string|max:100',
+            'customer'                      => 'nullable|string|max:255',
+            'jenis'                         => 'nullable|in:Milik Sendiri,Eksternal',
+            'kategori_problem'              => 'nullable|in:Dies,Burry,Dimensi,Human Error,Accessories',
+            'detail_proyek'                 => 'nullable|string',
+            'on_process_at'                 => 'nullable|date',
+            'finish_repair_at'              => 'nullable|date|after_or_equal:on_process_at',
+            'on_trial_at'                   => 'nullable|date|after_or_equal:on_process_at|after_or_equal:finish_repair_at',
+            'closed_at'                     => 'required|date|after_or_equal:on_trial_at|after_or_equal:on_process_at',
+            'analisa_penyebab'              => 'nullable|string',
+            'tindakan_perbaikan'            => 'nullable|string',
+            'catatan_penggantian_sparepart' => 'nullable|string',
+            'pic_names'                     => 'nullable|string|max:255',
+            'rootcause'                     => 'nullable|string',
+            'recovery'                      => 'nullable|string',
+        ], [
+            'tanggal_pengajuan.required' => 'Tanggal pengajuan wajib diisi.',
+            'closed_at.required'         => 'Waktu closed wajib diisi.',
+            'finish_repair_at.after_or_equal' => 'Waktu Finish Repair tidak boleh sebelum On Process.',
+            'on_trial_at.after_or_equal' => 'Waktu On Trial tidak boleh sebelum On Process / Finish Repair.',
+            'closed_at.after_or_equal'   => 'Waktu Closed tidak boleh sebelum On Process / On Trial.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
+        }
+
+        $h = $historyRepair;
+        $h->fill($request->only([
+            'tanggal_pengajuan', 'group', 'shift', 'jumlah_stroke', 'line_mesin', 'process_no', 'customer',
+            'jenis', 'kategori_problem', 'detail_proyek', 'on_process_at', 'finish_repair_at', 'on_trial_at', 'closed_at',
+            'analisa_penyebab', 'tindakan_perbaikan', 'catatan_penggantian_sparepart', 'pic_names', 'rootcause', 'recovery',
+        ]));
+
+        // Hitung ulang durasi dengan rumus yang sama seperti saat repair di-close
+        // (waktu pause tidak dihitung).
+        $paused = (int) $h->total_paused_seconds;
+        // Durasi repair berakhir di Finish Repair (data lama tanpa Finish Repair: di On Trial)
+        $repairEnd = $h->finish_repair_at ?? $h->on_trial_at;
+        $h->durasi_on_process_seconds = ($h->on_process_at && $repairEnd)
+            ? max(0, (int) $h->on_process_at->diffInSeconds($repairEnd) - $paused)
+            : null;
+        $h->durasi_on_trial_seconds = $h->on_trial_at
+            ? (int) $h->on_trial_at->diffInSeconds($h->closed_at)
+            : null;
+        $h->durasi_total_seconds = $h->on_process_at
+            ? max(0, (int) $h->on_process_at->diffInSeconds($h->closed_at) - $paused)
+            : null;
+
+        $h->save();
+
+        return response()->json(['success' => true, 'message' => 'History berhasil diupdate!', 'part_no' => $h->part_no]);
     }
 
     // ── Helper: format 1 sesi pause untuk output JSON (⬅️ baru) ──

@@ -7,6 +7,7 @@ use App\Models\HistoryCheckup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
 
 class HistoryCheckupController extends Controller
 {
@@ -260,6 +261,72 @@ class HistoryCheckupController extends Controller
             'summary' => $summary,
             'records' => $records->reverse()->values(), // terbaru di atas
         ]);
+    }
+
+    /**
+     * Data 1 history untuk form edit (superadmin)
+     */
+    public function editData($id)
+    {
+        $h = HistoryCheckup::findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'id'                => $h->id,
+                'kode_barang'       => $h->kode_barang,
+                'nama'              => $h->nama,
+                'tanggal_terjadwal' => optional($h->tanggal_terjadwal)->format('Y-m-d'),
+                'tanggal_checkup'   => optional($h->tanggal_checkup)->format('Y-m-d'),
+                'mulai_perbaikan'   => optional($h->mulai_perbaikan)->format('Y-m-d\TH:i'),
+                'waktu_selesai'     => optional($h->waktu_selesai)->format('Y-m-d\TH:i'),
+                'durasi_perbaikan'  => $h->durasi_perbaikan,
+                'line'              => $h->line,
+                'catatan_umum'      => $h->catatan_umum,
+            ],
+        ]);
+    }
+
+    /**
+     * Update history (superadmin): tanggal & waktu, durasi, line & catatan
+     */
+    public function update(Request $request, $id)
+    {
+        $history = HistoryCheckup::findOrFail($id);
+
+        $validator = Validator::make($request->all(), [
+            'tanggal_terjadwal' => 'nullable|date',
+            'tanggal_checkup'   => 'required|date',
+            'mulai_perbaikan'   => 'nullable|date',
+            'waktu_selesai'     => 'nullable|date|after_or_equal:mulai_perbaikan',
+            'durasi_otomatis'   => 'nullable|boolean',
+            'durasi_perbaikan'  => 'nullable|required_unless:durasi_otomatis,true,1|integer|min:0',
+            'line'              => 'nullable|string|max:255',
+            'catatan_umum'      => 'nullable|string',
+        ], [
+            'tanggal_checkup.required'         => 'Tanggal checkup wajib diisi.',
+            'waktu_selesai.after_or_equal'     => 'Waktu selesai tidak boleh sebelum mulai perbaikan.',
+            'durasi_perbaikan.required_unless' => 'Durasi wajib diisi kalau tidak dihitung otomatis.',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first(), 'errors' => $validator->errors()], 422);
+        }
+
+        $history->fill($request->only(['tanggal_terjadwal', 'tanggal_checkup', 'mulai_perbaikan', 'waktu_selesai', 'line', 'catatan_umum']));
+
+        // Durasi: otomatis dari mulai -> selesai, atau angka manual (menit)
+        if ($request->boolean('durasi_otomatis')) {
+            $history->durasi_perbaikan = ($history->mulai_perbaikan && $history->waktu_selesai)
+                ? (int) $history->mulai_perbaikan->diffInMinutes($history->waktu_selesai)
+                : null;
+        } else {
+            $history->durasi_perbaikan = (int) $request->durasi_perbaikan;
+        }
+
+        $history->save();
+
+        return response()->json(['success' => true, 'message' => 'History berhasil diupdate!']);
     }
 
     /**

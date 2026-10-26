@@ -60,6 +60,7 @@ class RequestRepairHistory extends Model
         'judge_permanen',
         // Timestamps & durasi
         'on_process_at',
+        'finish_repair_at',
         'on_trial_at',
         'closed_at',
         'durasi_on_process_seconds',
@@ -69,6 +70,7 @@ class RequestRepairHistory extends Model
         'ng_attempt_count',        // ⬅️ baru — sebelumnya dikirim controller tapi gak ke-fillable
         'total_paused_seconds',    // ⬅️ baru — sama kasusnya
         'cycle_number',            // ⬅️ baru — sama kasusnya
+        'pic_names',               // sama kasusnya: dikirim saat closed tapi ke-drop karena tidak fillable
     ];
 
     protected $casts = [
@@ -77,6 +79,7 @@ class RequestRepairHistory extends Model
         'tanggal_cek'               => 'date',
         'jumlah_stroke'             => 'integer',
         'on_process_at'             => 'datetime',
+        'finish_repair_at'          => 'datetime',
         'on_trial_at'               => 'datetime',
         'closed_at'                 => 'datetime',
         'durasi_on_process_seconds' => 'integer',
@@ -117,6 +120,7 @@ class RequestRepairHistory extends Model
     {
         return [
             'on_process_at'     => $this->on_process_at?->toISOString(),
+            'finish_repair_at'  => $this->finish_repair_at?->toISOString(),
             'on_trial_at'       => $this->on_trial_at?->toISOString(),
             'closed_at'         => $this->closed_at?->toISOString(),
             'durasi_on_process' => self::formatDurasi($this->durasi_on_process_seconds),

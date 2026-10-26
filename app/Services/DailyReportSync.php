@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Schema;
  * Nyusun daily report otomatis dari aktivitas yang udah tercatat di sistem.
  *
  * Sumber baris:
- *   - RequestRepair  : on_process_at → on_trial_at        (kategori: repair)
+ *   - RequestRepair  : on_process_at → finish_repair_at   (kategori: repair; data lama: → on_trial_at)
  *       ↳ dipotong tiap pause; tiap pause jadi baris sendiri pakai alasan-nya
  *   - GeneralCheckup : mulai_perbaikan → waktu_selesai    (kategori: checkup)
  *
@@ -137,10 +137,12 @@ class DailyReportSync
 
         foreach ($rrs as $rr) {
             $start = Carbon::parse($rr->on_process_at);
-            $end   = $rr->on_trial_at ? Carbon::parse($rr->on_trial_at) : $now->copy();
+            // Kerja repair aktif sampai Finish Repair (data lama tanpa Finish Repair: sampai On Trial)
+            $repairEnd = $rr->repairEndAt();
+            $end   = $repairEnd ? Carbon::parse($repairEnd) : $now->copy();
             if ($end->lte($start)) continue;
 
-            $stillRunning = !$rr->on_trial_at;
+            $stillRunning = !$repairEnd;
 
             // Pause siklus berjalan, di-clip ke rentang repair
             $blocks = [];

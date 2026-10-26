@@ -8,19 +8,19 @@ class AndonRequestRepairController extends Controller
 {
     /**
      * Display request repair monitoring (READ-ONLY)
-     * Shows ALL active request repairs (open, on_process, on_trial)
+     * Shows ALL active request repairs (open, on_process, finish_repair, on_trial)
      * Closed items are excluded because they're already moved to history table
      *
      * Urutan:
-     * 1. Status: open -> on_process -> on_trial
+     * 1. Status: open -> on_process -> finish_repair -> on_trial
      * 2. Khusus status open: diurutkan dari sisa stock FG paling kritis
      *    (paling dekat habis / udah lewat paling lama dari tanggal_pengajuan)
-     * 3. Sisanya (on_process & on_trial): tanggal_pengajuan & created_at terbaru dulu
+     * 3. Sisanya (on_process, finish_repair & on_trial): tanggal_pengajuan & created_at terbaru dulu
      */
     public function index()
     {
         $requestRepairs = RequestRepair::with(['barang', 'creator', 'pics'])
-            ->orderByRaw("FIELD(status, 'open', 'on_process', 'on_trial')")
+            ->orderByRaw("FIELD(status, 'open', 'on_process', 'finish_repair', 'on_trial')")
             ->orderByRaw("
                 CASE
                     WHEN status = 'open' THEN (kekuatan_stock_fg - DATEDIFF(NOW(), tanggal_pengajuan))

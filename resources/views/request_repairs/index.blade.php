@@ -197,8 +197,9 @@ const JENIS_BADGE = {
 };
 const STATUS_CFG = {
     'open':       { bg: '#dcfce7', color: '#166534', label: 'Open'       },
-    'on_process': { bg: '#dbeafe', color: '#1e40af', label: 'On Process' },
-    'on_trial':   { bg: '#fef9c3', color: '#854d0e', label: 'On Trial'   },
+    'on_process':    { bg: '#dbeafe', color: '#1e40af', label: 'On Process'    },
+    'finish_repair': { bg: '#ede9fe', color: '#5b21b6', label: 'Finish Repair' },
+    'on_trial':      { bg: '#fef9c3', color: '#854d0e', label: 'On Trial'      },
     'closed':     { bg: '#dcfce7', color: '#166534', label: 'Closed'     },
     'paused':     { bg: '#fee2e2', color: '#991b1b', label: 'Paused'     },
 };
@@ -367,12 +368,17 @@ function renderTable(items) {
                 btns += makeBtn('confirmStatus(' + r.id + ', \'on_process\')', 'Proses Request', '#0048e8', '#4f46e5',
                     '<path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437m6.615 8.206L15.75 15.75M4.867 19.125h.008v.008h-.008v-.008z"/>');
             }
+            if (r.can_to_finish_repair) {
+                btns += makeBtn('confirmStatus(' + r.id + ', \'finish_repair\')', 'Finish Repair', '#7c3aed', '#6d28d9',
+                    '<path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17L17.25 21A2.652 2.652 0 0021 17.25l-5.877-5.877M11.42 15.17l2.496-3.03c.317-.384.74-.626 1.208-.766M11.42 15.17l-4.655 5.653a2.548 2.548 0 11-3.586-3.586l6.837-5.63m5.108-.233c.55-.164 1.163-.188 1.743-.14a4.5 4.5 0 004.486-6.336l-3.276 3.277a3.004 3.004 0 01-2.25-2.25l3.276-3.276a4.5 4.5 0 00-6.336 4.486c.091 1.076-.071 2.264-.904 2.95l-.102.085m-1.745 1.437L5.909 7.5H4.5L2.25 3.75l1.5-1.5L7.5 4.5v1.409l4.26 4.26m-1.745 1.437l1.745-1.437"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l2 2 4-4"/>');
+            }
             if (r.can_to_on_trial) {
                 btns += makeBtn('confirmStatus(' + r.id + ', \'on_trial\')', 'Konfirmasi ke On Trial', '#16a34a', '#15803d',
                     '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>');
             }
-            // Pause/Resume buat role 1/2/7 yang BUKAN PIC (jadi gak punya tombol On Trial di atas)
-            if (r.can_pause && !r.can_to_on_trial) {
+            // Pause/Resume (role 1/2/7) selama On Process. Sejak ada Finish Repair, On Trial sudah bukan
+            // jalan masuk ke kontrol pause lagi, jadi tombol ini tampil untuk semua yang boleh pause.
+            if (r.can_pause) {
                 var pauseResumeIcon = r.is_paused
                     ? '<path d="M8 5v14l11-7z"/>'                 // icon Resume (play)
                     : '<path d="M6 5h4v14H6V5zm8 0h4v14h-4V5z"/>'; // icon Pause (dua batang)
@@ -412,9 +418,65 @@ function renderTable(items) {
 // CONFIRM STATUS
 // ════════════════════════════════════════════════════════
 async function confirmStatus(id, newStatus) {
-    if (newStatus === 'on_process') { await openSelectPicModal(id); return; }
-    if (newStatus === 'on_trial')   { await openAdditionalInfoModal(id); return; }
+    if (newStatus === 'on_process')    { await openSelectPicModal(id); return; }
+    if (newStatus === 'finish_repair') { await confirmFinishRepair(id); return; }
+    if (newStatus === 'on_trial')      { await openAdditionalInfoModal(id); return; }
     if (newStatus === 'closed')     { await openClosedInfoModal(id);     return; }
+}
+
+// ════════════════════════════════════════════════════════
+// FINISH REPAIR — On Process → Finish Repair (konfirmasi saja, tanpa form)
+// ════════════════════════════════════════════════════════
+async function confirmFinishRepair(id) {
+    const result = await Swal.fire({
+        title: 'Finish Repair?',
+        text: 'Repair dinyatakan selesai dan durasi repair berhenti. Setelah ini lanjut konfirmasi ke On Trial.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#7c3aed',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Ya, Finish Repair',
+        cancelButtonText: 'Batal',
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+        const res = await fetch('/request-repairs/' + id + '/status', {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ status: 'finish_repair' }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            await Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, showConfirmButton: false, timer: 1500 });
+            loadData();
+        } else {
+            Swal.fire('Gagal!', data.message || 'Gagal mengubah status', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error!', 'Terjadi kesalahan', 'error');
+    }
+}
+
+// Modal additional-info dipakai untuk 2 hal:
+//  - status On Process   : kontrol Pause/Resume saja (form On Trial disembunyikan)
+//  - status Finish Repair: form konfirmasi ke On Trial (durasi repair sudah berhenti, tidak bisa pause)
+function setAdditionalInfoMode(status) {
+    const isTrial = status === 'finish_repair';
+    const show = (id, visible) => { const el = document.getElementById(id); if (el) el.style.display = visible ? '' : 'none'; };
+
+    show('additionalFormSections', isTrial);
+    show('submitAdditionalInfoBtn', isTrial);
+    show('durasiModeSection', isTrial);
+    show('pauseControls', !isTrial);
+    if (isTrial) show('pauseReasonPanel', false);
+
+    document.getElementById('additionalInfoTitle').textContent = isTrial ? 'Konfirmasi ke On Trial' : 'Pause / Resume Repair';
+    document.getElementById('durasiStatusText').textContent = isTrial ? 'Status: Finish Repair (durasi repair berhenti)' : 'Status: On Process';
 }
 
 // ════════════════════════════════════════════════════════
@@ -634,7 +696,10 @@ async function openAdditionalInfoModal(id) {
     try {
         const res    = await fetch('/request-repairs/' + id);
         const result = await res.json();
-        if (result.success) document.getElementById('additionalInfoNo').textContent = result.data.no || '';
+        if (result.success) {
+            document.getElementById('additionalInfoNo').textContent = result.data.no || '';
+            setAdditionalInfoMode(result.data.status);
+        }
 
         await refreshDurasiState();
     } catch (e) {
@@ -1293,12 +1358,15 @@ async function openDetailModal(id) {
         }
 
         // ── Timeline ──
-        if (tl.on_trial_at) {
+        // Timeline tampil sejak Finish Repair (atau On Trial untuk data lama tanpa Finish Repair)
+        if (tl.finish_repair_at || tl.on_trial_at) {
             document.getElementById('detailTimeline').classList.remove('hidden');
+            document.getElementById('timelineFinishRepairRow').classList.toggle('hidden', !tl.finish_repair_at);
+            document.getElementById('timelineFinishRepairAt').textContent = tl.finish_repair_at ? fmtDT(tl.finish_repair_at) : '';
             document.getElementById('timelineOnProcessAt').textContent = fmtDT(tl.on_process_at);
             if (tl.durasi_on_process) { document.getElementById('timelineDurasiOnProcessVal').textContent = tl.durasi_on_process; document.getElementById('timelineDurasiOnProcess').classList.remove('hidden'); }
-            document.getElementById('timelineOnTrialRow').classList.remove('hidden');
-            document.getElementById('timelineOnTrialAt').textContent = fmtDT(tl.on_trial_at);
+            document.getElementById('timelineOnTrialRow').classList.toggle('hidden', !tl.on_trial_at);
+            document.getElementById('timelineOnTrialAt').textContent = tl.on_trial_at ? fmtDT(tl.on_trial_at) : '';
             if (tl.durasi_on_trial) { document.getElementById('timelineDurasiOnTrialVal').textContent = tl.durasi_on_trial; document.getElementById('timelineDurasiOnTrial').classList.remove('hidden'); }
             if (tl.closed_at) { document.getElementById('timelineClosedRow').classList.remove('hidden'); document.getElementById('timelineClosedAt').textContent = fmtDT(tl.closed_at); }
             if (tl.durasi_total) { document.getElementById('timelineDurasiTotal').textContent = tl.durasi_total; document.getElementById('timelineTotalRow').classList.remove('hidden'); }

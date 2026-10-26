@@ -16,6 +16,7 @@ class HistoryCheckup extends Model
         'kode_barang',
         'gambar',
         'nama',
+        'line',
         'tanggal_terjadwal',
         'tanggal_checkup',
         'mulai_perbaikan',

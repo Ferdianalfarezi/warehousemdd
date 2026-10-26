@@ -74,10 +74,11 @@ class RequestRepairController extends Controller
         // 4. Tie-breaker: yang diajukan lebih dulu di atas
         $query->orderByRaw("
                 CASE status
-                    WHEN 'open'       THEN 0
-                    WHEN 'on_process' THEN 1
-                    WHEN 'on_trial'   THEN 2
-                    ELSE 3
+                    WHEN 'open'          THEN 0
+                    WHEN 'on_process'    THEN 1
+                    WHEN 'finish_repair' THEN 2
+                    WHEN 'on_trial'      THEN 3
+                    ELSE 4
                 END
             ")
             ->orderByRaw('kekuatan_stock_fg IS NULL')
@@ -132,7 +133,8 @@ class RequestRepairController extends Controller
                 'can_edit'          => $rr->isEditable(),
                 'can_delete'        => $rr->isDeletable(),
                 'can_to_process'    => $rr->canConfirmToProcess()
-                                        && in_array($userRoleId, RequestRepair::ROLES_TO_ON_PROCESS),
+                                        && in_array($userRoleId, RequestRepair::ROLES_TO_PROCESS_STEPS),
+                'can_to_finish_repair' => $rr->canUserConfirmToFinishRepair($authUser),
                 'can_to_on_trial'   => $rr->canUserConfirmToOnTrial($authUser),
                 'can_to_closed'     => $rr->canConfirmToClosed()
                                         && in_array($userRoleId, RequestRepair::ROLES_TO_CLOSED),
@@ -227,7 +229,9 @@ class RequestRepairController extends Controller
     public function getDurasi(RequestRepair $requestRepair)
     {
         $start = $requestRepair->on_process_at ?? $requestRepair->created_at;
-        $end   = $requestRepair->is_paused ? ($requestRepair->paused_at ?? now()) : now();
+        // Durasi repair berhenti di Finish Repair
+        $end   = $requestRepair->repairEndAt()
+            ?? ($requestRepair->is_paused ? ($requestRepair->paused_at ?? now()) : now());
 
         $rawSeconds = $start ? (int) $start->diffInSeconds($end) : 0;
         $seconds    = max(0, $rawSeconds - $requestRepair->total_paused_seconds);
@@ -235,6 +239,7 @@ class RequestRepairController extends Controller
         return response()->json([
             'success'          => true,
             'is_paused'        => $requestRepair->is_paused,
+            'is_stopped'       => (bool) $requestRepair->repairEndAt(), // durasi repair sudah berhenti (Finish Repair)
             'pause_reason'     => $requestRepair->pause_reason,
             'seconds'          => $seconds,
             'durasi_formatted' => RequestRepair::formatDurasi($seconds),
@@ -620,16 +625,19 @@ class RequestRepairController extends Controller
                 $baseStart = $requestRepair->on_process_at ?? $requestRepair->created_at;
 
                 if ($baseStart) {
-                    $newOnTrialAt = $baseStart->copy()->addSeconds(
+                    $newRepairEnd = $baseStart->copy()->addSeconds(
                         (int) $request->durasi_manual_seconds + $requestRepair->total_paused_seconds
                     );
 
-                    $now = now();
-                    if ($newOnTrialAt->gt($now)) {
-                        $newOnTrialAt = $now;
+                    if ($requestRepair->finish_repair_at) {
+                        // Durasi repair berakhir di Finish Repair -> geser finish_repair_at (maks. sampai On Trial)
+                        $limit = $requestRepair->on_trial_at ?? now();
+                        $updateData['finish_repair_at'] = $newRepairEnd->gt($limit) ? $limit : $newRepairEnd;
+                    } else {
+                        // Data lama (sebelum ada Finish Repair): durasi repair berakhir di On Trial
+                        $now = now();
+                        $updateData['on_trial_at'] = $newRepairEnd->gt($now) ? $now : $newRepairEnd;
                     }
-
-                    $updateData['on_trial_at'] = $newOnTrialAt;
                 }
             }
 
@@ -662,7 +670,7 @@ class RequestRepairController extends Controller
                     'message' => 'Status tidak bisa diubah ke On Process dari status saat ini.',
                 ], 422);
             }
-            if (!in_array($userRoleId, RequestRepair::ROLES_TO_ON_PROCESS)) {
+            if (!in_array($userRoleId, RequestRepair::ROLES_TO_PROCESS_STEPS)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Anda tidak memiliki akses untuk mengubah status ke On Process.',
@@ -709,7 +717,41 @@ class RequestRepairController extends Controller
             }
 
         // ════════════════════════════════════════════════════
-        // ON TRIAL — hanya PIC yang tercatat, ATAU admin override (role 1)
+        // FINISH REPAIR — On Process → Finish Repair (konfirmasi saja, tanpa form)
+        // Role sama seperti On Process: superadmin, kepala divisi, mekanik.
+        // Durasi repair berhenti di sini.
+        // ════════════════════════════════════════════════════
+        } elseif ($newStatus === RequestRepair::STATUS_FINISH_REPAIR) {
+
+            if (!$requestRepair->canConfirmToFinishRepair()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Status tidak bisa diubah ke Finish Repair dari status saat ini.',
+                ], 422);
+            }
+            if (!$requestRepair->canUserConfirmToFinishRepair($authUser)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki akses untuk mengubah status ke Finish Repair.',
+                ], 403);
+            }
+            if ($requestRepair->is_paused) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data ini sedang di-pause (' . (RequestRepairPause::ALASAN_LABELS[$requestRepair->pause_reason] ?? $requestRepair->pause_reason) . '). Resume terlebih dahulu sebelum konfirmasi ke Finish Repair.',
+                ], 422);
+            }
+
+            $requestRepair->update([
+                'status'           => RequestRepair::STATUS_FINISH_REPAIR,
+                'finish_repair_at' => now(),
+            ]);
+
+            return response()->json(['success' => true, 'message' => 'Status berhasil diubah ke Finish Repair!']);
+
+        // ════════════════════════════════════════════════════
+        // ON TRIAL — Finish Repair → On Trial
+        // hanya PIC yang tercatat, ATAU admin override (role 1)
         // ════════════════════════════════════════════════════
         } elseif ($newStatus === RequestRepair::STATUS_ON_TRIAL) {
 
@@ -799,15 +841,20 @@ class RequestRepairController extends Controller
                         ];
                     }
 
-                    $baseStart = $requestRepair->on_process_at ?? $requestRepair->created_at;
-                    $onTrialAt = $baseStart->copy()->addSeconds((int) $request->durasi_manual_seconds + $totalPausedSeconds);
-
-                    if ($onTrialAt->gt($now)) {
-                        $onTrialAt = $now;
-                    }
-                } else {
-                    $onTrialAt = $now;
                 }
+
+                // Durasi repair berakhir di Finish Repair. Mode manual (admin) mengoreksi durasi repair
+                // dengan menggeser finish_repair_at; On Trial selalu tercatat sekarang.
+                $finishRepairAt = $requestRepair->finish_repair_at ?? $now;
+                if ($isManualDurasi) {
+                    $baseStart      = $requestRepair->on_process_at ?? $requestRepair->created_at;
+                    $finishRepairAt = $baseStart->copy()->addSeconds((int) $request->durasi_manual_seconds + $totalPausedSeconds);
+
+                    if ($finishRepairAt->gt($now)) {
+                        $finishRepairAt = $now;
+                    }
+                }
+                $onTrialAt = $now;
 
                 $sparepartSnapshot = [];
 
@@ -857,6 +904,7 @@ class RequestRepairController extends Controller
                     'actual'                        => $request->actual,
                     'remark'                        => $request->remark,
                     'judge'                         => $request->judge,
+                    'finish_repair_at'              => $finishRepairAt,
                     'on_trial_at'                   => $onTrialAt,
                 ], $pauseFieldsReset));
 
@@ -924,8 +972,8 @@ class RequestRepairController extends Controller
                     $durasiOnProcessSeconds = null;
                     $durasiOnTrialSeconds   = null;
 
-                    if ($requestRepair->on_process_at && $requestRepair->on_trial_at) {
-                        $rawOnProcess = (int) $requestRepair->on_process_at->diffInSeconds($requestRepair->on_trial_at);
+                    if ($requestRepair->on_process_at && $requestRepair->repairEndAt()) {
+                        $rawOnProcess = (int) $requestRepair->on_process_at->diffInSeconds($requestRepair->repairEndAt());
                         $durasiOnProcessSeconds = max(0, $rawOnProcess - $requestRepair->total_paused_seconds);
                     }
                     if ($requestRepair->on_trial_at) {
@@ -969,6 +1017,7 @@ class RequestRepairController extends Controller
                         'assy_trial_check'                => $request->assy_trial_check,
                         'judge_permanen'                 => $request->judge_permanen,
                         'on_process_at'                  => $requestRepair->on_process_at,
+                        'finish_repair_at'               => $requestRepair->finish_repair_at,
                         'on_trial_at'                    => $requestRepair->on_trial_at,
                         'ng_judged_at'                    => $now,
                         'durasi_on_process_seconds'      => $durasiOnProcessSeconds,
@@ -982,6 +1031,7 @@ class RequestRepairController extends Controller
                         'status'                        => RequestRepair::STATUS_OPEN,
                         'ng_attempt_count'               => $requestRepair->ng_attempt_count + 1,
                         'on_process_at'                  => null,
+                        'finish_repair_at'               => null,
                         'on_trial_at'                    => null,
                         'analisa_penyebab'               => null,
                         'tindakan_perbaikan'             => null,
@@ -1031,8 +1081,8 @@ class RequestRepairController extends Controller
                 $durasiOnTrialSeconds   = null;
                 $durasiTotalSeconds     = null;
 
-                if ($requestRepair->on_process_at && $requestRepair->on_trial_at) {
-                    $rawOnProcess = (int) $requestRepair->on_process_at->diffInSeconds($requestRepair->on_trial_at);
+                if ($requestRepair->on_process_at && $requestRepair->repairEndAt()) {
+                    $rawOnProcess = (int) $requestRepair->on_process_at->diffInSeconds($requestRepair->repairEndAt());
                     $durasiOnProcessSeconds = max(0, $rawOnProcess - $requestRepair->total_paused_seconds);
                 }
                 if ($requestRepair->on_trial_at) {
@@ -1094,6 +1144,7 @@ class RequestRepairController extends Controller
                     'assy_trial_check'              => $request->assy_trial_check,
                     'judge_permanen'                => $request->judge_permanen,
                     'on_process_at'                 => $requestRepair->on_process_at,
+                    'finish_repair_at'              => $requestRepair->finish_repair_at,
                     'on_trial_at'                   => $requestRepair->on_trial_at,
                     'closed_at'                     => $closedAt,
                     'durasi_on_process_seconds'     => $durasiOnProcessSeconds,

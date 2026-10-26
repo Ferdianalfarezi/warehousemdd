@@ -292,6 +292,20 @@
                         </div>
                     </div>
 
+                    {{-- Finish Repair --}}
+                    <div id="timelineFinishRepairRow" class="hidden flex gap-4 pb-5 relative">
+                        <div class="relative z-10 flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center" style="background-color:#f5f3ff;border:1.5px solid #7c3aed;">
+                            <svg class="w-4 h-4" style="color:#7c3aed;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0 pt-1.5">
+                            <p class="text-[13.5px] font-medium text-zinc-900">Finish Repair</p>
+                            <p class="text-[12px] text-zinc-400 mt-0.5">Repair selesai, durasi repair berhenti</p>
+                            <p id="timelineFinishRepairAt" class="text-[11px] font-mono text-zinc-500 mt-1"></p>
+                        </div>
+                    </div>
+
                     {{-- On Trial --}}
                     <div id="timelineOnTrialRow" class="hidden flex gap-4 pb-5 relative">
                         <div class="relative z-10 flex-shrink-0 w-9 h-9 rounded-full bg-green-50 border-[1.5px] border-green-600 flex items-center justify-center">

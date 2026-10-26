@@ -214,6 +214,78 @@
 
 @include('history-checkups.detail-modal')
 
+@can('superadmin-only')
+{{-- Modal Edit History (khusus superadmin). Id sengaja bukan #editModal (ada style global di layout) --}}
+<div id="historyEditModal" style="display:none;position:fixed;inset:0;z-index:70;background-color:rgba(0,0,0,0);transition:background-color .3s ease;align-items:center;justify-content:center;padding:16px;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full" style="max-width:560px;max-height:90vh;overflow-y:auto;opacity:0;transform:translateY(16px) scale(.95);transition:opacity .3s cubic-bezier(.4,0,.2,1),transform .3s cubic-bezier(.4,0,.2,1);">
+        <div class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div>
+                <h3 class="text-xl font-bold text-gray-900">Edit History Checkup</h3>
+                <p id="heTitle" class="text-sm text-gray-600 mt-1"></p>
+            </div>
+            <button type="button" onclick="closeHistoryEdit()" class="text-gray-400 hover:text-gray-600 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+
+        <form id="historyEditForm" onsubmit="event.preventDefault(); submitHistoryEdit();" class="p-6 space-y-4">
+            <input type="hidden" id="heId">
+
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tanggal & Waktu</p>
+            <div class="grid grid-cols-2 gap-3">
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Tgl Terjadwal</label>
+                    <input type="date" id="heTanggalTerjadwal" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Tgl Checkup <span class="text-red-500">*</span></label>
+                    <input type="date" id="heTanggalCheckup" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Mulai Perbaikan</label>
+                    <input type="datetime-local" id="heMulai" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-gray-700 mb-1">Waktu Selesai</label>
+                    <input type="datetime-local" id="heSelesai" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+                </div>
+            </div>
+
+            <div style="border:1px solid #fde68a;background-color:#fffbeb;border-radius:12px;padding:14px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                    <p class="text-sm font-semibold text-gray-700">Durasi Preventive</p>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;" class="text-xs text-gray-600">
+                        <input type="checkbox" id="heDurasiOtomatis" onchange="renderHeDurasi()">
+                        Hitung otomatis dari Mulai–Selesai
+                    </label>
+                </div>
+                <p id="heDurasiAutoInfo" class="text-xs text-gray-500" style="margin-top:4px;"></p>
+                <div id="heDurasiInputs" class="grid grid-cols-3 gap-3" style="margin-top:10px;">
+                    <div><label class="block text-xs font-medium text-gray-600 mb-1">Hari</label><input type="number" id="heHari" min="0" class="w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                    <div><label class="block text-xs font-medium text-gray-600 mb-1">Jam</label><input type="number" id="heJam" min="0" max="23" class="w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                    <div><label class="block text-xs font-medium text-gray-600 mb-1">Menit</label><input type="number" id="heMenit" min="0" max="59" class="w-full px-3 py-2 border border-gray-300 rounded-lg"></div>
+                </div>
+            </div>
+
+            <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Line & Catatan</p>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Line</label>
+                <input type="text" id="heLine" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Catatan Umum</label>
+                <textarea id="heCatatan" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black resize-none"></textarea>
+            </div>
+
+            <div class="flex justify-end gap-3 pt-2">
+                <button type="button" onclick="closeHistoryEdit()" class="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition">Batal</button>
+                <button type="submit" id="heSubmitBtn" class="px-5 py-2.5 bg-black text-white rounded-lg font-semibold hover:bg-gray-800 transition">Simpan</button>
+            </div>
+        </form>
+    </div>
+</div>
+@endcan
+
 @endsection
 
 @push('scripts')
@@ -223,6 +295,9 @@
 // ════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════
+// Edit history hanya untuk superadmin (server juga menolak role lain)
+const CAN_EDIT_HISTORY = @json(Gate::allows('superadmin-only'));
+
 let currentPage   = 1;
 let perPage       = 20;
 let searchQuery   = '';
@@ -446,7 +521,7 @@ function renderTable(items) {
              + '<td class="px-4 py-3 text-sm text-gray-600">' + (esc(r.selesai) || '-') + '</td>'
              + '<td class="px-4 py-3 text-sm text-gray-600 whitespace-nowrap">' + esc(r.durasi) + '</td>'
              + '<td class="px-4 py-3 text-center">' + periodeBadge + '</td>'
-             + '<td class="px-4 py-3"><div class="flex items-center justify-center gap-2">' + detailBtn + deleteBtn + '</div></td>'
+             + '<td class="px-4 py-3"><div class="flex items-center justify-center gap-2">' + detailBtn + editHistoryBtn(r.id) + deleteBtn + '</div></td>'
              + '</tr>';
     }).join('');
 }
@@ -499,6 +574,149 @@ function updateShowingInfo(p) {
 // ════════════════════════════════════════════════════════
 // DELETE
 // ════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════
+// EDIT HISTORY (superadmin)
+// ════════════════════════════════════════════════════════
+function editHistoryBtn(id) {
+    if (!CAN_EDIT_HISTORY) return '';
+    return '<button onclick="openHistoryEdit(' + Number(id) + ')" title="Edit"'
+         + ' style="background-color:#f97316;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;"'
+         + ' onmouseover="this.style.backgroundColor=\'#ea580c\'" onmouseout="this.style.backgroundColor=\'#f97316\'">'
+         + '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>'
+         + '</button>';
+}
+
+// Selisih Mulai -> Selesai dalam menit (null kalau salah satu kosong)
+function heAutoMenit() {
+    const mulai = document.getElementById('heMulai').value;
+    const selesai = document.getElementById('heSelesai').value;
+    if (!mulai || !selesai) return null;
+    return Math.max(0, Math.floor((new Date(selesai) - new Date(mulai)) / 60000));
+}
+
+function heSetDurasi(total) {
+    total = Math.max(0, parseInt(total, 10) || 0);
+    document.getElementById('heHari').value = Math.floor(total / 1440);
+    document.getElementById('heJam').value = Math.floor((total % 1440) / 60);
+    document.getElementById('heMenit').value = total % 60;
+}
+
+function heGetDurasi() {
+    const v = id => Math.max(0, parseInt(document.getElementById(id).value, 10) || 0);
+    return v('heHari') * 1440 + v('heJam') * 60 + v('heMenit');
+}
+
+function renderHeDurasi() {
+    const auto = document.getElementById('heDurasiOtomatis').checked;
+    const autoMenit = heAutoMenit();
+    if (auto && autoMenit !== null) heSetDurasi(autoMenit);
+    document.getElementById('heDurasiAutoInfo').textContent = autoMenit === null
+        ? 'Isi Mulai & Selesai untuk menghitung otomatis.'
+        : 'Hitungan dari Mulai–Selesai: ' + autoMenit + ' menit';
+    document.getElementById('heDurasiInputs').style.opacity = auto ? '0.5' : '1';
+    ['heHari', 'heJam', 'heMenit'].forEach(id => { document.getElementById(id).disabled = auto; });
+}
+
+async function openHistoryEdit(id) {
+    try {
+        const res = await fetch('/history-checkups/' + id + '/edit-data', { headers: { 'Accept': 'application/json' } });
+        const result = await res.json();
+        if (!result.success) throw new Error();
+        const d = result.data;
+
+        document.getElementById('heId').value = d.id;
+        document.getElementById('heTitle').textContent = d.kode_barang + ' - ' + d.nama;
+        document.getElementById('heTanggalTerjadwal').value = d.tanggal_terjadwal || '';
+        document.getElementById('heTanggalCheckup').value = d.tanggal_checkup || '';
+        document.getElementById('heMulai').value = d.mulai_perbaikan || '';
+        document.getElementById('heSelesai').value = d.waktu_selesai || '';
+        document.getElementById('heLine').value = d.line || '';
+        document.getElementById('heCatatan').value = d.catatan_umum || '';
+
+        // Toggle otomatis aktif kalau durasi tersimpan = selisih mulai-selesai
+        heSetDurasi(d.durasi_perbaikan);
+        const autoMenit = heAutoMenit();
+        document.getElementById('heDurasiOtomatis').checked = autoMenit !== null && autoMenit === Number(d.durasi_perbaikan);
+        renderHeDurasi();
+
+        animateModal(document.getElementById('historyEditModal'), true);
+    } catch (e) {
+        Swal.fire('Error!', 'Gagal memuat data history', 'error');
+    }
+}
+
+// Animasi masuk/keluar modal edit (latar memudar + kartu membesar), sama seperti modal lain di aplikasi
+function animateModal(modal, show) {
+    const card = modal.firstElementChild;
+    clearTimeout(modal._hideTimer);
+    if (show) {
+        modal.style.display = 'flex';
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            modal.style.backgroundColor = 'rgba(0,0,0,.5)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0) scale(1)';
+        }));
+    } else {
+        modal.style.backgroundColor = 'rgba(0,0,0,0)';
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(16px) scale(.95)';
+        modal._hideTimer = setTimeout(() => { modal.style.display = 'none'; }, 300);
+    }
+}
+
+function closeHistoryEdit() {
+    const modal = document.getElementById('historyEditModal');
+    if (modal) animateModal(modal, false);
+}
+
+async function submitHistoryEdit() {
+    const id = document.getElementById('heId').value;
+    const auto = document.getElementById('heDurasiOtomatis').checked;
+    const payload = {
+        tanggal_terjadwal: document.getElementById('heTanggalTerjadwal').value || null,
+        tanggal_checkup: document.getElementById('heTanggalCheckup').value,
+        mulai_perbaikan: document.getElementById('heMulai').value || null,
+        waktu_selesai: document.getElementById('heSelesai').value || null,
+        durasi_otomatis: auto,
+        durasi_perbaikan: auto ? null : heGetDurasi(),
+        line: document.getElementById('heLine').value || null,
+        catatan_umum: document.getElementById('heCatatan').value || null,
+    };
+
+    const btn = document.getElementById('heSubmitBtn');
+    btn.disabled = true;
+    try {
+        const res = await fetch('/history-checkups/' + id, {
+            method: 'PUT',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeHistoryEdit();
+            await Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, showConfirmButton: false, timer: 1500 });
+            loadData();
+            loadSummary();
+        } else {
+            Swal.fire('Error!', data.message || 'Gagal menyimpan', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error!', 'Gagal menyimpan history!', 'error');
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    if (!CAN_EDIT_HISTORY) return;
+    // Hitungan otomatis ikut berubah saat Mulai/Selesai diubah
+    ['heMulai', 'heSelesai'].forEach(id => document.getElementById(id).addEventListener('input', renderHeDurasi));
+});
+
 async function deleteHistory(historyId) {
     const result = await Swal.fire({
         title: 'Yakin hapus?',
@@ -554,7 +772,10 @@ function showEmpty(msg) {
 }
 
 document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closeDetailModal();
+    if (e.key !== 'Escape') return;
+    const editModal = document.getElementById('historyEditModal');
+    if (editModal && editModal.style.display === 'flex') closeHistoryEdit();
+    else closeDetailModal();
 });
 </script>
 @endpush

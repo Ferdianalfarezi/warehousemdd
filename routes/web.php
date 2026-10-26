@@ -214,6 +214,11 @@ Route::middleware('auth')->group(function () {
         Route::get('data',            [HistoryRepairController::class, 'getData'])->name('data');
         Route::get('summary',         [HistoryRepairController::class, 'getSummary'])->name('summary'); 
         Route::get('by-part-no',      [HistoryRepairController::class, 'getByPartNo'])->name('by-part-no');
+        // Edit history — khusus superadmin
+        Route::middleware('can:superadmin-only')->group(function () {
+            Route::get('{historyRepair}/edit-data', [HistoryRepairController::class, 'editData'])->name('edit-data');
+            Route::put('{historyRepair}',           [HistoryRepairController::class, 'update'])->name('update');
+        });
         Route::get('{historyRepair}', [HistoryRepairController::class, 'show'])->name('show');
         Route::get('{historyRepair}/print', [HistoryRepairController::class, 'print'])->name('print');
     });
@@ -247,6 +252,11 @@ Route::middleware('auth')->group(function () {
         Route::get('data',      [HistoryCheckupController::class, 'data'])->name('data');           // ⚠️ sebelum {id}
         Route::get('summary',   [HistoryCheckupController::class, 'summary'])->name('summary');     // ⚠️ sebelum {id}
         Route::get('by-barang', [HistoryCheckupController::class, 'byBarang'])->name('by-barang');  // ⚠️ sebelum {id}
+        // Edit history — khusus superadmin
+        Route::middleware('can:superadmin-only')->group(function () {
+            Route::get('{id}/edit-data', [HistoryCheckupController::class, 'editData'])->name('edit-data');
+            Route::put('{id}',           [HistoryCheckupController::class, 'update'])->name('update');
+        });
         Route::delete('{id}',   [HistoryCheckupController::class, 'destroy'])->name('destroy');
     });
 
@@ -275,6 +285,7 @@ Route::middleware('auth')->group(function () {
                     'request_repairs'  => \App\Models\RequestRepair::whereIn('status', [
                         \App\Models\RequestRepair::STATUS_OPEN,
                         \App\Models\RequestRepair::STATUS_ON_PROCESS,
+                        \App\Models\RequestRepair::STATUS_FINISH_REPAIR,
                         \App\Models\RequestRepair::STATUS_ON_TRIAL,
                     ])->count(),
                 ]);

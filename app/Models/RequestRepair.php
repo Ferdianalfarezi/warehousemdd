@@ -51,6 +51,7 @@ class RequestRepair extends Model
         'line_mesin',
         // Status timestamps
         'on_process_at',
+        'finish_repair_at',
         'on_trial_at',
         // NG attempt tracking
         'ng_attempt_count',
@@ -67,6 +68,7 @@ class RequestRepair extends Model
         'jumlah_stroke'        => 'integer',
         'kekuatan_stock_fg'    => 'integer',
         'on_process_at'        => 'datetime',
+        'finish_repair_at'     => 'datetime',
         'on_trial_at'          => 'datetime',
         'ng_attempt_count'     => 'integer',
         'is_paused'            => 'boolean',   // ⬅️ baru
@@ -77,16 +79,21 @@ class RequestRepair extends Model
     ];
 
     // ── Constants ───────────────────────────────────────────
-    const STATUS_OPEN       = 'open';
-    const STATUS_ON_PROCESS = 'on_process';
-    const STATUS_ON_TRIAL   = 'on_trial';
-    const STATUS_CLOSED     = 'closed';
+    // Alur: open -> on_process -> finish_repair -> on_trial -> closed
+    const STATUS_OPEN          = 'open';
+    const STATUS_ON_PROCESS    = 'on_process';
+    const STATUS_FINISH_REPAIR = 'finish_repair';
+    const STATUS_ON_TRIAL      = 'on_trial';
+    const STATUS_CLOSED        = 'closed';
 
+    // Role yang boleh jadi PIC (dipilih saat On Process)
     const ROLES_TO_ON_PROCESS = [1, 7];
+    // Role yang boleh mengubah status ke On Process & Finish Repair: superadmin, kepala divisi, mekanik
+    const ROLES_TO_PROCESS_STEPS = [1, 3, 7];
     const ROLES_TO_ON_TRIAL   = [1, 2, 3, 7]; // sudah tidak dipakai untuk gate on_trial (digantikan PIC + admin override), dibiarkan untuk referensi
     const ROLES_TO_CLOSED     = [1, 8, 4,3];
 
-    const ROLE_ADMIN_OVERRIDE = 1; // role yang bisa override PIC di transisi on_process -> on_trial
+    const ROLE_ADMIN_OVERRIDE = 1; // role yang bisa override PIC di transisi finish_repair -> on_trial
 
     const ROLES_CAN_PAUSE_RESUME = [1, 2, 7]; // ⬅️ baru — role yang boleh pause/resume, gak harus PIC yang tercatat & gak harus orang yang sama yang mem-pause
 
@@ -154,9 +161,21 @@ class RequestRepair extends Model
         return $this->status === self::STATUS_OPEN;
     }
 
-    public function canConfirmToOnTrial(): bool
+    public function canConfirmToFinishRepair(): bool
     {
         return $this->status === self::STATUS_ON_PROCESS;
+    }
+
+    public function canUserConfirmToFinishRepair(User $user): bool
+    {
+        return $this->canConfirmToFinishRepair()
+            && in_array($user->role_id, self::ROLES_TO_PROCESS_STEPS, true);
+    }
+
+    // On Trial sekarang dari Finish Repair (bukan langsung dari On Process)
+    public function canConfirmToOnTrial(): bool
+    {
+        return $this->status === self::STATUS_FINISH_REPAIR;
     }
 
     public function canConfirmToClosed(): bool
@@ -213,10 +232,19 @@ class RequestRepair extends Model
     }
 
     // ── Durasi helpers ──────────────────────────────────────
+
+    /**
+     * Akhir durasi repair: Finish Repair. Data lama (sebelum ada Finish Repair) pakai On Trial.
+     */
+    public function repairEndAt(): ?Carbon
+    {
+        return $this->finish_repair_at ?? $this->on_trial_at;
+    }
+
     public function getDurasiOnProcessSeconds(): ?int
     {
         $start = $this->on_process_at ?? $this->created_at;
-        $end   = $this->on_trial_at ?? now();
+        $end   = $this->repairEndAt() ?? now();
         return $start ? max(0, (int) $start->diffInSeconds($end) - $this->total_paused_seconds) : null;
     }
 
@@ -254,12 +282,14 @@ class RequestRepair extends Model
     {
         $start = $this->on_process_at ?? $this->created_at;
 
-        $onProcessSec = $this->on_trial_at && $start
-            ? max(0, (int) $start->diffInSeconds($this->on_trial_at) - $this->total_paused_seconds)
+        $repairEnd    = $this->repairEndAt();
+        $onProcessSec = $repairEnd && $start
+            ? max(0, (int) $start->diffInSeconds($repairEnd) - $this->total_paused_seconds)
             : null;
 
         return [
             'on_process_at'             => $this->on_process_at?->toISOString(),
+            'finish_repair_at'          => $this->finish_repair_at?->toISOString(),
             'on_trial_at'               => $this->on_trial_at?->toISOString(),
             'closed_at'                 => null,
             'durasi_on_process'         => $onProcessSec !== null ? self::formatDurasi($onProcessSec) : null,
