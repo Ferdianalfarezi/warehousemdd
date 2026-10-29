@@ -428,7 +428,7 @@
          style="display:none; opacity:0; transition:opacity .15s; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center; background:rgba(255,255,255,0.35); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);">
         <div style="display:flex; flex-direction:column; align-items:center; gap:12px; background:#fff; padding:20px 28px; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.12);">
             <div style="width:40px; height:40px; border:4px solid #e5e7eb; border-top-color:#111827; border-radius:50%; animation:gl-spin .8s linear infinite;"></div>
-            <span style="font-size:14px; font-weight:500; color:#4b5563;">Memuat...</span>
+            <span style="font-size:14px; font-weight:500; color:#4b5563;">Sebentar pak...</span>
         </div>
     </div>
     <div class="flex h-screen overflow-hidden" x-data="menuState()">
