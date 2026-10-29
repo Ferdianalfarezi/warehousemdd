@@ -24,13 +24,17 @@ class ScheduleObserver
 
                 if (!$exists) {
                     // Create general checkup
+                    // Data barang dari master (salinan di schedule bisa ketinggalan).
+                    // 'line' harus nama line (teks): $barang->line itu relasi/objek, kalau disimpan
+                    // langsung jadi JSON {"id":..,"nama_line":..} di kolom line.
+                    $barang = $schedule->barang;
                     GeneralCheckup::create([
                         'schedule_id' => $schedule->id,
                         'barang_id' => $schedule->barang_id,
-                        'kode_barang' => $schedule->kode_barang,
-                        'gambar' => $schedule->gambar,
-                        'nama' => $schedule->nama,
-                        'line' => $schedule->barang->line ?? null,
+                        'kode_barang' => $barang->kode_barang ?? $schedule->kode_barang,
+                        'gambar' => $barang ? $barang->gambar : $schedule->gambar,
+                        'nama' => $barang->nama ?? $schedule->nama,
+                        'line' => $barang?->line?->nama_line,
                         'tanggal_terjadwal' => $schedule->service_berikutnya,
                         'status' => 'pending',
                     ]);
