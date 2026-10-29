@@ -31,7 +31,8 @@
         // State awal sidebar langsung dipasang sebagai class di <html> supaya CSS bisa menampilkan
         // submenu yang terbuka SEBELUM Alpine (defer, dari CDN) jalan. Tanpa ini submenu tampil
         // tertutup dulu lalu beranimasi terbuka setiap pindah halaman.
-        (function() {
+        // Dipanggil saat load awal DAN setiap pindah halaman lewat Turbo (lihat turbo:before-render di bawah).
+        window.applyMenuPreload = function (path) {
             let saved = null;
             try {
                 const raw = localStorage.getItem('sidebar_menu_state');
@@ -39,13 +40,12 @@
             } catch(e) {}
             saved = saved || {};
 
-            const path = window.location.pathname;
             const byPath = {
-                master:      ['/parts', '/barangs', '/schedules', '/check-indicators', '/suppliers', '/users'],
-                transaction: ['/request-parts', '/general-checkups'],
+                master:      ['/parts', '/barangs', '/lines', '/schedules', '/check-indicators', '/suppliers', '/users'],
+                transaction: ['/request-parts', '/general-checkups', '/request-repairs'],
                 approval:    ['/pdd/confirm', '/subcont/confirm'],
                 andon:       ['/andon/'],
-                history:     ['/history-checkups', '/history-request-parts'],
+                history:     ['/history-checkups', '/history-request-parts', '/history-repairs'],
             };
 
             const state = {};
@@ -54,15 +54,115 @@
 
             Object.keys(byPath).forEach(function (menu) {
                 state[menu] = byPath[menu].some(p => path.includes(p)) || !!saved[menu];
-                if (state[menu]) html.classList.add('sb-open-' + menu);
+                html.classList.toggle('sb-open-' + menu, state[menu]);
             });
 
             window.__INITIAL_MENU_STATE__ = state;
+        };
+        window.applyMenuPreload(window.location.pathname);
+    </script>
+
+    {{-- ════════════════════════════════════════════════════════════════════
+         NAVIGASI TANPA RELOAD (Turbo Drive)
+         Pindah menu = ambil halaman baru di background lalu tukar <body>. Sidebar, CSS, JS & favicon
+         tidak dimuat ulang. Script halaman tetap jalan ulang tiap kunjungan, jadi:
+           - pakai onPageReady(fn) (bukan DOMContentLoaded),
+           - listener document/window pakai pageListen(), timer pakai pageInterval()
+             -> otomatis dibersihkan saat pindah halaman (tidak menumpuk).
+         Halaman yang tidak mau ikut Turbo: tambahkan data-turbo="false" di link/form-nya.
+         ════════════════════════════════════════════════════════════════════ --}}
+    <meta name="turbo-cache-control" content="no-cache">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.12/dist/turbo.es2017-esm.js"></script>
+    <script>
+        (function () {
+            let listeners = [];
+            let intervals = [];
+            let rendering = false;   // sedang menampilkan halaman baru lewat Turbo
+            let readyQueue = [];
+
+            // Jalankan fn setelah halaman siap:
+            //  - load awal: tunggu DOMContentLoaded (browser sudah menunggu script eksternal)
+            //  - kunjungan Turbo: tunggu semua <script src> halaman baru selesai dimuat
+            //    (Chart.js, pareto-chart.js, process.js, ...), karena script yang disisipkan Turbo dimuat asinkron
+            window.onPageReady = function (fn) {
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', fn, { once: true });
+                } else if (rendering) {
+                    readyQueue.push(fn);
+                } else {
+                    setTimeout(fn, 0);
+                }
+            };
+
+            function flushReadyQueue() {
+                const queue = readyQueue;
+                readyQueue = [];
+                rendering = false;
+                queue.forEach(fn => setTimeout(fn, 0));
+            }
+
+            // Setelah body baru tampil: tunggu script eksternalnya selesai dimuat, baru jalankan onPageReady
+            function runReadyAfterScripts() {
+                const scripts = [...document.body.querySelectorAll('script[src]')];
+                if (!scripts.length) return flushReadyQueue();
+
+                let remaining = scripts.length;
+                const done = () => { if (--remaining === 0) flushReadyQueue(); };
+                scripts.forEach(s => {
+                    s.addEventListener('load', done, { once: true });
+                    s.addEventListener('error', done, { once: true });
+                });
+                setTimeout(() => { if (rendering) flushReadyQueue(); }, 8000); // cadangan kalau ada script macet
+            }
+
+            window.pageListen = function (target, type, fn, options) {
+                target.addEventListener(type, fn, options);
+                listeners.push([target, type, fn, options]);
+            };
+
+            window.pageInterval = function (fn, ms, ...args) {
+                const id = setInterval(fn, ms, ...args);
+                intervals.push(id);
+                return id;
+            };
+
+            // Bersihkan sisa halaman lama sebelum halaman baru ditampilkan
+            function cleanupPage() {
+                listeners.forEach(([target, type, fn, options]) => target.removeEventListener(type, fn, options));
+                intervals.forEach(id => clearInterval(id));
+                listeners = [];
+                intervals = [];
+                if (window.Swal && Swal.isVisible && Swal.isVisible()) Swal.close();
+            }
+
+            function saveSidebarScroll() {
+                const nav = document.querySelector('.sidebar-nav-container');
+                if (nav) try { sessionStorage.setItem('sidebar_scroll', nav.scrollTop); } catch (e) {}
+            }
+
+            document.addEventListener('turbo:before-visit', saveSidebarScroll);
+
+            document.addEventListener('turbo:before-render', function () {
+                cleanupPage();
+                rendering = true;
+                readyQueue = [];
+                // State sidebar untuk halaman baru dipasang SEBELUM digambar -> submenu tidak animasi tutup-buka
+                window.applyMenuPreload(window.location.pathname);
+            });
+
+            document.addEventListener('turbo:render', function () {
+                const nav = document.querySelector('.sidebar-nav-container');
+                if (nav) try { nav.scrollTop = parseInt(sessionStorage.getItem('sidebar_scroll') || '0', 10); } catch (e) {}
+                runReadyAfterScripts();
+            });
         })();
     </script>
 </head>
 
 <style>
+    /* Progress bar Turbo (muncul kalau pindah halaman > 0,5 detik) */
+    .turbo-progress-bar { height: 3px; background-color: #111827; }
+
     /* Prevent layout shift saat Alpine belum ready */
     [x-cloak] { display: none !important; }
 
@@ -571,10 +671,10 @@
                     </svg>
                     <span class="font-semibold text-sm">Logout</span>
                 </button>
-                <form id="logout-form" method="POST" action="{{ route('logout') }}" class="hidden">@csrf</form>
+                <form id="logout-form" method="POST" action="{{ route('logout') }}" class="hidden" data-turbo="false">@csrf</form>
             </div>
         </aside>
-        <script>
+        <script data-turbo-eval="false">{{-- dijalankan sekali saja (scroll sidebar ditangani event Turbo) --}}
             // Pertahankan posisi scroll sidebar antar halaman (dijalankan sync sebelum halaman digambar)
             (function () {
                 const nav = document.querySelector('.sidebar-nav-container');
@@ -659,7 +759,7 @@
 
     <div id="notificationContainer" class="notification-container"></div>
 
-    <script>
+    <script data-turbo-eval="false">{{-- script layout: cukup sekali, tidak diulang tiap pindah halaman --}}
     // ============================================
     // ALPINE MENU STATE
     // ============================================

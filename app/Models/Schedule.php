@@ -102,7 +102,8 @@ class Schedule extends Model
             'custom' => 'hari'
         ];
 
-        return ucfirst($this->periode) . " ({$this->interval_value} {$satuan[$this->periode]})";
+        // Cukup jumlah + satuan, mis. "12 bulan", "1 tahun", "2 minggu"
+        return "{$this->interval_value} " . ($satuan[$this->periode] ?? 'hari');
     }
 
     /**

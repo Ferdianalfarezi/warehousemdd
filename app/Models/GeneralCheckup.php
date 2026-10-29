@@ -24,11 +24,13 @@ class GeneralCheckup extends Model
         'waktu_selesai',
         'durasi_manual_menit',
         'status',
+        'is_early',
         'catatan_umum',
     ];
 
     protected $casts = [
         'tanggal_terjadwal' => 'date',
+        'is_early' => 'boolean',
         'tanggal_checkup' => 'date',
         'mulai_perbaikan' => 'datetime',
         'waktu_selesai' => 'datetime',

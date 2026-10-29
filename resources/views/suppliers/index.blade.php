@@ -181,14 +181,14 @@
 @push('scripts')
 <script>
     // === DATA & STATE ===
-    let allSuppliers   = [];
-    let filteredSuppliers = [];
-    let currentPerPage  = 20;
-    let currentPage = 1;
-    let totalPages = 1;
+    var allSuppliers   = [];
+    var filteredSuppliers = [];
+    var currentPerPage  = 20;
+    var currentPage = 1;
+    var totalPages = 1;
 
     // === INIT ===
-    document.addEventListener('DOMContentLoaded', function () {
+    onPageReady(function () {
         const rows = document.querySelectorAll('#suppliersTableBody tr');
         rows.forEach(row => {
             if (!row.querySelector('td[colspan]')) {
@@ -552,7 +552,7 @@
     }
 
     // ESC to close all modals
-    document.addEventListener('keydown', e => {
+    pageListen(document, 'keydown', e => {
         if (e.key === 'Escape') {
             closeCreateModal();
             closeEditModal();

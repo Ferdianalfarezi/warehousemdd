@@ -82,7 +82,7 @@
 
 @push('scripts')
 <script>
-    let bagianCounter = 0;
+    var bagianCounter = 0;
 
     function openCreateModal() {
         const modal = document.getElementById('createModal');

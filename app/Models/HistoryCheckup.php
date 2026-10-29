@@ -23,6 +23,7 @@ class HistoryCheckup extends Model
         'waktu_selesai',
         'durasi_perbaikan',
         'status',
+        'is_early',
         'catatan_umum',
         'total_ok',
         'total_ng',
@@ -31,6 +32,7 @@ class HistoryCheckup extends Model
 
     protected $casts = [
         'tanggal_terjadwal' => 'date',
+        'is_early' => 'boolean',
         'tanggal_checkup' => 'date',
         'mulai_perbaikan' => 'datetime',
         'waktu_selesai' => 'datetime',

@@ -310,7 +310,7 @@ async function verifyRequest(id) {
 }
 
 // ESC to close modal
-document.addEventListener('keydown', function(e) {
+pageListen(document, 'keydown', function(e) {
     if (e.key === 'Escape') closeRequestDetailModal();
 });
 </script>

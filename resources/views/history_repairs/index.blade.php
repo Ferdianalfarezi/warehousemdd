@@ -314,20 +314,20 @@
 // Ditaruh di window karena tombol Edit dirender oleh script di history_repairs/detail.blade.php
 window.CAN_EDIT_HISTORY = @json(Gate::allows('superadmin-only'));
 
-let currentPage   = 1;
-let perPage       = 20;
-let searchQuery   = '';
-let dateFrom      = '';
-let dateTo        = '';
-let customers     = [];
-let totalPages    = 1;
-let isLoading     = false;
-let searchTimeout = null;
+var currentPage   = 1;
+var perPage       = 20;
+var searchQuery   = '';
+var dateFrom      = '';
+var dateTo        = '';
+var customers     = [];
+var totalPages    = 1;
+var isLoading     = false;
+var searchTimeout = null;
 
 // ════════════════════════════════════════════════════════
 // BADGES
 // ════════════════════════════════════════════════════════
-const KATEGORI_BADGE = {
+var KATEGORI_BADGE = {
     'Dies':        'bg-blue-100 text-blue-800',
     'Burry':       'bg-yellow-100 text-yellow-800',
     'Dimensi':     'bg-purple-100 text-purple-800',
@@ -346,7 +346,7 @@ function okngBadge(val) {
 // ════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function () {
+onPageReady(function () {
     loadData();
     loadSummary();
 
@@ -433,12 +433,12 @@ function initCustomerFilter() {
 // ════════════════════════════════════════════════════════
 // LOAD SUMMARY (grafik Pareto, ikut filter)
 // ════════════════════════════════════════════════════════
-let summaryRequestId = 0;
+var summaryRequestId = 0;
 
 // ════════════════════════════════════════════════════════
 // EDIT HISTORY REPAIR (superadmin) — dibuka dari kartu repair di modal detail
 // ════════════════════════════════════════════════════════
-const RE_FIELDS = {
+var RE_FIELDS = {
     reTanggalPengajuan: 'tanggal_pengajuan', reJumlahStroke: 'jumlah_stroke', reGroup: 'group', reShift: 'shift',
     reLineMesin: 'line_mesin', reProcessNo: 'process_no', reCustomer: 'customer', reJenis: 'jenis',
     reKategori: 'kategori_problem', reDetailProyek: 'detail_proyek',
@@ -446,7 +446,7 @@ const RE_FIELDS = {
     rePic: 'pic_names', reAnalisa: 'analisa_penyebab', reTindakan: 'tindakan_perbaikan',
     reRootcause: 'rootcause', reRecovery: 'recovery', reCatatanSparepart: 'catatan_penggantian_sparepart',
 };
-let rePausedSeconds = 0;
+var rePausedSeconds = 0;
 
 function reFormatDurasi(sec) {
     if (sec === null || sec === undefined || sec < 0) return '-';
@@ -545,7 +545,7 @@ async function submitRepairEdit() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+onPageReady(function () {
     if (!window.CAN_EDIT_HISTORY) return;
     ['reOnProcess', 'reFinishRepair', 'reOnTrial', 'reClosed'].forEach(id => document.getElementById(id).addEventListener('input', renderRepairDurasiPreview));
 });
@@ -586,7 +586,7 @@ async function loadSummary() {
 // ════════════════════════════════════════════════════════
 // LOAD DATA
 // ════════════════════════════════════════════════════════
-let reloadQueued = false;
+var reloadQueued = false;
 
 async function loadData() {
     // Filter diubah saat masih loading -> jalankan lagi setelah selesai (jangan dibuang)
@@ -711,7 +711,7 @@ function showEmpty(msg) {
     document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="9" class="px-6 py-12 text-center text-gray-500">' + msg + '</td></tr>';
 }
 
-document.addEventListener('keydown', function (e) {
+pageListen(document, 'keydown', function (e) {
     if (e.key !== 'Escape') return;
     const editModal = document.getElementById('repairEditModal');
     if (editModal && editModal.style.display === 'flex') closeRepairEdit();

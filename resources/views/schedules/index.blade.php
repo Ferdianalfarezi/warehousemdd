@@ -341,7 +341,7 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+onPageReady(function() {
     initializeSelect2();
     updateIntervalLabel();
 
@@ -494,7 +494,7 @@ function closeEditModal() {
     }, 300);
 }
 
-const intervalLabels = {
+var intervalLabels = {
     'harian': 'hari',
     'mingguan': 'minggu',
     'bulanan': 'bulan',
@@ -582,7 +582,7 @@ function updateEditNextServiceInfo() {
     document.getElementById('editNextServiceInfo').textContent = fmtTanggal(next);
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+onPageReady(function () {
     document.getElementById('editMulaiService').addEventListener('input', updateEditNextServiceInfo);
 });
 
@@ -745,7 +745,7 @@ function clearEditErrors() {
 }
 
 // Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
+pageListen(document, 'keydown', function(e) {
     if (e.key === 'Escape') {
         closeCreateModal();
         closeEditModal();

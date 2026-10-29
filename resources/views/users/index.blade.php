@@ -197,13 +197,13 @@
 
 @push('scripts')
 <script>
-const OPERATOR_ROLE_ID = 4;
+var OPERATOR_ROLE_ID = 4;
 
-let allUsers = [];
-let filteredUsers = [];
-let currentPerPage = 20;
+var allUsers = [];
+var filteredUsers = [];
+var currentPerPage = 20;
 
-document.addEventListener('DOMContentLoaded', function() {
+onPageReady(function() {
     console.log('DOM Loaded');
     
     // Initialize table data
@@ -595,7 +595,7 @@ function updateTable() {
     });
 }
 
-document.addEventListener('keydown', function(e) {
+pageListen(document, 'keydown', function(e) {
     if (e.key === 'Escape') {
         closeCreateModal();
         closeEditModal();

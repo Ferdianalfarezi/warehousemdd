@@ -110,7 +110,7 @@
 
 @push('scripts')
 <script>
-    let editStandardCounter = 0;
+    var editStandardCounter = 0;
 
     async function openEditModal(id) {
         try {

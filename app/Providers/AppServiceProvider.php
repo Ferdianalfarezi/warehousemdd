@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Vite;
 use App\Models\Schedule;
 use App\Observers\ScheduleObserver;
 
@@ -38,5 +39,9 @@ class AppServiceProvider extends ServiceProvider
         });
 
         Schedule::observe(ScheduleObserver::class);
+
+        // Navigasi Turbo: kalau CSS/JS hasil build berubah (deploy baru), Turbo otomatis reload penuh
+        Vite::useScriptTagAttributes(['data-turbo-track' => 'reload']);
+        Vite::useStyleTagAttributes(['data-turbo-track' => 'reload']);
     }
 }

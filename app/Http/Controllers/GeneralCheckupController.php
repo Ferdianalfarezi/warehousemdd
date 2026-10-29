@@ -240,6 +240,97 @@ class GeneralCheckupController extends Controller
     }
 
     /**
+     * PREVENTIVE LEBIH AWAL (superadmin) — daftar schedule yang BELUM jatuh tempo
+     * dan belum punya checkup aktif. Pencarian per kata di kode/nama barang.
+     */
+    public function earlyCandidates(Request $request)
+    {
+        $activeScheduleIds = GeneralCheckup::whereIn('status', self::ACTIVE_STATUS)
+            ->whereNotNull('schedule_id')
+            ->select('schedule_id');
+
+        $query = Schedule::with('barang:id,kode_barang,nama')
+            ->whereDate('service_berikutnya', '>', today())
+            ->whereNotIn('id', $activeScheduleIds);
+
+        $words = preg_split('/\s+/', trim((string) $request->search), -1, PREG_SPLIT_NO_EMPTY);
+        foreach ($words as $word) {
+            $query->where(function ($q) use ($word) {
+                $q->where('kode_barang', 'like', "%{$word}%")
+                  ->orWhere('nama', 'like', "%{$word}%")
+                  ->orWhereHas('barang', fn ($b) => $b->where('kode_barang', 'like', "%{$word}%")
+                                                      ->orWhere('nama', 'like', "%{$word}%"));
+            });
+        }
+
+        $total     = (clone $query)->count();
+        $schedules = $query->orderBy('service_berikutnya')->limit(50)->get();
+
+        return response()->json([
+            'success' => true,
+            'total'   => $total,
+            'data'    => $schedules->map(fn ($s) => [
+                'id'                 => $s->id,
+                'kode_barang'        => $s->barang->kode_barang ?? $s->kode_barang,
+                'nama'               => $s->barang->nama ?? $s->nama,
+                'periode'            => $s->periode_display,
+                'service_berikutnya' => $s->service_berikutnya?->format('d/m/Y'),
+                // jadwal berikutnya kalau ditarik lebih awal sekarang
+                'next_after_early'   => $s->service_berikutnya ? $s->addPeriod($s->service_berikutnya)->format('d/m/Y') : null,
+            ]),
+        ]);
+    }
+
+    /**
+     * PREVENTIVE LEBIH AWAL (superadmin) — buat checkup pending dari schedule yang belum jatuh tempo.
+     * tanggal_terjadwal = jatuh tempo asli schedule (dipakai untuk hitung jadwal berikutnya saat selesai).
+     */
+    public function storeEarly(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'schedule_id' => 'required|exists:schedules,id',
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'message' => $validator->errors()->first()], 422);
+        }
+
+        $schedule = Schedule::with('barang.line')->findOrFail($request->schedule_id);
+
+        if (!$schedule->service_berikutnya || !$schedule->service_berikutnya->gt(today())) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Schedule ini sudah jatuh tempo, akan masuk otomatis ke daftar checkup.',
+            ], 422);
+        }
+
+        $hasActive = GeneralCheckup::where('schedule_id', $schedule->id)
+            ->whereIn('status', self::ACTIVE_STATUS)
+            ->exists();
+        if ($hasActive) {
+            return response()->json(['success' => false, 'message' => 'Barang ini sudah ada di daftar checkup.'], 422);
+        }
+
+        $barang = $schedule->barang;
+        $checkup = GeneralCheckup::create([
+            'schedule_id'       => $schedule->id,
+            'barang_id'         => $schedule->barang_id,
+            'kode_barang'       => $barang->kode_barang ?? $schedule->kode_barang,
+            'gambar'            => $barang ? $barang->gambar : $schedule->gambar,
+            'nama'              => $barang->nama ?? $schedule->nama,
+            'line'              => $barang?->line?->nama_line,
+            'tanggal_terjadwal' => $schedule->service_berikutnya,
+            'status'            => 'pending',
+            'is_early'          => true,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Preventive {$checkup->kode_barang} ditarik lebih awal. Jadwal berikutnya akan menjadi "
+                . $schedule->addPeriod($schedule->service_berikutnya)->format('d/m/Y') . ' setelah selesai.',
+        ]);
+    }
+
+    /**
      * Auto populate dari schedule yang sudah jatuh tempo (tombol manual)
      */
     public function autoPopulate()
@@ -566,6 +657,7 @@ class GeneralCheckupController extends Controller
         Log::info('Moving to history, checkup ID: ' . $checkup->id);
 
         $history = HistoryCheckup::create([
+            'is_early'          => (bool) $checkup->is_early,
             'schedule_id'       => $checkup->schedule_id,
             'barang_id'         => $checkup->barang_id,
             'kode_barang'       => $checkup->kode_barang,
@@ -648,7 +740,17 @@ class GeneralCheckupController extends Controller
         $schedule = Schedule::find($checkup->schedule_id);
         if ($schedule) {
             $schedule->terakhir_service = $checkup->waktu_selesai;
-            $schedule->calculateNextService();
+
+            if ($checkup->is_early && $checkup->tanggal_terjadwal) {
+                // Preventive lebih awal: jatah jadwal aslinya dianggap sudah dikerjakan,
+                // jadi berikutnya = jatuh tempo asli + 1 periode (siklus tidak bergeser).
+                // Contoh: jatuh tempo 1 Jan 2027, dikerjakan Juli 2026 -> berikutnya 1 Jan 2028.
+                $schedule->service_berikutnya = $schedule->addPeriod($checkup->tanggal_terjadwal);
+                $schedule->keepServiceBerikutnya = true;
+            } else {
+                $schedule->calculateNextService();
+            }
+
             $schedule->save();
         }
 

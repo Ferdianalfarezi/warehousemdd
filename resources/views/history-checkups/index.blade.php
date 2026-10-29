@@ -296,22 +296,22 @@
 // STATE
 // ════════════════════════════════════════════════════════
 // Edit history hanya untuk superadmin (server juga menolak role lain)
-const CAN_EDIT_HISTORY = @json(Gate::allows('superadmin-only'));
+var CAN_EDIT_HISTORY = @json(Gate::allows('superadmin-only'));
 
-let currentPage   = 1;
-let perPage       = 20;
-let searchQuery   = '';
-let dateFrom      = '';
-let dateTo        = '';
-let customers     = [];
-let totalPages    = 1;
-let isLoading     = false;
-let searchTimeout = null;
+var currentPage   = 1;
+var perPage       = 20;
+var searchQuery   = '';
+var dateFrom      = '';
+var dateTo        = '';
+var customers     = [];
+var totalPages    = 1;
+var isLoading     = false;
+var searchTimeout = null;
 
 // ════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function () {
+onPageReady(function () {
     loadData();
     loadSummary();
 
@@ -398,7 +398,7 @@ function initCustomerFilter() {
 // ════════════════════════════════════════════════════════
 // LOAD SUMMARY (stats + grafik Pareto, ikut filter)
 // ════════════════════════════════════════════════════════
-let summaryRequestId = 0;
+var summaryRequestId = 0;
 
 async function loadSummary() {
     const requestId = ++summaryRequestId;
@@ -445,7 +445,7 @@ async function loadSummary() {
 // ════════════════════════════════════════════════════════
 // LOAD DATA
 // ════════════════════════════════════════════════════════
-let reloadQueued = false;
+var reloadQueued = false;
 
 async function loadData() {
     // Filter diubah saat masih loading -> jalankan lagi setelah selesai (jangan dibuang)
@@ -711,7 +711,7 @@ async function submitHistoryEdit() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+onPageReady(function () {
     if (!CAN_EDIT_HISTORY) return;
     // Hitungan otomatis ikut berubah saat Mulai/Selesai diubah
     ['heMulai', 'heSelesai'].forEach(id => document.getElementById(id).addEventListener('input', renderHeDurasi));
@@ -771,7 +771,7 @@ function showEmpty(msg) {
     document.getElementById('historyTableBody').innerHTML = '<tr><td colspan="10" class="px-6 py-12 text-center text-gray-500">' + msg + '</td></tr>';
 }
 
-document.addEventListener('keydown', function (e) {
+pageListen(document, 'keydown', function (e) {
     if (e.key !== 'Escape') return;
     const editModal = document.getElementById('historyEditModal');
     if (editModal && editModal.style.display === 'flex') closeHistoryEdit();

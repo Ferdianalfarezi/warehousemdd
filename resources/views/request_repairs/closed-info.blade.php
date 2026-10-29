@@ -345,7 +345,7 @@
 // ════════════════════════════════════════════════════════
 // Toggle warning NG di modal Closed — tampil hanya saat NG dipilih
 // ════════════════════════════════════════════════════════
-document.addEventListener('change', function (e) {
+pageListen(document, 'change', function (e) {
     if (e.target.name === 'closedHasilAkhir') {
         const warning = document.getElementById('hasilAkhirNgWarning');
         if (e.target.value === 'NG') {

@@ -157,16 +157,16 @@
 // ════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════
-const IS_ADMIN = {{ $isAdmin ? 'true' : 'false' }};
+var IS_ADMIN = {{ $isAdmin ? 'true' : 'false' }};
 
-let currentData   = null;   // payload terakhir dari server
-let currentItemId = null;   // null = mode tambah
-let isLoading     = false;
+var currentData   = null;   // payload terakhir dari server
+var currentItemId = null;   // null = mode tambah
+var isLoading     = false;
 
 // ════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function () {
+onPageReady(function () {
     document.getElementById('filterTanggal').value = tanggalKerjaHariIni();
 
     document.getElementById('filterTanggal').addEventListener('change', loadData);
@@ -519,7 +519,7 @@ function esc(str) {
     return d.innerHTML;
 }
 
-document.addEventListener('keydown', function (e) {
+pageListen(document, 'keydown', function (e) {
     if (e.key === 'Escape') closeItemModal();
 });
 </script>

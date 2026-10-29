@@ -11,15 +11,31 @@
                 <h1 class="text-3xl font-bold text-gray-900">Preventive Checkups</h1>
                 <p class="text-gray-600 mt-1">Manage maintenance checkups for scheduled items</p>
             </div>
-            <button 
-                onclick="autoPopulate()"
-                class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
-            >
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                </svg>
-                <span>Auto Populate</span>
-            </button>
+            <div class="flex items-center gap-3">
+                @can('superadmin-only')
+                    {{-- Preventive lebih awal: tarik schedule yang belum jatuh tempo (khusus superadmin) --}}
+                    <button
+                        type="button"
+                        onclick="openEarlyModal()"
+                        style="background-color:#fff;color:#111827;border:2px solid #111827;"
+                        class="px-5 py-3 rounded-lg font-semibold transition flex items-center space-x-2 hover:bg-gray-100"
+                    >
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/>
+                        </svg>
+                        <span>Preventive Lebih Awal</span>
+                    </button>
+                @endcan
+                <button
+                    onclick="autoPopulate()"
+                    class="bg-black text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition transform hover:scale-105 flex items-center space-x-2"
+                >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <span>Auto Populate</span>
+                </button>
+            </div>
         </div>
 
         <!-- Stats Cards -->
@@ -210,6 +226,10 @@
                                     <span class="px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap {{ $checkup->status_badge_class }}">
                                         {{ $checkup->status_display }}
                                     </span>
+                                    @if($checkup->is_early)
+                                        <span title="Ditarik sebelum jatuh tempo"
+                                              style="display:inline-block;margin-left:4px;padding:2px 8px;border-radius:9999px;background-color:#ede9fe;color:#5b21b6;font-size:11px;font-weight:600;white-space:nowrap;">Lebih awal</span>
+                                    @endif
                                 </td>
                                 <td class="px-6 py-4">
                                     @php
@@ -366,6 +386,46 @@
 <!-- Include Detail Modal -->
 @include('general-checkups.detail-modal')
 
+@can('superadmin-only')
+<!-- Modal Preventive Lebih Awal (khusus superadmin) -->
+<div id="earlyModal" style="display:none;position:fixed;inset:0;z-index:70;background-color:rgba(0,0,0,.5);align-items:center;justify-content:center;padding:16px;">
+    <div class="bg-white rounded-2xl shadow-2xl w-full" style="max-width:720px;max-height:90vh;display:flex;flex-direction:column;">
+        <div class="border-b border-gray-200 px-6 py-4 flex items-start justify-between">
+            <div>
+                <h3 class="text-xl font-bold text-gray-900">Preventive Lebih Awal</h3>
+                <p class="text-sm text-gray-600 mt-1">
+                    Tarik preventive yang belum jatuh tempo. Setelah selesai, jadwal berikutnya =
+                    <b>jatuh tempo asli + 1 periode</b> (siklus tidak bergeser).
+                </p>
+            </div>
+            <button type="button" onclick="closeEarlyModal()" class="text-gray-400 hover:text-gray-600 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="px-6 pt-4">
+            <input type="text" id="earlySearch" autocomplete="off"
+                   placeholder="Cari kode / nama barang..."
+                   class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition">
+            <p id="earlyInfo" class="text-xs text-gray-500" style="margin-top:6px;"></p>
+        </div>
+        <div class="px-6 py-4" style="overflow-y:auto;flex:1;">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Barang</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Periode</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Jatuh Tempo</th>
+                        <th class="px-3 py-2 text-left text-xs font-semibold text-gray-600 uppercase">Berikutnya Jadi</th>
+                        <th class="px-3 py-2"></th>
+                    </tr>
+                </thead>
+                <tbody id="earlyTableBody" class="divide-y divide-gray-200"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+@endcan
+
 <!-- Edit Modal -->
 <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl" style="max-height:90vh;overflow-y:auto;">
@@ -475,12 +535,12 @@
 @push('scripts')
 <script>
 // ===== Filter (server-side) =====
-let searchTimer = null;
+var searchTimer = null;
 
 // Filter/search/pagination TANPA reload halaman: ambil HTML hasil filter dari server,
 // lalu tukar kartu tabel + link Reset saja. Kolom search tidak pernah diganti,
 // jadi ketikan user tidak hilang (dulu form.submit() me-reload seluruh halaman).
-let filterRequestId = 0;
+var filterRequestId = 0;
 
 function filterUrl() {
     const params = new URLSearchParams(new FormData(document.getElementById('filterForm')));
@@ -505,7 +565,7 @@ async function loadCheckupTable(url) {
             const fresh = doc.getElementById(id);
             if (fresh) document.getElementById(id).innerHTML = fresh.innerHTML;
         });
-        history.replaceState(null, '', url); // refresh / back tetap bawa filter yang sama
+        history.replaceState(history.state, '', url); // refresh / back tetap bawa filter yang sama
     } catch (e) {
         if (requestId === filterRequestId) location.href = url; // fallback: cara lama
     } finally {
@@ -527,7 +587,7 @@ function debounceSubmit() {
     }, 400);
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+onPageReady(function () {
     const form = document.getElementById('filterForm');
     form.addEventListener('submit', e => { e.preventDefault(); submitFilter(); }); // Enter di kolom search
 
@@ -822,7 +882,7 @@ function renderDurasiToggle() {
     ['editDurasiHari', 'editDurasiJam', 'editDurasiMenit'].forEach(id => { document.getElementById(id).disabled = !on; });
 }
 
-document.addEventListener('DOMContentLoaded', function () {
+onPageReady(function () {
     document.getElementById('editMulaiPerbaikan').addEventListener('input', updateAutoDurasiLabel);
 });
 
@@ -894,9 +954,115 @@ async function submitEdit() {
     }
 }
 
+// ===== Preventive Lebih Awal (superadmin) =====
+var earlySearchTimer = null;
+var earlyRequestId = 0;
+
+function escHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str ?? '';
+    return d.innerHTML;
+}
+
+function openEarlyModal() {
+    const modal = document.getElementById('earlyModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    const input = document.getElementById('earlySearch');
+    input.value = '';
+    loadEarlyCandidates();
+    setTimeout(() => input.focus(), 50);
+}
+
+function closeEarlyModal() {
+    const modal = document.getElementById('earlyModal');
+    if (modal) modal.style.display = 'none';
+}
+
+async function loadEarlyCandidates() {
+    const requestId = ++earlyRequestId;
+    const tbody = document.getElementById('earlyTableBody');
+    const info = document.getElementById('earlyInfo');
+    const search = document.getElementById('earlySearch').value.trim();
+    info.textContent = 'Memuat...';
+    try {
+        const res = await fetch('/general-checkups/early-candidates?search=' + encodeURIComponent(search), { headers: { 'Accept': 'application/json' } });
+        const data = await res.json();
+        if (requestId !== earlyRequestId) return; // ada pencarian lebih baru
+        if (!data.success) throw new Error();
+
+        info.textContent = data.total > data.data.length
+            ? `Menampilkan ${data.data.length} dari ${data.total} schedule yang belum jatuh tempo. Ketik untuk mempersempit.`
+            : `${data.total} schedule yang belum jatuh tempo.`;
+
+        tbody.innerHTML = data.data.length ? data.data.map(s => `
+            <tr>
+                <td class="px-3 py-2 text-sm"><div class="font-semibold text-gray-900">${escHtml(s.kode_barang)}</div><div class="text-xs text-gray-500">${escHtml(s.nama)}</div></td>
+                <td class="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">${escHtml(s.periode)}</td>
+                <td class="px-3 py-2 text-sm text-gray-700 whitespace-nowrap">${escHtml(s.service_berikutnya)}</td>
+                <td class="px-3 py-2 text-sm whitespace-nowrap" style="color:#5b21b6;font-weight:600;">${escHtml(s.next_after_early)}</td>
+                <td class="px-3 py-2 text-right">
+                    <button type="button" onclick="storeEarly(${s.id}, '${escHtml(s.kode_barang).replace(/'/g, '&#39;')}', '${escHtml(s.service_berikutnya)}', '${escHtml(s.next_after_early)}')"
+                            style="background-color:#111827;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;">
+                        Tarik
+                    </button>
+                </td>
+            </tr>`).join('')
+            : '<tr><td colspan="5" class="px-3 py-8 text-center text-sm text-gray-500">Tidak ada schedule yang cocok</td></tr>';
+    } catch (e) {
+        if (requestId === earlyRequestId) info.textContent = 'Gagal memuat daftar schedule.';
+    }
+}
+
+async function storeEarly(scheduleId, kode, jatuhTempo, nextAfter) {
+    const result = await Swal.fire({
+        title: 'Tarik preventive lebih awal?',
+        html: `<b>${kode}</b> dijadwalkan <b>${jatuhTempo}</b>.<br>Setelah selesai, jadwal berikutnya menjadi <b>${nextAfter}</b>.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#111827',
+        cancelButtonColor: '#6b7280',
+        confirmButtonText: 'Ya, tarik',
+        cancelButtonText: 'Batal',
+    });
+    if (!result.isConfirmed) return;
+
+    try {
+        const res = await fetch('/general-checkups/early', {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+            },
+            body: JSON.stringify({ schedule_id: scheduleId }),
+        });
+        const data = await res.json();
+        if (data.success) {
+            closeEarlyModal();
+            await Swal.fire({ icon: 'success', title: 'Berhasil!', text: data.message, timer: 2500, showConfirmButton: false });
+            loadCheckupTable(location.href); // refresh tabel tanpa reload halaman
+        } else {
+            Swal.fire('Gagal', data.message || 'Gagal menarik preventive', 'error');
+        }
+    } catch (e) {
+        Swal.fire('Error!', 'Terjadi kesalahan', 'error');
+    }
+}
+
+onPageReady(function () {
+    const input = document.getElementById('earlySearch');
+    if (!input) return; // bukan superadmin
+    input.addEventListener('input', function () {
+        clearTimeout(earlySearchTimer);
+        earlySearchTimer = setTimeout(loadEarlyCandidates, 300);
+    });
+});
+
 // Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
+pageListen(document, 'keydown', function(e) {
     if (e.key === 'Escape') {
+        closeEarlyModal();
         closeDetailModal();
         closeEditModal();
     }

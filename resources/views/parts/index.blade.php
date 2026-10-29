@@ -307,19 +307,19 @@
     // ============================================
     // State Management
     // ============================================
-    let currentPage = 1;
-    let perPage = 20;
-    let searchQuery = '';
-    let stockConditionFilter = '';
-    let totalPages = 1;
-    let isLoading = false;
-    let searchTimeout = null;
-    let selectedParts = new Map();
+    var currentPage = 1;
+    var perPage = 20;
+    var searchQuery = '';
+    var stockConditionFilter = '';
+    var totalPages = 1;
+    var isLoading = false;
+    var searchTimeout = null;
+    var selectedParts = new Map();
 
     // ============================================
     // Initialize
     // ============================================
-    document.addEventListener('DOMContentLoaded', function() {
+    onPageReady(function() {
         initializeSelect2();
         loadParts();
         bindEvents();
@@ -1224,7 +1224,7 @@
     // ============================================
     // Keyboard Shortcuts
     // ============================================
-    document.addEventListener('keydown', function(e) {
+    pageListen(document, 'keydown', function(e) {
         if (e.key === 'Escape') {
             closeCreateModal();
             closeEditModal();
@@ -1238,8 +1238,8 @@
     // ============================================
     // Request Part Modal (Manual Add)
     // ============================================
-    let requestPartItems = new Map();
-    let partSearchTimeout = null;
+    var requestPartItems = new Map();
+    var partSearchTimeout = null;
 
     function openRequestPartModal() {
         const modal = document.getElementById('requestPartModal');
@@ -1512,7 +1512,7 @@
     });
 
     // Close search results when clicking outside
-    document.addEventListener('click', function(e) {
+    pageListen(document, 'click', function(e) {
         const searchContainer = document.getElementById('partSearchContainer');
         if (searchContainer && !searchContainer.contains(e.target)) {
             document.getElementById('partSearchResults')?.classList.add('hidden');

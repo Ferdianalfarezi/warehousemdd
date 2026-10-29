@@ -131,6 +131,11 @@ Route::middleware('auth')->group(function () {
     // ── General Checkups ───────────────────────────────────────────────────
     Route::prefix('general-checkups')->name('general-checkups.')->group(function () {
         Route::post('auto-populate',          [GeneralCheckupController::class, 'autoPopulate'])->name('auto-populate');
+        // Preventive lebih awal (sebelum jatuh tempo) — khusus superadmin
+        Route::middleware('can:superadmin-only')->group(function () {
+            Route::get('early-candidates',    [GeneralCheckupController::class, 'earlyCandidates'])->name('early-candidates');
+            Route::post('early',              [GeneralCheckupController::class, 'storeEarly'])->name('early');
+        });
         Route::post('{id}/start-repair',      [GeneralCheckupController::class, 'startRepair'])->name('start-repair');
         Route::get('{id}/process',            [GeneralCheckupController::class, 'process'])->name('process');
         Route::post('{id}/save-checkup',      [GeneralCheckupController::class, 'saveCheckup'])->name('save-checkup');

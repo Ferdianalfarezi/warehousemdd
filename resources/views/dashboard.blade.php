@@ -368,13 +368,13 @@
 @endsection
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
 <script src="{{ asset('js/pareto-chart.js') }}?v={{ filemtime(public_path('js/pareto-chart.js')) }}"></script>
 <script>
 // ============================================
 // RESUME PARETO — pakai endpoint summary yang sama dengan halaman History (tanpa filter)
 // ============================================
-document.addEventListener('DOMContentLoaded', async function () {
+onPageReady(async function () {
     const empty = (ids, text) => ids.forEach(id => {
         const el = document.getElementById(id + 'Empty');
         el.textContent = text;
@@ -412,7 +412,7 @@ document.addEventListener('DOMContentLoaded', async function () {
 });
 </script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+onPageReady(function() {
     // Data dari backend untuk General Condition
     const inStock = {{ $partCondition['in_stock'] }};
     const lowStock = {{ $partCondition['low_stock'] }};

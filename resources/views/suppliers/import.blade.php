@@ -22,7 +22,7 @@
                 <h3 class="font-semibold text-gray-900 mb-3 flex items-center text-sm">
                     Download Template Excel
                 </h3>
-                <a href="{{ route('suppliers.download.template') }}" 
+                <a data-turbo="false" href="{{ route('suppliers.download.template') }}" 
                    class="inline-flex items-center space-x-2 bg-green-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-green-700 transition text-sm">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>

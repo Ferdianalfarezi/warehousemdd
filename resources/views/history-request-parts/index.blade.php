@@ -290,7 +290,7 @@
         }, 300);
     }
     
-    document.addEventListener('keydown', function(e) {
+    pageListen(document, 'keydown', function(e) {
         if (e.key === 'Escape') {
             closeHistoryDetailModal();
         }

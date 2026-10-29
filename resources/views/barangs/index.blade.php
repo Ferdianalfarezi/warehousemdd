@@ -221,14 +221,14 @@
 // ============================================
 // SHARED CONSTANTS (icons & repeated class strings)
 // ============================================
-const ICON = {
+var ICON = {
     trash: `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>`,
 };
-const BTN_PAGE          = 'px-3 py-1.5 rounded-lg border text-xs transition';
-const BTN_PAGE_ACTIVE   = 'bg-black text-white border-black font-semibold';
-const BTN_PAGE_NORMAL   = 'border-gray-300 text-gray-700 hover:bg-gray-50';
-const BTN_PAGE_DISABLED = 'border-gray-200 text-gray-400 cursor-not-allowed';
-const INPUT_XS = 'w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black';
+var BTN_PAGE          = 'px-3 py-1.5 rounded-lg border text-xs transition';
+var BTN_PAGE_ACTIVE   = 'bg-black text-white border-black font-semibold';
+var BTN_PAGE_NORMAL   = 'border-gray-300 text-gray-700 hover:bg-gray-50';
+var BTN_PAGE_DISABLED = 'border-gray-200 text-gray-400 cursor-not-allowed';
+var INPUT_XS = 'w-full px-2 py-1.5 text-xs border border-gray-300 rounded focus:ring-1 focus:ring-black';
 
 function waitForJQuery(callback, maxWait = 5000) {
     const start = Date.now();
@@ -240,14 +240,14 @@ function waitForJQuery(callback, maxWait = 5000) {
     check();
 }
 
-let currentPage   = 1;
-let perPage       = 20;
-let searchQuery   = '';
-let totalPages    = 1;
-let isLoading     = false;
-let searchTimeout = null;
-let partCounter   = 0;
-let partsData = {!! json_encode($parts->map(fn($p) => [
+var currentPage   = 1;
+var perPage       = 20;
+var searchQuery   = '';
+var totalPages    = 1;
+var isLoading     = false;
+var searchTimeout = null;
+var partCounter   = 0;
+var partsData = {!! json_encode($parts->map(fn($p) => [
     'id'   => $p->id,
     'nama' => $p->nama,
     'kode' => $p->kode_part,
@@ -256,7 +256,7 @@ let partsData = {!! json_encode($parts->map(fn($p) => [
 // ============================================
 // INIT
 // ============================================
-document.addEventListener('DOMContentLoaded', function () {
+onPageReady(function () {
     loadBarangs();
     bindEvents();
 
@@ -535,9 +535,9 @@ async function submitImport() {
 // ============================================
 // DIES DETAIL ROWS
 // ============================================
-const DIES_FIELDS = ['child_part_code', 'part_name', 'cust', 'model', 'process_name', 'process_no'];
-const DIES_PLACEHOLDERS = { child_part_code: 'Child Code', part_name: 'Part Name', cust: 'Cust', model: 'Model', process_name: 'Proses Name', process_no: 'No' };
-const DIES_COLSPAN = { child_part_code: 2, part_name: 3, cust: 1, model: 2, process_name: 2, process_no: 1 };
+var DIES_FIELDS = ['child_part_code', 'part_name', 'cust', 'model', 'process_name', 'process_no'];
+var DIES_PLACEHOLDERS = { child_part_code: 'Child Code', part_name: 'Part Name', cust: 'Cust', model: 'Model', process_name: 'Proses Name', process_no: 'No' };
+var DIES_COLSPAN = { child_part_code: 2, part_name: 3, cust: 1, model: 2, process_name: 2, process_no: 1 };
 
 function addDiesDetailRow(containerId, data = {}) {
     const container = document.getElementById(containerId);
@@ -859,7 +859,7 @@ function clearErrors() {
 // ============================================
 // KEYBOARD
 // ============================================
-document.addEventListener('keydown', function (e) {
+pageListen(document, 'keydown', function (e) {
     if (e.key === 'Escape') {
         closeCreateModal(); closeEditModal(); closeDetailModal();
         closeImagePreview(); closeImportModal();

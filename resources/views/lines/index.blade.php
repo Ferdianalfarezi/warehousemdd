@@ -106,7 +106,7 @@
 
 @push('scripts')
 <script>
-let lineMode = 'create'; // 'create' | 'edit'
+var lineMode = 'create'; // 'create' | 'edit'
 
 function openCreateLineModal() {
     lineMode = 'create';
@@ -204,7 +204,7 @@ function clearLineErrors() {
     document.getElementById('error-mesin').textContent     = '';
 }
 
-document.addEventListener('keydown', function (e) {
+pageListen(document, 'keydown', function (e) {
     if (e.key === 'Escape') closeLineModal();
 });
 </script>

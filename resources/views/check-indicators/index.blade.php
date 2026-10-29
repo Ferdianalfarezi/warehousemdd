@@ -128,22 +128,22 @@
 // ============================================
 // STATE
 // ============================================
-let currentPage   = 1;
-let perPage       = 20;
-let searchQuery   = '';
-let totalPages    = 1;
-let isLoading     = false;
-let searchTimeout = null;
+var currentPage   = 1;
+var perPage       = 20;
+var searchQuery   = '';
+var totalPages    = 1;
+var isLoading     = false;
+var searchTimeout = null;
 
-const BTN_PAGE          = 'px-3 py-1.5 rounded-lg border text-xs transition';
-const BTN_PAGE_ACTIVE   = 'bg-black text-white border-black font-semibold';
-const BTN_PAGE_NORMAL   = 'border-gray-300 text-gray-700 hover:bg-gray-50';
-const BTN_PAGE_DISABLED = 'border-gray-200 text-gray-400 cursor-not-allowed';
+var BTN_PAGE          = 'px-3 py-1.5 rounded-lg border text-xs transition';
+var BTN_PAGE_ACTIVE   = 'bg-black text-white border-black font-semibold';
+var BTN_PAGE_NORMAL   = 'border-gray-300 text-gray-700 hover:bg-gray-50';
+var BTN_PAGE_DISABLED = 'border-gray-200 text-gray-400 cursor-not-allowed';
 
 // ============================================
 // INIT
 // ============================================
-document.addEventListener('DOMContentLoaded', function () {
+onPageReady(function () {
     loadIndicators();
 
     document.getElementById('searchInput').addEventListener('input', function () {
@@ -325,7 +325,7 @@ function showEmpty(msg) {
 // BARANG OPTIONS (dropdown Create/Edit) — di-load sekali saat modal pertama dibuka,
 // tidak lagi dirender di HTML (1700+ barang x 2 dropdown bikin halaman berat)
 // ============================================
-let barangOptionsPromise = null;
+var barangOptionsPromise = null;
 
 function ensureBarangOptions() {
     if (!barangOptionsPromise) {
@@ -382,7 +382,7 @@ async function deleteCheckIndicator(id) {
     }
 }
 
-document.addEventListener('keydown', function (e) {
+pageListen(document, 'keydown', function (e) {
     if (e.key === 'Escape') {
         closeViewModal();
         closeCreateModal();

@@ -124,43 +124,43 @@
 // ════════════════════════════════════════════════════════
 // AUTH CONTEXT
 // ════════════════════════════════════════════════════════
-const AUTH_USER_ID   = {{ auth()->id() }};
-const AUTH_USER_NAME = @json(auth()->user()->nama);
-const AUTH_USER_ROLE = {{ auth()->user()->role_id }}; // ⬅️ baru
+var AUTH_USER_ID   = {{ auth()->id() }};
+var AUTH_USER_NAME = @json(auth()->user()->nama);
+var AUTH_USER_ROLE = {{ auth()->user()->role_id }}; // ⬅️ baru
 
 // ════════════════════════════════════════════════════════
 // STATE
 // ════════════════════════════════════════════════════════
-let currentPage     = 1;
-let perPage         = 20;
-let searchQuery     = '';
-let customerFilter  = ''; // ⬅️ baru
-let totalPages      = 1;
-let isLoading        = false;
-let searchTimeout    = null;
+var currentPage     = 1;
+var perPage         = 20;
+var searchQuery     = '';
+var customerFilter  = ''; // ⬅️ baru
+var totalPages      = 1;
+var isLoading        = false;
+var searchTimeout    = null;
 
 // ════════════════════════════════════════════════════════
 // SELECT PIC MODAL STATE
 // ════════════════════════════════════════════════════════
-let _selectPicId = null;
+var _selectPicId = null;
 
 // ════════════════════════════════════════════════════════
 // ADDITIONAL INFO MODAL STATE
 // ════════════════════════════════════════════════════════
-let _additionalInfoId   = null;
-let _durasiStartSeconds = 0;
-let _durasiStartTime    = null;
-let _durasiTimer        = null;
+var _additionalInfoId   = null;
+var _durasiStartSeconds = 0;
+var _durasiStartTime    = null;
+var _durasiTimer        = null;
 
 // ════════════════════════════════════════════════════════
 // CLOSED INFO MODAL STATE
 // ════════════════════════════════════════════════════════
-let _closedInfoId = null;
+var _closedInfoId = null;
 
 // ════════════════════════════════════════════════════════
 // PAUSE REASON LABELS
 // ════════════════════════════════════════════════════════
-const PAUSE_REASON_LABEL = {
+var PAUSE_REASON_LABEL = {
     adjust_dimensi: 'Adjust Dimensi',
     repair_line:    'Repair di Line',
     trial:          'Trial',
@@ -184,18 +184,18 @@ function makeBtn(onclick, title, bgColor, bgHoverColor, svgPath) {
 // ════════════════════════════════════════════════════════
 // BADGES
 // ════════════════════════════════════════════════════════
-const KATEGORI_BADGE = {
+var KATEGORI_BADGE = {
     'Dies':        'bg-blue-100 text-blue-800',
     'Burry':       'bg-yellow-100 text-yellow-800',
     'Dimensi':     'bg-purple-100 text-purple-800',
     'Human Error': 'bg-red-100 text-red-800',
     'Accessories': 'bg-green-100 text-green-800',
 };
-const JENIS_BADGE = {
+var JENIS_BADGE = {
     'Milik Sendiri': 'bg-teal-100 text-teal-800',
     'Eksternal':     'bg-orange-100 text-orange-800',
 };
-const STATUS_CFG = {
+var STATUS_CFG = {
     'open':       { bg: '#dcfce7', color: '#166534', label: 'Open'       },
     'on_process':    { bg: '#dbeafe', color: '#1e40af', label: 'On Process'    },
     'finish_repair': { bg: '#ede9fe', color: '#5b21b6', label: 'Finish Repair' },
@@ -240,7 +240,7 @@ function formatStockFgJam(totalJam) {
 // ════════════════════════════════════════════════════════
 // INIT
 // ════════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function () {
+onPageReady(function () {
     loadData();
 
     document.getElementById('searchInput').addEventListener('input', function () {
@@ -260,7 +260,7 @@ document.addEventListener('DOMContentLoaded', function () {
         loadData();
     });
 
-    document.addEventListener('change', function (e) {
+    pageListen(document, 'change', function (e) {
         // ⬅️ diubah — listener untuk sinkronisasi select↔input process_no dihapus,
         // karena Process No sekarang selalu input manual (tidak ada select lagi).
 
@@ -713,7 +713,7 @@ async function openAdditionalInfoModal(id) {
 function startDurasiTimer() {
     stopDurasiTimer();
     updateDurasiDisplay();
-    _durasiTimer = setInterval(updateDurasiDisplay, 1000);
+    _durasiTimer = pageInterval(updateDurasiDisplay, 1000);
 }
 function stopDurasiTimer() {
     if (_durasiTimer) { clearInterval(_durasiTimer); _durasiTimer = null; }
@@ -1436,7 +1436,7 @@ function clearErrors() { document.querySelectorAll('.error-message').forEach(fun
 function displayErrors(errors, prefix) { Object.keys(errors).forEach(function (key) { const el = document.getElementById('error-' + prefix + '-' + key); if (el) el.textContent = errors[key][0]; }); }
 
 // ESC key
-document.addEventListener('keydown', function (e) {
+pageListen(document, 'keydown', function (e) {
     if (e.key === 'Escape') { closeCreateModal(); closeEditModal(); closeDetailModal(); closeSelectPicModal(); closeAdditionalInfoModal(); closeClosedInfoModal(); closeQuickAddBarangModal(); }
 });
 </script>

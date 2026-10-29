@@ -394,8 +394,9 @@
     window.checkupId = {{ $checkup->id }};
     
     // Initialize duration update if mulai_perbaikan exists
+    // (onPageReady: tunggu process.js selesai dimuat, penting saat pindah halaman lewat Turbo)
     @if($checkup->mulai_perbaikan)
-        initializeDurationUpdate('{{ $checkup->mulai_perbaikan->format('Y-m-d H:i:s') }}');
+        onPageReady(() => initializeDurationUpdate('{{ $checkup->mulai_perbaikan->format('Y-m-d H:i:s') }}'));
     @endif
 </script>
 @endpush

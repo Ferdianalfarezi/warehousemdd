@@ -1,5 +1,5 @@
 // Global variables
-let selectedStandardId = null;
+var selectedStandardId = null;
 
 // Update duration display
 function initializeDurationUpdate(mulaiPerbaikan) {
@@ -22,7 +22,7 @@ function initializeDurationUpdate(mulaiPerbaikan) {
     }
 
     updateDuration();
-    setInterval(updateDuration, 60000); // Update every minute
+    pageInterval(updateDuration, 60000); // Update every minute
 }
 
 // Set Status
@@ -727,12 +727,12 @@ async function closeAllParts(checkupDetailId, standardId) {
 }
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
+onPageReady(function() {
     updateActionButtons();
 });
 
 // Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
+pageListen(document, 'keydown', function(e) {
     if (e.key === 'Escape') {
         closeAddPartModal();
     }

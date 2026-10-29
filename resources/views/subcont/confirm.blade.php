@@ -338,7 +338,7 @@ async function completeRequest(requestId) {
     }
 }
 
-document.addEventListener('keydown', function(e) {
+pageListen(document, 'keydown', function(e) {
     if (e.key === 'Escape') {
         closeDetailModal();
     }
