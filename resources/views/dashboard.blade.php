@@ -377,6 +377,7 @@
 onPageReady(async function () {
     const empty = (ids, text) => ids.forEach(id => {
         const el = document.getElementById(id + 'Empty');
+        if (!el) return; // user sudah pindah halaman sebelum data selesai dimuat
         el.textContent = text;
         el.style.display = 'flex';
     });

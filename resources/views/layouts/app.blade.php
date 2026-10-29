@@ -72,6 +72,67 @@
          Halaman yang tidak mau ikut Turbo: tambahkan data-turbo="false" di link/form-nya.
          ════════════════════════════════════════════════════════════════════ --}}
     <meta name="turbo-cache-control" content="no-cache">
+    <meta name="turbo-prefetch" content="false">{{-- hover link tidak memicu request/loading --}}
+    <script>
+        // ════════════════════════════════════════════════════════════════
+        // LOADING GLOBAL: layar blur + spinner di tengah kalau ada request data yang > 300ms
+        // (pindah menu lewat Turbo, load tabel, buka modal, simpan, dll). Satu tempat untuk
+        // semua fetch(), jadi halaman tidak perlu spinner sendiri.
+        // Dikecualikan: fetch(url, { silent: true }), polling badge, dan request yang dipicu
+        // saat user sedang mengetik di input (biar tidak mengganggu pencarian).
+        // ════════════════════════════════════════════════════════════════
+        (function () {
+            const SHOW_DELAY = 300;  // ms sebelum overlay muncul (request cepat tidak bikin kedip)
+            const MIN_VISIBLE = 250; // ms minimal tampil sekali muncul
+            const SILENT_URLS = ['/api/approval-counts', '/api/transaction-counts'];
+            let pending = 0, showTimer = null, shownAt = 0;
+
+            const overlay = () => document.getElementById('globalLoading');
+
+            function show() {
+                if (showTimer || shownAt) return;
+                showTimer = setTimeout(() => {
+                    showTimer = null;
+                    const el = overlay();
+                    if (!el || pending === 0) return;
+                    shownAt = Date.now();
+                    el.style.display = 'flex';
+                    requestAnimationFrame(() => { el.style.opacity = '1'; });
+                }, SHOW_DELAY);
+            }
+
+            function hide() {
+                if (pending > 0) return;
+                clearTimeout(showTimer); showTimer = null;
+                if (!shownAt) return;
+                const wait = Math.max(0, MIN_VISIBLE - (Date.now() - shownAt));
+                setTimeout(() => {
+                    if (pending > 0) return;
+                    const el = overlay();
+                    shownAt = 0;
+                    if (!el) return;
+                    el.style.opacity = '0';
+                    setTimeout(() => { if (!shownAt) el.style.display = 'none'; }, 150);
+                }, wait);
+            }
+
+            function isTyping() {
+                const el = document.activeElement;
+                return el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && /^(text|search|number|email|tel)$/.test(el.type || 'text')));
+            }
+
+            const originalFetch = window.fetch.bind(window);
+            window.fetch = function (input, init) {
+                const url = typeof input === 'string' ? input : (input && input.url) || '';
+                const silent = (init && init.silent) || SILENT_URLS.some(u => url.includes(u)) || isTyping();
+                if (silent) return originalFetch(input, init);
+
+                pending++;
+                show();
+                return originalFetch(input, init).finally(() => { pending = Math.max(0, pending - 1); hide(); });
+            };
+        })();
+    </script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@8.0.12/dist/turbo.es2017-esm.js"></script>
     <script>
         (function () {
@@ -161,7 +222,12 @@
 
 <style>
     /* Progress bar Turbo (muncul kalau pindah halaman > 0,5 detik) */
-    .turbo-progress-bar { height: 3px; background-color: #111827; }
+    /* Loading sudah ditangani overlay global (#globalLoading): progress bar Turbo
+       dan spinner per tabel disembunyikan */
+    .turbo-progress-bar { display: none !important; }
+    #loadingOverlay { display: none !important; }
+    #initialLoadingRow td > * { visibility: hidden; }
+    @keyframes gl-spin { to { transform: rotate(360deg); } }
 
     /* Prevent layout shift saat Alpine belum ready */
     [x-cloak] { display: none !important; }
@@ -357,6 +423,14 @@
 </style>
 
 <body class="bg-gray-50 font-sans antialiased">
+    {{-- Overlay loading global (dikendalikan script di <head>) --}}
+    <div id="globalLoading" data-turbo-permanent
+         style="display:none; opacity:0; transition:opacity .15s; position:fixed; inset:0; z-index:1000; align-items:center; justify-content:center; background:rgba(255,255,255,0.35); backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);">
+        <div style="display:flex; flex-direction:column; align-items:center; gap:12px; background:#fff; padding:20px 28px; border-radius:14px; box-shadow:0 10px 30px rgba(0,0,0,0.12);">
+            <div style="width:40px; height:40px; border:4px solid #e5e7eb; border-top-color:#111827; border-radius:50%; animation:gl-spin .8s linear infinite;"></div>
+            <span style="font-size:14px; font-weight:500; color:#4b5563;">Memuat...</span>
+        </div>
+    </div>
     <div class="flex h-screen overflow-hidden" x-data="menuState()">
 
         <!-- Sidebar -->

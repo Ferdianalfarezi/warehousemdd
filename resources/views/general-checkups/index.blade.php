@@ -137,6 +137,17 @@
                     </select>
                 </div>
 
+                <!-- Filter Bulan & Tanggal (Tgl Terjadwal) -->
+                <div class="flex-shrink-0 flex items-center gap-2">
+                    <span class="text-xs font-medium text-gray-500 whitespace-nowrap">Terjadwal</span>
+                    <input type="month" name="bulan" value="{{ request('bulan') }}" title="Bulan terjadwal"
+                           onchange="submitFilter()"
+                           class="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition text-sm">
+                    <input type="date" name="tanggal" value="{{ request('tanggal') }}" title="Tanggal terjadwal"
+                           onchange="submitFilter()"
+                           class="px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-black transition text-sm">
+                </div>
+
                 <!-- Customer Filter -->
                 <div class="flex-shrink-0">
                     <select
@@ -166,7 +177,7 @@
 
                 {{-- Wrapper selalu ada supaya isinya bisa diperbarui lewat AJAX --}}
                 <div id="filterResetWrap" style="display:contents;">
-                    @if(request()->hasAny(['search', 'status', 'line', 'customer']))
+                    @if(request()->hasAny(['search', 'status', 'line', 'customer', 'bulan', 'tanggal']))
                         <div class="flex-shrink-0">
                             <a href="{{ route('general-checkups.index') }}"
                                class="text-sm text-gray-600 hover:text-black underline">
@@ -303,7 +314,7 @@
                                     <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
                                     </svg>
-                                    @if(request()->hasAny(['search', 'status', 'line', 'customer']))
+                                    @if(request()->hasAny(['search', 'status', 'line', 'customer', 'bulan', 'tanggal']))
                                         <p class="mt-4 text-gray-600 font-semibold">No checkups match your filters</p>
                                     @else
                                         <p class="mt-4 text-gray-600 font-semibold">No checkups found</p>
@@ -553,8 +564,6 @@ function filterUrl() {
 
 async function loadCheckupTable(url) {
     const requestId = ++filterRequestId;
-    const card = document.getElementById('checkupTableCard');
-    card.style.opacity = '0.5';
     try {
         const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
         if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -568,8 +577,6 @@ async function loadCheckupTable(url) {
         history.replaceState(history.state, '', url); // refresh / back tetap bawa filter yang sama
     } catch (e) {
         if (requestId === filterRequestId) location.href = url; // fallback: cara lama
-    } finally {
-        if (requestId === filterRequestId) card.style.opacity = '1';
     }
 }
 

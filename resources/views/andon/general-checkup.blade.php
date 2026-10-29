@@ -140,7 +140,7 @@ tr.row-overdue td {
                     </tr>
                 @endforeach
 
-                {{-- UPCOMING (Schedule, 4 terdekat) --}}
+                {{-- UPCOMING (Schedule, 10 terdekat) --}}
                 @foreach($upcomings as $schedule)
                     <tr data-status="upcoming">
                         <td style="font-weight: bold;">{{ $schedule->kode_barang }}</td>

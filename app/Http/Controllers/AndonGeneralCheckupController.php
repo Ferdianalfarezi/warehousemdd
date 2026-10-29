@@ -10,7 +10,7 @@ class AndonGeneralCheckupController extends Controller
 {
     /**
      * Display general checkup monitoring (READ-ONLY)
-     * Menampilkan checkup yang sedang on process + 4 schedule upcoming terdekat
+     * Menampilkan checkup yang sedang on process + 10 schedule upcoming terdekat
      */
     public function index()
     {
@@ -25,13 +25,13 @@ class AndonGeneralCheckupController extends Controller
         // Schedule yang sedang dikerjakan (biar tidak dobel tampil)
         $onProcessScheduleIds = $checkups->pluck('schedule_id')->filter()->unique();
 
-        // 4 schedule terdekat (hari ini ke depan)
+        // 10 schedule terdekat (hari ini ke depan)
         $upcomings = Schedule::whereDate('service_berikutnya', '>=', today())
             ->when($onProcessScheduleIds->isNotEmpty(), function ($query) use ($onProcessScheduleIds) {
                 $query->whereNotIn('id', $onProcessScheduleIds);
             })
             ->orderBy('service_berikutnya', 'asc')
-            ->limit(4)
+            ->limit(10)
             ->get();
 
         return view('andon.general-checkup', compact('checkups', 'upcomings'));

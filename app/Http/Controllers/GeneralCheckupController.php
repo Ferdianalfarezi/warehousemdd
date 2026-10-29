@@ -53,6 +53,12 @@ class GeneralCheckupController extends Controller
                 }
             })
             ->when($request->filled('line'), fn ($q) => $q->where('line', $request->line))
+            // Filter Tgl Terjadwal: tanggal persis (Y-m-d) dan/atau bulan (Y-m)
+            ->when($request->filled('tanggal') && strtotime($request->tanggal), fn ($q) => $q->whereDate('tanggal_terjadwal', $request->tanggal))
+            ->when($request->filled('bulan') && preg_match('/^\d{4}-\d{2}$/', $request->bulan), function ($q) use ($request) {
+                [$year, $month] = explode('-', $request->bulan);
+                $q->whereYear('tanggal_terjadwal', (int) $year)->whereMonth('tanggal_terjadwal', (int) $month);
+            })
             ->when($request->filled('customer'), fn ($q) => $q->whereHas('barang', fn ($b) => $b->where('cust', $request->customer)))
             ->when(
                 in_array($request->status, self::ACTIVE_STATUS, true),
