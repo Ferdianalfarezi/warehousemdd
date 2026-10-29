@@ -36,41 +36,53 @@ class Schedule extends Model
     }
 
     /**
-     * Calculate next service date
+     * true = jangan hitung ulang service_berikutnya saat save (cuma status yang di-refresh).
+     * Dipakai saat edit Mulai Service dengan pilihan "tetap" / tanggal di-set manual.
+     * (property biasa, bukan kolom tabel)
+     */
+    public bool $keepServiceBerikutnya = false;
+
+    /**
+     * Tanggal + 1 periode (sesuai jenis periode & interval schedule ini)
+     */
+    public function addPeriod($date): Carbon
+    {
+        $interval = (int) $this->interval_value;
+        $date = Carbon::parse($date);
+
+        return match ($this->periode) {
+            'mingguan' => $date->addWeeks($interval),
+            'bulanan'  => $date->addMonths($interval),
+            'tahunan'  => $date->addYears($interval),
+            default    => $date->addDays($interval), // harian, custom
+        };
+    }
+
+    /**
+     * Calculate next service date: dari service terakhir, atau dari mulai service kalau belum pernah service
      */
     public function calculateNextService()
     {
-        $interval = (int) $this->interval_value;
         $baseDate = $this->terakhir_service ?: $this->mulai_service;
-        
-        switch ($this->periode) {
-            case 'harian':
-                $this->service_berikutnya = Carbon::parse($baseDate)->addDays($interval);
-                break;
-            case 'mingguan':
-                $this->service_berikutnya = Carbon::parse($baseDate)->addWeeks($interval);
-                break;
-            case 'bulanan':
-                $this->service_berikutnya = Carbon::parse($baseDate)->addMonths($interval);
-                break;
-            case 'tahunan':
-                $this->service_berikutnya = Carbon::parse($baseDate)->addYears($interval);
-                break;
-            case 'custom':
-                $this->service_berikutnya = Carbon::parse($baseDate)->addDays($interval);
-                break;
-            default:
-                $this->service_berikutnya = Carbon::parse($baseDate)->addDays($interval);
-        }
-        
+        $this->service_berikutnya = $this->addPeriod($baseDate);
+
+        $this->refreshStatus();
+    }
+
+    /**
+     * Status dari tanggal service berikutnya.
+     * (Carbon 3: diffInDays() bisa negatif, jadi pakai perbandingan tanggal langsung)
+     */
+    public function refreshStatus(): void
+    {
         $today = Carbon::today();
         $nextService = Carbon::parse($this->service_berikutnya);
-        
+
         if ($nextService->lessThan($today)) {
             $this->status = 'terlambat';
         } elseif ($nextService->isToday()) {
             $this->status = 'hari_ini';
-        } elseif ($nextService->diffInDays($today) <= 7) {
+        } elseif ($nextService->lte($today->copy()->addDays(7))) {
             $this->status = 'segera';
         } else {
             $this->status = 'terjadwal';
@@ -113,7 +125,11 @@ class Schedule extends Model
         parent::boot();
 
         static::saving(function ($schedule) {
-            $schedule->calculateNextService();
+            if ($schedule->keepServiceBerikutnya) {
+                $schedule->refreshStatus();
+            } else {
+                $schedule->calculateNextService();
+            }
         });
     }
 }

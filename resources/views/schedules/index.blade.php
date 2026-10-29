@@ -459,12 +459,15 @@ async function openEditModal(scheduleId) {
             document.getElementById('editPeriode').value = schedule.periode;
             document.getElementById('editIntervalValue').value = schedule.interval_value;
 
-            const nextServiceDate = new Date(schedule.service_berikutnya);
-            document.getElementById('editNextServiceInfo').textContent = nextServiceDate.toLocaleDateString('id-ID', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            });
+            // Data asli untuk perbandingan & preview service selanjutnya
+            window._editOrig = {
+                mulai: schedule.mulai_service,
+                next: schedule.service_berikutnya_ymd,
+                terakhir: schedule.terakhir_service,
+                periode: schedule.periode,
+                interval: String(schedule.interval_value),
+            };
+            document.querySelector('#editScheduleForm input[name="next_service_mode"][value="tetap"]').checked = true;
 
             updateEditIntervalLabel();
             clearEditErrors();
@@ -521,7 +524,67 @@ function updateEditIntervalLabel() {
 
     label.textContent = `Interval (${intervalLabels[periode]})`;
     preview.textContent = `${intervalValue} ${intervalLabels[periode]}`;
+
+    updateEditNextServiceInfo();
 }
+
+// Tanggal (Y-m-d) + 1 periode, sama seperti Schedule::addPeriod() di server
+function addPeriodJS(ymd, periode, interval) {
+    const [y, m, d] = ymd.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    interval = parseInt(interval, 10) || 1;
+    if (periode === 'mingguan') date.setDate(date.getDate() + interval * 7);
+    else if (periode === 'bulanan') date.setMonth(date.getMonth() + interval);
+    else if (periode === 'tahunan') date.setFullYear(date.getFullYear() + interval);
+    else date.setDate(date.getDate() + interval); // harian, custom
+    return date;
+}
+
+function fmtTanggal(date) {
+    return date ? date.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+}
+
+function ymdToDate(ymd) {
+    if (!ymd) return null;
+    const [y, m, d] = ymd.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
+// Preview "Service Selanjutnya" + pilihan ikut/tetap saat Mulai Service diubah
+function updateEditNextServiceInfo() {
+    const orig = window._editOrig;
+    if (!orig) return;
+
+    const mulai    = document.getElementById('editMulaiService').value;
+    const periode  = document.getElementById('editPeriode').value;
+    const interval = document.getElementById('editIntervalValue').value;
+    const changed  = !!mulai && mulai !== orig.mulai;
+
+    const choice = document.getElementById('editNextServiceChoice');
+    const radios = choice.querySelectorAll('input[name="next_service_mode"]');
+    choice.style.display = changed ? 'block' : 'none';
+    radios.forEach(r => { r.disabled = !changed; }); // tidak ikut terkirim kalau mulai tidak diubah
+
+    const ikutDate  = mulai ? addPeriodJS(mulai, periode, interval) : null;
+    const tetapDate = ymdToDate(orig.next);
+    document.getElementById('editNextIkutDate').textContent  = fmtTanggal(ikutDate);
+    document.getElementById('editNextTetapDate').textContent = fmtTanggal(tetapDate);
+
+    let next;
+    if (changed) {
+        next = choice.querySelector('input[name="next_service_mode"]:checked')?.value === 'ikut' ? ikutDate : tetapDate;
+    } else if (periode !== orig.periode || interval !== orig.interval) {
+        // Perilaku lama: dihitung ulang dari service terakhir (atau mulai service kalau belum pernah)
+        next = addPeriodJS(orig.terakhir || mulai, periode, interval);
+    } else {
+        next = tetapDate;
+    }
+    document.getElementById('editNextServiceInfo').textContent = fmtTanggal(next);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('editMulaiService').addEventListener('input', updateEditNextServiceInfo);
+});
 
 // Handle Create Form Submit
 document.getElementById('createScheduleForm').addEventListener('submit', async function(e) {

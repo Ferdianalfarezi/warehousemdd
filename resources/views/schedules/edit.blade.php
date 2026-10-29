@@ -52,6 +52,7 @@
                         <option value="harian">Harian</option>
                         <option value="mingguan">Mingguan</option>
                         <option value="bulanan">Bulanan</option>
+                        <option value="tahunan">Tahunan</option>
                         <option value="custom">Custom</option>
                     </select>
                     <p id="error-edit-periode" class="error-message text-red-500 text-sm mt-1"></p>
@@ -84,9 +85,30 @@
             <!-- Next Service Info -->
             <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <p class="text-sm text-gray-700">
-                    <span class="font-semibold">Service Selanjutnya:</span> 
+                    <span class="font-semibold">Service Selanjutnya:</span>
                     <span id="editNextServiceInfo" class="font-bold">-</span>
                 </p>
+            </div>
+
+            <!-- Pilihan saat Mulai Service diubah (muncul hanya kalau tanggal mulai berubah) -->
+            <div id="editNextServiceChoice" style="display:none;border:1px solid #fde68a;background-color:#fffbeb;border-radius:12px;padding:14px;">
+                <p class="text-sm font-semibold text-gray-700" style="margin-bottom:10px;">
+                    Tanggal Mulai Service diubah. Service selanjutnya mau bagaimana?
+                </p>
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #e5e7eb;margin-bottom:8px;">
+                    <input type="radio" name="next_service_mode" value="ikut" onchange="updateEditNextServiceInfo()" style="margin-top:3px;" disabled>
+                    <span class="text-sm text-gray-700">
+                        <b>Ikut Mulai Service baru</b> (dihitung ulang sesuai periode)<br>
+                        <span class="text-xs text-gray-500">Service selanjutnya jadi <b id="editNextIkutDate">-</b></span>
+                    </span>
+                </label>
+                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;padding:8px 10px;border-radius:8px;background:#fff;border:1px solid #e5e7eb;">
+                    <input type="radio" name="next_service_mode" value="tetap" onchange="updateEditNextServiceInfo()" style="margin-top:3px;" disabled checked>
+                    <span class="text-sm text-gray-700">
+                        <b>Tetap</b> seperti sekarang<br>
+                        <span class="text-xs text-gray-500">Service selanjutnya tetap <b id="editNextTetapDate">-</b></span>
+                    </span>
+                </label>
             </div>
 
             <!-- Error Messages -->

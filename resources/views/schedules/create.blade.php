@@ -53,6 +53,7 @@
                         <option value="harian">Harian</option>
                         <option value="mingguan">Mingguan</option>
                         <option value="bulanan">Bulanan</option>
+                        <option value="tahunan">Tahunan</option>
                         <option value="custom">Custom</option>
                     </select>
                     <p id="error-create-periode" class="error-message text-red-500 text-sm mt-1"></p>

@@ -183,6 +183,8 @@ class ScheduleController extends Controller
                     'periode' => $schedule->periode,
                     'interval_value' => $schedule->interval_value,
                     'service_berikutnya' => $schedule->service_berikutnya,
+                    'service_berikutnya_ymd' => $schedule->service_berikutnya?->format('Y-m-d'),
+                    'terakhir_service' => $schedule->terakhir_service?->format('Y-m-d'),
                 ]
             ]);
         } catch (\Exception $e) {
@@ -204,6 +206,8 @@ class ScheduleController extends Controller
             'mulai_service' => 'required|date',
             'periode' => 'required|in:harian,mingguan,bulanan,tahunan,custom',
             'interval_value' => 'required|integer|min:1',
+            // Kalau Mulai Service diubah: service berikutnya ikut (dihitung ulang dari mulai baru) atau tetap
+            'next_service_mode' => 'nullable|in:ikut,tetap',
         ]);
 
         if ($validator->fails()) {
@@ -215,11 +219,22 @@ class ScheduleController extends Controller
 
         DB::beginTransaction();
         try {
+            $mulaiDiubah = $schedule->mulai_service?->toDateString() !== \Carbon\Carbon::parse($request->mulai_service)->toDateString();
+
             $schedule->mulai_service = $request->mulai_service;
             $schedule->periode = $request->periode;
             $schedule->interval_value = $request->interval_value;
 
-            $schedule->calculateNextService();
+            if ($mulaiDiubah && $request->next_service_mode === 'tetap') {
+                // Service berikutnya tidak berubah (status tetap di-refresh saat save)
+                $schedule->keepServiceBerikutnya = true;
+            } elseif ($mulaiDiubah && $request->next_service_mode === 'ikut') {
+                // Hitung ulang dari Mulai Service baru + 1 periode (abaikan service terakhir)
+                $schedule->service_berikutnya = $schedule->addPeriod($schedule->mulai_service);
+                $schedule->keepServiceBerikutnya = true;
+            }
+            // selain itu: perilaku lama, dihitung ulang otomatis saat save (dari service terakhir / mulai service)
+
             $schedule->save();
 
             DB::commit();
