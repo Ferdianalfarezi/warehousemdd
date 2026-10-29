@@ -148,20 +148,23 @@
                     </select>
                 </div>
 
-                @if(request()->hasAny(['search', 'status', 'line', 'customer']))
-                    <div class="flex-shrink-0">
-                        <a href="{{ route('general-checkups.index') }}"
-                           class="text-sm text-gray-600 hover:text-black underline">
-                            Reset
-                        </a>
-                    </div>
-                @endif
+                {{-- Wrapper selalu ada supaya isinya bisa diperbarui lewat AJAX --}}
+                <div id="filterResetWrap" style="display:contents;">
+                    @if(request()->hasAny(['search', 'status', 'line', 'customer']))
+                        <div class="flex-shrink-0">
+                            <a href="{{ route('general-checkups.index') }}"
+                               class="text-sm text-gray-600 hover:text-black underline">
+                                Reset
+                            </a>
+                        </div>
+                    @endif
+                </div>
 
             </div>
         </form>
 
-        <!-- Table Card -->
-        <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <!-- Table Card (diperbarui lewat AJAX saat filter/search/pagination berubah) -->
+        <div id="checkupTableCard" class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden" style="transition:opacity .15s;">
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-50 border-b border-gray-200">
@@ -474,23 +477,77 @@
 // ===== Filter (server-side) =====
 let searchTimer = null;
 
+// Filter/search/pagination TANPA reload halaman: ambil HTML hasil filter dari server,
+// lalu tukar kartu tabel + link Reset saja. Kolom search tidak pernah diganti,
+// jadi ketikan user tidak hilang (dulu form.submit() me-reload seluruh halaman).
+let filterRequestId = 0;
+
+function filterUrl() {
+    const params = new URLSearchParams(new FormData(document.getElementById('filterForm')));
+    // Rapikan kata kunci: spasi di awal/akhir & spasi ganda tidak mengubah hasil pencarian
+    if (params.has('search')) params.set('search', params.get('search').trim().replace(/\s+/g, ' '));
+    [...params.keys()].forEach(key => { if (!params.get(key)) params.delete(key); });
+    const query = params.toString();
+    return document.getElementById('filterForm').action + (query ? '?' + query : '');
+}
+
+async function loadCheckupTable(url) {
+    const requestId = ++filterRequestId;
+    const card = document.getElementById('checkupTableCard');
+    card.style.opacity = '0.5';
+    try {
+        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+        if (requestId !== filterRequestId) return; // ada request lebih baru (user masih mengetik)
+
+        ['checkupTableCard', 'filterResetWrap'].forEach(id => {
+            const fresh = doc.getElementById(id);
+            if (fresh) document.getElementById(id).innerHTML = fresh.innerHTML;
+        });
+        history.replaceState(null, '', url); // refresh / back tetap bawa filter yang sama
+    } catch (e) {
+        if (requestId === filterRequestId) location.href = url; // fallback: cara lama
+    } finally {
+        if (requestId === filterRequestId) card.style.opacity = '1';
+    }
+}
+
 function submitFilter() {
-    document.getElementById('filterForm').submit();
+    clearTimeout(searchTimer);
+    loadCheckupTable(filterUrl());
 }
 
 function debounceSubmit() {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(submitFilter, 500);
+    searchTimer = setTimeout(() => {
+        // Kata kunci tidak berubah (mis. cuma nambah spasi) -> tabel tidak perlu dimuat ulang
+        if (filterUrl() === location.href) return;
+        submitFilter();
+    }, 400);
 }
 
-// Fokus balik ke search box setelah reload (cursor di akhir teks)
 document.addEventListener('DOMContentLoaded', function () {
-    const input = document.getElementById('searchInput');
-    if (input && input.value) {
-        input.focus();
-        const len = input.value.length;
-        input.setSelectionRange(len, len);
-    }
+    const form = document.getElementById('filterForm');
+    form.addEventListener('submit', e => { e.preventDefault(); submitFilter(); }); // Enter di kolom search
+
+    // Pagination di dalam kartu tabel
+    document.getElementById('checkupTableCard').addEventListener('click', function (e) {
+        const link = e.target.closest('a[href*="page="]');
+        if (!link) return;
+        e.preventDefault();
+        loadCheckupTable(link.href);
+    });
+
+    // Reset: kosongkan semua filter lalu muat ulang tabel
+    document.getElementById('filterResetWrap').addEventListener('click', function (e) {
+        if (!e.target.closest('a')) return;
+        e.preventDefault();
+        form.querySelectorAll('input[name], select[name]').forEach(el => {
+            el.value = el.name === 'per_page' ? '20' : ''; // 20 = default per_page di server
+        });
+        submitFilter();
+    });
 });
 
 // Auto Populate

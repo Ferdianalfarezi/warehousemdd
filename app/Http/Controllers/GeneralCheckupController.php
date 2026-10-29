@@ -41,12 +41,16 @@ class GeneralCheckupController extends Controller
 
         $checkups = GeneralCheckup::with(['barang', 'schedule', 'starter:id,nama'])
             ->whereIn('status', self::ACTIVE_STATUS)
+            // Cari per kata: tiap kata harus ada di kode atau nama (jumlah spasi & urutan kata bebas).
+            // Banyak nama barang mengandung spasi ganda yang tampil sebagai 1 spasi di browser.
             ->when($request->filled('search'), function ($q) use ($request) {
-                $search = $request->search;
-                $q->where(function ($q2) use ($search) {
-                    $q2->where('kode_barang', 'like', "%{$search}%")
-                       ->orWhere('nama', 'like', "%{$search}%");
-                });
+                $words = preg_split('/\s+/', trim($request->search), -1, PREG_SPLIT_NO_EMPTY);
+                foreach ($words as $word) {
+                    $q->where(function ($q2) use ($word) {
+                        $q2->where('kode_barang', 'like', "%{$word}%")
+                           ->orWhere('nama', 'like', "%{$word}%");
+                    });
+                }
             })
             ->when($request->filled('line'), fn ($q) => $q->where('line', $request->line))
             ->when($request->filled('customer'), fn ($q) => $q->whereHas('barang', fn ($b) => $b->where('cust', $request->customer)))
