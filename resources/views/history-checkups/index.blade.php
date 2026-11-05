@@ -100,7 +100,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
                 </div>
-                <p class="text-sm font-semibold text-gray-700">Pareto Dies Paling Banyak NG <span class="text-xs font-normal text-gray-400">(Top 10)</span></p>
+                <p class="text-sm font-semibold text-gray-700">Dies per Customer: Belum vs Sudah Preventive <span class="text-xs font-normal text-gray-400">(Top 10)</span></p>
             </div>
             <div style="position:relative;height:280px;">
                 <canvas id="paretoNg"></canvas>
@@ -425,13 +425,12 @@ async function loadSummary() {
             onBarClick: item => openDetailModal(Number(item.payload)),
         });
 
-        renderPareto('paretoNg', toItems(result.by_ng), {
-            total: result.total_ng,
-            barColor: '#ef4444',
-            valueLabel: 'NG',
-            emptyId: 'paretoNgEmpty',
-            onBarClick: item => openDetailModal(Number(item.payload)),
-        });
+        // Per customer: dies belum (masih di daftar Preventive) vs sudah (ada di history)
+        const cust = result.by_customer || [];
+        renderGroupedBar('paretoNg', cust.map(r => r.customer), [
+            { label: 'Belum', data: cust.map(r => r.belum), color: '#ef4444' },
+            { label: 'Sudah', data: cust.map(r => r.sudah), color: '#10b981' },
+        ], { emptyId: 'paretoNgEmpty', yTitle: 'Jumlah Dies' });
     } catch (e) {
         if (requestId !== summaryRequestId) return;
         ['paretoPreventiveEmpty', 'paretoNgEmpty'].forEach(id => {

@@ -16,6 +16,36 @@
 (function () {
     const charts = {};
 
+    // Plugin: tulis angka di atas setiap batang (selalu tampil, bukan cuma saat hover)
+    const barValueLabels = {
+        id: 'barValueLabels',
+        afterDatasetsDraw(chart) {
+            const ctx = chart.ctx;
+            ctx.save();
+            ctx.font = '600 10px sans-serif';
+            ctx.fillStyle = '#374151';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            chart.data.datasets.forEach((ds, i) => {
+                const meta = chart.getDatasetMeta(i);
+                if (meta.type !== 'bar' || meta.hidden) return;
+                meta.data.forEach((bar, j) => {
+                    const v = ds.data[j];
+                    if (v === null || v === undefined) return;
+                    ctx.fillText(v, bar.x, bar.y - 3);
+                });
+            });
+            ctx.restore();
+        },
+    };
+
+    function destroy(canvasId) {
+        if (charts[canvasId]) {
+            charts[canvasId].destroy();
+            delete charts[canvasId];
+        }
+    }
+
     function truncate(str, max) {
         str = String(str ?? '');
         return str.length > max ? str.slice(0, max - 1) + '…' : str;
@@ -26,10 +56,7 @@
         const canvas = document.getElementById(canvasId);
         if (!canvas || typeof Chart === 'undefined') return;
 
-        if (charts[canvasId]) {
-            charts[canvasId].destroy();
-            delete charts[canvasId];
-        }
+        destroy(canvasId);
 
         const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
         const hasData = items && items.length > 0;
@@ -49,6 +76,7 @@
         const barColor = opts.barColor || '#3b82f6';
 
         charts[canvasId] = new Chart(canvas, {
+            plugins: [barValueLabels],
             data: {
                 labels: items.map(i => i.label),
                 datasets: [
@@ -91,6 +119,7 @@
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                layout: { padding: { top: 16 } }, // ruang untuk angka di atas batang
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: {
@@ -138,6 +167,66 @@
                 },
                 onHover: (evt, elements) => {
                     if (opts.onBarClick) evt.native.target.style.cursor = elements.length ? 'pointer' : 'default';
+                },
+            },
+        });
+    };
+
+    /**
+     * Grafik batang ganda (mis. per customer: dies Belum vs Sudah preventive).
+     * renderGroupedBar(canvasId, labels, series, options)
+     *   series  : [{ label, data: [angka per label], color }]
+     *   options : { emptyId, yTitle }
+     */
+    window.renderGroupedBar = function (canvasId, labels, series, options) {
+        const opts   = options || {};
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        destroy(canvasId);
+
+        const empty = opts.emptyId ? document.getElementById(opts.emptyId) : null;
+        const hasData = labels && labels.length > 0;
+        canvas.style.display = hasData ? 'block' : 'none';
+        if (empty) empty.style.display = hasData ? 'none' : 'flex';
+        if (!hasData) return;
+
+        charts[canvasId] = new Chart(canvas, {
+            type: 'bar',
+            plugins: [barValueLabels],
+            data: {
+                labels: labels,
+                datasets: series.map(s => ({
+                    label: s.label,
+                    data: s.data,
+                    backgroundColor: s.color,
+                    borderRadius: 4,
+                    maxBarThickness: 28,
+                })),
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: { top: 16 } },
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } },
+                },
+                scales: {
+                    x: {
+                        ticks: {
+                            font: { size: 10 },
+                            maxRotation: 45,
+                            autoSkip: false,
+                            callback: function (value) { return truncate(this.getLabelForValue(value), 12); },
+                        },
+                        grid: { display: false },
+                    },
+                    y: {
+                        beginAtZero: true,
+                        ticks: { precision: 0, font: { size: 10 } },
+                        title: { display: !!opts.yTitle, text: opts.yTitle || '', font: { size: 11 } },
+                    },
                 },
             },
         });

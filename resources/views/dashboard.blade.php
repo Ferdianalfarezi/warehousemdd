@@ -94,7 +94,7 @@
                 ['id' => 'dashParetoKategori',   'title' => 'Kategori Problem',         'source' => 'History Request Repair', 'url' => route('history-repairs.index')],
                 ['id' => 'dashParetoPartNo',     'title' => 'Part No Terbanyak Repair', 'source' => 'History Request Repair', 'url' => route('history-repairs.index')],
                 ['id' => 'dashParetoPreventive', 'title' => 'Dies Sering Preventive',   'source' => 'History Checkups',       'url' => route('history-checkups.index')],
-                ['id' => 'dashParetoNg',         'title' => 'Dies Paling Banyak NG',    'source' => 'History Checkups',       'url' => route('history-checkups.index')],
+                ['id' => 'dashParetoNg',         'title' => 'Dies per Customer: Belum vs Sudah',    'source' => 'History Checkups',       'url' => route('history-checkups.index')],
             ] as $p)
                 <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                     <div class="flex items-start justify-between mb-2">
@@ -404,9 +404,11 @@ onPageReady(async function () {
         renderPareto('dashParetoPreventive', toItems(hc.by_preventive), {
             total: hc.stats.total, barColor: '#3b82f6', valueLabel: 'Preventive', emptyId: 'dashParetoPreventiveEmpty',
         });
-        renderPareto('dashParetoNg', toItems(hc.by_ng), {
-            total: hc.total_ng, barColor: '#ef4444', valueLabel: 'NG', emptyId: 'dashParetoNgEmpty',
-        });
+        const cust = hc.by_customer || [];
+        renderGroupedBar('dashParetoNg', cust.map(r => r.customer), [
+            { label: 'Belum', data: cust.map(r => r.belum), color: '#ef4444' },
+            { label: 'Sudah', data: cust.map(r => r.sudah), color: '#10b981' },
+        ], { emptyId: 'dashParetoNgEmpty' });
     } catch (e) {
         empty(['dashParetoPreventive', 'dashParetoNg'], 'Gagal memuat data');
     }

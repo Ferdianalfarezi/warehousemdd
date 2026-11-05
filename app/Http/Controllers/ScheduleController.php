@@ -51,6 +51,8 @@ class ScheduleController extends Controller
             'search'   => $request->input('search', ''),
             'status'   => $request->input('status', 'all'),
             'periode'  => $request->input('periode', 'all'),
+            'tanggal'  => $request->input('tanggal', ''),
+            'bulan'    => $request->input('bulan', ''),
             'per_page' => $perPageInput === 'all' ? 'all' : (string) $perPage,
         ];
 
@@ -82,6 +84,14 @@ class ScheduleController extends Controller
         $status = $request->input('status');
         if ($status && $status !== 'all') {
             $this->applyStatus($query, $status);
+        }
+
+        // Filter kalender (service berikutnya): 1 tanggal atau 1 bulan penuh
+        if ($request->filled('tanggal') && strtotime($request->tanggal)) {
+            $query->whereDate('service_berikutnya', $request->tanggal);
+        } elseif ($request->filled('bulan') && preg_match('/^\d{4}-\d{2}$/', $request->bulan)) {
+            [$year, $month] = explode('-', $request->bulan);
+            $query->whereYear('service_berikutnya', (int) $year)->whereMonth('service_berikutnya', (int) $month);
         }
 
         return $query;

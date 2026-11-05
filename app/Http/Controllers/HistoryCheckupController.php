@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Barang;
+use App\Models\GeneralCheckup;
 use App\Models\HistoryCheckup;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -161,27 +162,54 @@ class HistoryCheckupController extends Controller
             ->limit(10)
             ->get();
 
-        $byNg = (clone $base)
-            ->whereNotNull('barang_id')
-            ->select(
-                'barang_id',
-                DB::raw('MAX(kode_barang) as kode_barang'),
-                DB::raw('MAX(nama) as nama'),
-                DB::raw('SUM(total_ng) as total')
-            )
-            ->groupBy('barang_id')
-            ->havingRaw('SUM(total_ng) > 0')
-            ->orderByDesc('total')
-            ->limit(10)
-            ->get();
-
         return response()->json([
             'success'       => true,
             'stats'         => $stats,
             'total_ng'      => $totalNg,
             'by_preventive' => $byPreventive,
-            'by_ng'         => $byNg,
+            'by_customer'   => $this->customerProgress($base, $request),
         ]);
+    }
+
+    /**
+     * Per customer: jumlah dies yang SUDAH preventive (ada di history, ikut filter)
+     * vs yang BELUM (masih di daftar Preventive: pending / on process, filter tanggal
+     * pakai tgl terjadwal). Top 10 customer dengan dies terbanyak.
+     */
+    private function customerProgress($historyBase, Request $request): array
+    {
+        $sudah = (clone $historyBase)
+            ->join('barangs', 'barangs.id', '=', 'history_checkups.barang_id')
+            ->whereNotNull('barangs.cust')->where('barangs.cust', '!=', '')
+            ->groupBy('barangs.cust')
+            ->selectRaw('barangs.cust as cust, COUNT(DISTINCT history_checkups.barang_id) as total')
+            ->pluck('total', 'cust');
+
+        $customers = array_filter((array) $request->input('customers', []), fn ($c) => $c !== null && $c !== '');
+        $belum = GeneralCheckup::query()
+            ->join('barangs', 'barangs.id', '=', 'general_checkups.barang_id')
+            ->whereNotNull('barangs.cust')->where('barangs.cust', '!=', '')
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $q->where(fn ($w) => $w->where('general_checkups.kode_barang', 'like', "%{$request->search}%")
+                    ->orWhere('general_checkups.nama', 'like', "%{$request->search}%"));
+            })
+            ->when($request->filled('date_from'), fn ($q) => $q->whereDate('general_checkups.tanggal_terjadwal', '>=', $request->date_from))
+            ->when($request->filled('date_to'), fn ($q) => $q->whereDate('general_checkups.tanggal_terjadwal', '<=', $request->date_to))
+            ->when($customers, fn ($q) => $q->whereIn('barangs.cust', $customers))
+            ->groupBy('barangs.cust')
+            ->selectRaw('barangs.cust as cust, COUNT(DISTINCT general_checkups.barang_id) as total')
+            ->pluck('total', 'cust');
+
+        return collect($sudah->keys())->merge($belum->keys())->unique()
+            ->map(fn ($cust) => [
+                'customer' => $cust,
+                'belum'    => (int) ($belum[$cust] ?? 0),
+                'sudah'    => (int) ($sudah[$cust] ?? 0),
+            ])
+            ->sortByDesc(fn ($r) => $r['belum'] + $r['sudah'])
+            ->take(10)
+            ->values()
+            ->all();
     }
 
     /**

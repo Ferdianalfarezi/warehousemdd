@@ -4,7 +4,8 @@
 
 @section('content')
 @php
-    $isFiltered = $filters['search'] !== '' || $filters['status'] !== 'all' || $filters['periode'] !== 'all';
+    $isFiltered = $filters['search'] !== '' || $filters['status'] !== 'all' || $filters['periode'] !== 'all'
+        || $filters['tanggal'] !== '' || $filters['bulan'] !== '';
 
     $statusOptions = [
         'all' => 'All Status',
@@ -167,6 +168,9 @@
                     @endforeach
                 </select>
             </div>
+
+            <!-- Filter Bulan / Tanggal (Service Berikutnya) -->
+            @include('partials.date-filter-picker', ['label' => 'Service Berikutnya', 'onChange' => "document.getElementById('filterForm').requestSubmit()"])
 
             <!-- Per Page Selector -->
             <div class="flex-shrink-0">
