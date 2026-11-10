@@ -16,6 +16,7 @@ use Carbon\Carbon; // ⬅️ baru
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -468,8 +469,11 @@ class RequestRepairController extends Controller
     {
         $authUser = auth()->user();
 
-        // tanggal_pengajuan tidak divalidasi dari input: selalu tanggal hari ini (lihat create di bawah)
+        // tanggal_pengajuan: user biasa selalu hari ini; hanya superadmin yang boleh mengatur
+        $canSetTanggal = Gate::allows('superadmin-only');
+
         $validator = Validator::make($request->all(), [
+            'tanggal_pengajuan' => $canSetTanggal ? 'nullable|date' : 'nullable',
             'group'             => 'required|in:A,B',
             'shift'             => 'required|in:Pagi,Malam',
             'jumlah_stroke'     => 'required|integer|min:0',
@@ -509,7 +513,9 @@ class RequestRepairController extends Controller
 
             $rr = RequestRepair::create([
                 'no'                => RequestRepair::generateNo(),
-                'tanggal_pengajuan' => today(), // fix hari ini, tidak bisa diatur dari form
+                'tanggal_pengajuan' => $canSetTanggal && $request->filled('tanggal_pengajuan')
+                    ? Carbon::parse($request->tanggal_pengajuan)->startOfDay()
+                    : today(), // selain superadmin: fix hari ini, input dari form diabaikan
                 'group'             => $request->group,
                 'shift'             => $request->shift,
                 'jumlah_stroke'     => $request->jumlah_stroke,
