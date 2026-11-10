@@ -22,11 +22,7 @@
                     <div>
                         <label class="block text-sm font-semibold text-gray-700 mb-1">
                             Tanggal Pengajuan <span class="text-red-500">*</span>
-                            @can('superadmin-only')
-                                <span style="display:inline-block;margin-left:4px;padding:1px 8px;border-radius:9999px;background-color:#fef3c7;color:#92400e;font-size:11px;font-weight:600;vertical-align:middle;">Bisa diubah (Superadmin)</span>
-                            @else
-                                <span style="display:inline-block;margin-left:4px;padding:1px 8px;border-radius:9999px;background-color:#dbeafe;color:#1e40af;font-size:11px;font-weight:600;vertical-align:middle;">Auto hari ini</span>
-                            @endcan
+                            <span style="display:inline-block;margin-left:4px;padding:1px 8px;border-radius:9999px;background-color:#dbeafe;color:#1e40af;font-size:11px;font-weight:600;vertical-align:middle;">Auto hari ini</span>
                         </label>
                         @can('superadmin-only')
                             {{-- Superadmin boleh atur tanggal (default hari ini) --}}
