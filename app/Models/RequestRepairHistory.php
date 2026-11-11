@@ -129,6 +129,29 @@ class RequestRepairHistory extends Model
         ];
     }
 
+    // ── Nomor "repair ke-" per part_no ──────────────────────
+    // Diurutkan dari waktu closed (paling lama = 1). Dipanggil setiap ada repair
+    // yang di-close atau waktu closed-nya diedit, supaya nomor selalu urut sesuai tanggal.
+    public static function renumberPart(?string $partNo): void
+    {
+        if ($partNo === null || $partNo === '') {
+            return;
+        }
+
+        $ids = static::where('part_no', $partNo)
+            ->orderBy('closed_at')
+            ->orderBy('id')
+            ->pluck('repair_count', 'id');
+
+        $n = 0;
+        foreach ($ids as $id => $current) {
+            $n++;
+            if ((int) $current !== $n) {
+                static::whereKey($id)->update(['repair_count' => $n]);
+            }
+        }
+    }
+
     // ── Summary per part_no ──────────────────────────────────
     public static function getSummaryByPartNo(string $partNo): array
     {

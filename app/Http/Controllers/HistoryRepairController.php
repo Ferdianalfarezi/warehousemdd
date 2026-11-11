@@ -172,6 +172,7 @@ class HistoryRepairController extends Controller
 
         $historyRecords = RequestRepairHistory::where('part_no', $partNo)
             ->orderBy('closed_at', 'desc')
+            ->orderBy('id', 'desc')
             ->get();
 
         // ── Ambil semua riwayat percobaan NG (attempts) untuk kumpulan 'no' yang relevan ──
@@ -405,6 +406,9 @@ class HistoryRepairController extends Controller
             : null;
 
         $h->save();
+
+        // Waktu closed bisa berubah -> nomor "repair ke-" diurutkan ulang
+        RequestRepairHistory::renumberPart($h->part_no);
 
         return response()->json(['success' => true, 'message' => 'History berhasil diupdate!', 'part_no' => $h->part_no]);
     }

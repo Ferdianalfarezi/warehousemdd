@@ -1162,6 +1162,9 @@ class RequestRepairController extends Controller
                     'cycle_number'                    => $requestRepair->cycle_number,
                 ]);
 
+                // Pastikan nomor "repair ke-" urut sesuai waktu closed
+                RequestRepairHistory::renumberPart($requestRepair->part_no);
+
                 $requestRepair->delete();
 
                 DB::commit();
