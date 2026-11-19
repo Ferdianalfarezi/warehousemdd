@@ -178,11 +178,9 @@
                         <select name="kategori_problem" id="createKategori"
                             class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
                             <option value="">Pilih Kategori</option>
-                            <option value="Dies">Dies</option>
-                            <option value="Burry">Burry</option>
-                            <option value="Dimensi">Dimensi</option>
-                            <option value="Human Error">Human Error</option>
-                            <option value="Accessories">Accessories</option>
+                            @foreach(\App\Models\RequestRepair::KATEGORI_PROBLEM as $kat)
+                                <option value="{{ $kat }}">{{ $kat }}</option>
+                            @endforeach
                         </select>
                         <p class="error-message text-xs text-red-500 mt-1" id="error-create-kategori_problem"></p>
                     </div>

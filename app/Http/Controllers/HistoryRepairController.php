@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\RequestRepair;
 use App\Models\RequestRepairHistory;
 use App\Models\RequestRepairAttempt;
 use App\Models\RequestRepairPause;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
 
 class HistoryRepairController extends Controller
@@ -359,7 +361,7 @@ class HistoryRepairController extends Controller
             'process_no'                    => 'nullable|string|max:100',
             'customer'                      => 'nullable|string|max:255',
             'jenis'                         => 'nullable|in:Milik Sendiri,Eksternal',
-            'kategori_problem'              => 'nullable|in:Dies,Burry,Dimensi,Human Error,Accessories',
+            'kategori_problem'              => ['nullable', Rule::in([...RequestRepair::KATEGORI_PROBLEM, $historyRepair->kategori_problem])],
             'detail_proyek'                 => 'nullable|string',
             'on_process_at'                 => 'nullable|date',
             'finish_repair_at'              => 'nullable|date|after_or_equal:on_process_at',

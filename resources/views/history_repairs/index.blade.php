@@ -223,7 +223,7 @@
                         <label class="block text-sm font-semibold text-gray-700 mb-1">Kategori Problem</label>
                         <select id="reKategori" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black">
                             <option value="">-</option>
-                            @foreach(['Dies', 'Burry', 'Dimensi', 'Human Error', 'Accessories'] as $kat)
+                            @foreach([...\App\Models\RequestRepair::KATEGORI_PROBLEM, ...\App\Models\RequestRepair::KATEGORI_PROBLEM_LAMA] as $kat)
                                 <option value="{{ $kat }}">{{ $kat }}</option>
                             @endforeach
                         </select>
@@ -328,8 +328,18 @@ var searchTimeout = null;
 // BADGES
 // ════════════════════════════════════════════════════════
 var KATEGORI_BADGE = {
+    'NG Dimensi':                 'bg-purple-100 text-purple-800',
+    'Burry':                      'bg-yellow-100 text-yellow-800',
+    'Scratch':                    'bg-red-100 text-red-800',
+    'Waving':                     'bg-blue-100 text-blue-800',
+    'Neck':                       'bg-orange-100 text-orange-800',
+    'Cutting Tidak Putus':        'bg-teal-100 text-teal-800',
+    'Marking Hilang/Tidak Jelas': 'bg-green-100 text-green-800',
+    'Blank Nempel':               'bg-blue-100 text-blue-800',
+    'Tool Mark':                  'bg-orange-100 text-orange-800',
+    'Deform':                     'bg-red-100 text-red-800',
+    // kategori lama
     'Dies':        'bg-blue-100 text-blue-800',
-    'Burry':       'bg-yellow-100 text-yellow-800',
     'Dimensi':     'bg-purple-100 text-purple-800',
     'Human Error': 'bg-red-100 text-red-800',
     'Accessories': 'bg-green-100 text-green-800',

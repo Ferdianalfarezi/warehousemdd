@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
@@ -482,7 +483,7 @@ class RequestRepairController extends Controller
             'process_no'        => 'nullable|string|max:100',
             'jenis'             => 'required|in:Milik Sendiri,Eksternal',
             'kekuatan_stock_fg' => 'nullable|integer|min:0',
-            'kategori_problem'  => 'required|in:Dies,Burry,Dimensi,Human Error,Accessories',
+            'kategori_problem'  => ['required', Rule::in(RequestRepair::KATEGORI_PROBLEM)],
             'detail_proyek'     => 'nullable|string',
             'gambar'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5000',
             'created_by'        => 'nullable|integer|exists:users,id',
@@ -582,7 +583,8 @@ class RequestRepairController extends Controller
             'process_no'        => 'nullable|string|max:100',
             'jenis'             => 'required|in:Milik Sendiri,Eksternal',
             'kekuatan_stock_fg' => 'nullable|integer|min:0',
-            'kategori_problem'  => 'required|in:Dies,Burry,Dimensi,Human Error,Accessories',
+            // Kategori lama yang sudah tersimpan tetap boleh (tidak dipaksa ganti saat edit)
+            'kategori_problem'  => ['required', Rule::in([...RequestRepair::KATEGORI_PROBLEM, $requestRepair->kategori_problem])],
             'detail_proyek'     => 'nullable|string',
             'gambar'            => 'nullable|image|mimes:jpeg,png,jpg,webp|max:5000',
             'durasi_manual_seconds' => 'nullable|integer|min:60',

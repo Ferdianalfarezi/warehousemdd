@@ -185,8 +185,18 @@ function makeBtn(onclick, title, bgColor, bgHoverColor, svgPath) {
 // BADGES
 // ════════════════════════════════════════════════════════
 var KATEGORI_BADGE = {
+    'NG Dimensi':                 'bg-purple-100 text-purple-800',
+    'Burry':                      'bg-yellow-100 text-yellow-800',
+    'Scratch':                    'bg-red-100 text-red-800',
+    'Waving':                     'bg-blue-100 text-blue-800',
+    'Neck':                       'bg-orange-100 text-orange-800',
+    'Cutting Tidak Putus':        'bg-teal-100 text-teal-800',
+    'Marking Hilang/Tidak Jelas': 'bg-green-100 text-green-800',
+    'Blank Nempel':               'bg-blue-100 text-blue-800',
+    'Tool Mark':                  'bg-orange-100 text-orange-800',
+    'Deform':                     'bg-red-100 text-red-800',
+    // kategori lama
     'Dies':        'bg-blue-100 text-blue-800',
-    'Burry':       'bg-yellow-100 text-yellow-800',
     'Dimensi':     'bg-purple-100 text-purple-800',
     'Human Error': 'bg-red-100 text-red-800',
     'Accessories': 'bg-green-100 text-green-800',
@@ -1174,7 +1184,15 @@ async function openEditModal(id) {
         document.getElementById('editNamaDisplay').value     = r.nama       || '';
         document.getElementById('editCustomerDisplay').value = r.customer   || '';
         document.getElementById('editJenis').value           = r.jenis;
-        document.getElementById('editKategori').value        = r.kategori_problem;
+        var katSelect = document.getElementById('editKategori');
+        katSelect.querySelectorAll('option[data-lama]').forEach(function (o) { o.remove(); });
+        if (r.kategori_problem && ![...katSelect.options].some(function (o) { return o.value === r.kategori_problem; })) {
+            // kategori lama (sudah tidak ada di pilihan) tetap ditampilkan untuk data lama
+            var opt = new Option(r.kategori_problem, r.kategori_problem);
+            opt.dataset.lama = '1';
+            katSelect.add(opt);
+        }
+        katSelect.value = r.kategori_problem;
         document.getElementById('editKekuatanStockFg').value = r.kekuatan_stock_fg ?? '';
         document.getElementById('editDetailProyek').value    = r.detail_proyek || '';
         document.getElementById('editStatusBadge').innerHTML = statusBadge(r.status, r.is_paused, r.pause_reason);

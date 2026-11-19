@@ -84,6 +84,14 @@ class RequestRepair extends Model
     const STATUS_ON_PROCESS    = 'on_process';
     const STATUS_FINISH_REPAIR = 'finish_repair';
     const STATUS_ON_TRIAL      = 'on_trial';
+
+    // Pilihan Kategori Problem di form (request baru)
+    const KATEGORI_PROBLEM = [
+        'NG Dimensi', 'Burry', 'Scratch', 'Waving', 'Neck', 'Cutting Tidak Putus',
+        'Marking Hilang/Tidak Jelas', 'Blank Nempel', 'Tool Mark', 'Deform',
+    ];
+    // Kategori lama: tidak bisa dipilih lagi, tapi data lama tetap tersimpan & bisa difilter
+    const KATEGORI_PROBLEM_LAMA = ['Dies', 'Dimensi', 'Human Error', 'Accessories'];
     const STATUS_CLOSED        = 'closed';
 
     // Role yang boleh jadi PIC (dipilih saat On Process)
